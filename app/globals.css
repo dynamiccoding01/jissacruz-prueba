@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paleta de marca JISSACRUZ (HSL) — ver UI_UX.md §1.2 */
+    --background: 0 0% 100%; /* #FFFFFF */
+    --foreground: 0 0% 13%; /* #212121 */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+    --primary: 211 77% 24%; /* #0E3C6D azul oscuro */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 80 3% 95%;
+    --secondary-foreground: 0 0% 13%;
+    --muted: 80 3% 95%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 208 72% 41%; /* #1D6DB2 azul secundario */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%; /* red-600 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 80 3% 85%; /* #B6B7B4 con opacidad */
+    --input: 80 3% 80%;
+    --ring: 208 72% 41%;
+    --chart-1: 211 77% 24%;
+    --chart-2: 208 72% 41%;
+    --chart-3: 80 3% 60%;
+    --chart-4: 0 72% 51%;
+    --chart-5: 0 0% 13%;
+    --radius: 0.5rem;
+    --sidebar: 211 77% 24%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 208 72% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 208 72% 41%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 211 50% 35%;
+    --sidebar-ring: 208 72% 41%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
