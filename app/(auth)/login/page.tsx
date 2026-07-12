@@ -26,9 +26,9 @@ export default async function LoginPage() {
         />
         <div className="relative flex items-center gap-2 text-lg font-bold tracking-tight">
           <div className="flex size-8 items-center justify-center rounded-md bg-white/15 text-sm">
-            S
+            J
           </div>
-          SISREP
+          JISSACRUZ
         </div>
         <div className="relative space-y-3">
           <h2 className="text-3xl font-bold leading-tight">

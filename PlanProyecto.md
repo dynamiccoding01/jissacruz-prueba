@@ -14,6 +14,10 @@
 
 ---
 
+> ⚠️ **Documento base firmado — NO EDITAR.** Es la línea base contractual acordada con el cliente (alcance, cronograma, pagos y firmas). Se conserva como foto del arranque del proyecto. Para el **avance real y el estado de cada tarea**, ver [PLAN.md](PLAN.md).
+
+---
+
 ## 1. Resumen Ejecutivo
 
 Dynamic Coding desarrollará para el cliente Rodrigo un sistema web de gestión de inventario, compras y ventas para su nueva tienda de repuestos de automóviles en Santa Cruz, Bolivia. El sistema permitirá llevar el control completo del negocio: desde el stock de productos hasta las ventas diarias, con acceso desde cualquier dispositivo conectado a internet.
