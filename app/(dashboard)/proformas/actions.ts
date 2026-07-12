@@ -94,3 +94,23 @@ export async function createProforma(values: ProformaInput) {
   revalidatePath("/proformas")
   return { id: proforma.id, numero: proforma.numero as string }
 }
+
+export async function convertirProformaAVenta(proformaId: string) {
+  const supabase = await createClient()
+
+  const { data: ventaId, error } = await supabase.rpc("fn_convertir_proforma_a_venta", {
+    p_proforma_id: proformaId,
+  })
+  if (error) {
+    return { error: error.message || "No se pudo convertir la proforma en venta." }
+  }
+
+  const { data: venta } = await supabase.from("ventas").select("numero").eq("id", ventaId).single()
+
+  revalidatePath("/proformas")
+  revalidatePath("/ventas")
+  revalidatePath("/inventario")
+  revalidatePath("/kardex")
+  revalidatePath("/productos")
+  return { id: ventaId as string, numero: venta?.numero as string | undefined }
+}

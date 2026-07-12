@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useTransition } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Plus, Search, Trash2 } from "lucide-react"
+import { History, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -22,6 +22,7 @@ import { TablaDatos } from "@/components/shared/tabla-datos"
 import type { Rol } from "@/components/shared/nav-items"
 import { deleteCliente, searchClientes } from "./actions"
 import { ClienteForm } from "./cliente-form"
+import { ClienteHistorial } from "./cliente-historial"
 
 export type ClienteFila = {
   id: string
@@ -78,6 +79,14 @@ export function ClientesExplorer({
       header: "",
       cell: ({ row }) => (
         <div className="flex justify-end gap-1">
+          <ClienteHistorial
+            cliente={row.original}
+            trigger={
+              <Button variant="ghost" size="icon" title="Ver historial de compras">
+                <History className="size-4" />
+              </Button>
+            }
+          />
           <ClienteForm
             cliente={row.original}
             onSaved={() => refrescar(query)}

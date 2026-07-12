@@ -15,6 +15,7 @@ export function Sidebar({ rol }: { rol: Rol }) {
   const items = NAV_ITEMS.filter((item) => item.roles.includes(rol))
   const [colapsado, setColapsado] = useState(false)
   const [listo, setListo] = useState(false)
+  const [logoError, setLogoError] = useState(false)
 
   useEffect(() => {
     setColapsado(localStorage.getItem(STORAGE_KEY) === "1")
@@ -36,12 +37,29 @@ export function Sidebar({ rol }: { rol: Rol }) {
         listo ? (colapsado ? "w-[4.5rem]" : "w-60") : "w-60"
       )}
     >
-      <div className="flex h-14 items-center gap-2 px-4">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-sm font-bold">
-          S
-        </div>
-        {!colapsado && (
-          <span className="truncate text-lg font-bold tracking-tight">SISREP</span>
+      <div className="flex h-24 items-center justify-center px-3 py-3">
+        {!logoError ? (
+          // Logo de la empresa: archivo en public/logo-empresa.png
+          // Si el archivo no existe, cae al recuadro "S" de abajo.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/logo-empresa.png"
+            alt="JISSACRUZ"
+            onError={() => setLogoError(true)}
+            className={cn(
+              "object-contain",
+              colapsado ? "size-12" : "h-20 w-auto max-w-[200px]"
+            )}
+          />
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-base font-bold">
+              S
+            </div>
+            {!colapsado && (
+              <span className="truncate text-xl font-bold tracking-tight">SISREP</span>
+            )}
+          </div>
         )}
       </div>
 

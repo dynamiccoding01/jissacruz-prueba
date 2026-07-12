@@ -11,7 +11,7 @@
 
 ## Estado general — corte al 12 jul 2026
 
-**Avance global: ~50%.** Sprint 1 y Sprint 2 prácticamente completos (el backend de toda la app —tablas, funciones RPC, RLS— ya está construido y verificado en Supabase, incluso el que da soporte a ventas/proformas). Sprint 3 y Sprint 4 pendientes en la interfaz. Único pendiente transversal de Sprint 1: **despliegue en Vercel**.
+**Avance global: ~90%.** Sprint 1 y Sprint 2 prácticamente completos (el backend de toda la app —tablas, funciones RPC, RLS— ya está construido y verificado en Supabase). Sprint 3 (proformas, POS/ventas, clientes) ya está funcional de punta a punta en la interfaz. De Sprint 4, están construidos el dashboard con KPIs, los 4 reportes (con exportación PDF/Excel) y la pantalla de Configuración (datos de empresa, stock mínimo default y gestión de usuarios); quedan la UAT, el manual de usuario y el despliegue. Único pendiente transversal de Sprint 1: **despliegue en Vercel**.
 
 **Leyenda de estado:**
 `✅ Hecho` · `⚠️ Parcial` (algo hecho, falta completar) · `⏳ Pendiente`
@@ -74,16 +74,16 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 | Agregar productos a proforma con búsqueda avanzada | Alta | ✅ Hecho (reusa `fn_buscar_productos`, prellena precio) |
 | Cálculo de subtotal, descuentos y total en proforma | Alta | ✅ Hecho (descuento por línea + global + impuesto; totales calculados en servidor) |
 | Generación de PDF de proforma imprimible (NIT, fecha, datos del cliente) | Alta | ✅ Hecho (`/api/pdf/proforma/[id]`, paleta de marca) |
-| Lista de proformas con filtro por fecha, cliente y estado | Media | ✅ Hecho (filtros por cliente y estado; estado `vencida` derivado. Falta filtro por fecha) |
-| Módulo de punto de venta (POS): búsqueda y selección de productos | Alta | ⏳ Pendiente |
-| Carrito de venta con cálculo de total y descuentos | Alta | ⏳ Pendiente |
-| Emisión de comprobante de venta en PDF | Alta | ⏳ Pendiente (falta ruta `/api/pdf/venta/[id]`) |
-| Conversión de proforma a venta directa | Media | ⏳ Pendiente (RPC `fn_convertir_proforma_a_venta` lista; falta UI) |
-| Historial de compras por cliente | Media | ⏳ Pendiente |
-| Descuento automático de stock al registrar una venta | Alta | ⚠️ Backend listo (`fn_registrar_venta`, FIFO); falta la UI que lo invoque |
+| Lista de proformas con filtro por fecha, cliente y estado | Media | ✅ Hecho (filtros por cliente, estado y **rango de fechas**; estado `vencida` derivado) |
+| Módulo de punto de venta (POS): búsqueda y selección de productos | Alta | ✅ Hecho (`app/(dashboard)/ventas/pos.tsx`, layout 2 columnas, reusa `fn_buscar_productos`) |
+| Carrito de venta con cálculo de total y descuentos | Alta | ✅ Hecho (misma lógica de cálculo que proformas, `lib/validations/venta.ts`) |
+| Emisión de comprobante de venta en PDF | Alta | ✅ Hecho (`/api/pdf/venta/[id]`, `lib/pdf/venta-document.tsx`) |
+| Conversión de proforma a venta directa | Media | ✅ Hecho (botón en `proformas-explorer.tsx` invoca `fn_convertir_proforma_a_venta` vía `convertirProformaAVenta`) |
+| Historial de compras por cliente | Media | ✅ Hecho (`ClienteHistorial`, dialog con proformas + ventas del cliente) |
+| Descuento automático de stock al registrar una venta | Alta | ✅ Hecho (POS y conversión de proforma llaman `fn_registrar_venta`, FIFO) |
 
 **Entregable Sprint 3:** proforma y ventas funcionales; el vendedor genera una cotización en PDF, la convierte a venta, registra la transacción y descuenta el stock automáticamente.
-**Estado del entregable:** ⏳ Pendiente (núcleo comercial por construir en la UI).
+**Estado del entregable:** ✅ Cumplido en código — pendiente probar el flujo de punta a punta contra un proyecto Supabase real (ver "Pruebas de integración" arriba).
 
 ---
 
@@ -93,19 +93,20 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 
 | Historia de Usuario / Tarea | Prioridad | Estado |
 |---|---|---|
-| Dashboard principal: KPIs (ventas hoy, stock bajo, proformas pendientes, compras recientes) | Alta | ⏳ Pendiente |
-| Reporte de ventas por período (diario, semanal, mensual) | Alta | ⏳ Pendiente |
-| Reporte de proformas (emitidas, convertidas, vencidas) | Media | ⏳ Pendiente |
-| Reporte de productos más vendidos | Media | ⏳ Pendiente |
+| Dashboard principal: KPIs (ventas hoy, stock bajo, proformas pendientes, compras recientes) | Alta | ✅ Hecho (`app/(dashboard)/dashboard/page.tsx`: KPIs + gráfico de ventas 7 días con `recharts` + stock crítico + compras recientes + accesos directos) |
+| Reporte de ventas por período (diario, semanal, mensual) | Alta | ✅ Hecho (módulo Reportes: selector de rango + agrupación, gráfico, resumen, exportación PDF/Excel) |
+| Reporte de proformas (emitidas, convertidas, vencidas) | Media | ✅ Hecho (mismo módulo Reportes) |
+| Reporte de productos más vendidos | Media | ✅ Hecho (mismo módulo Reportes, agrega `venta_items` por producto) |
 | Kardex: historial por producto exportable a PDF y Excel | Alta | ✅ Hecho (adelantado — implementado en Fase 4) |
-| Reporte de estado de inventario (stock actual por categoría/línea) | Alta | ⏳ Pendiente |
+| Reporte de estado de inventario (stock actual por categoría/línea) | Alta | ✅ Hecho (mismo módulo Reportes, agrupa por `linea_marca` con valorización) |
+| Pantalla de Configuración: gestión de usuarios, datos de empresa (para PDFs) y stock mínimo por defecto | Alta | ✅ Hecho (datos de empresa + stock mínimo default editables; alta de usuarios vía `service_role` con trigger que crea el perfil; activar/desactivar. **Falta:** subida del logo a Storage para los PDFs) |
 | Pruebas de usuario (UAT) con el cliente Rodrigo | Alta | ⏳ Pendiente |
 | Corrección de errores detectados en UAT | Alta | ⏳ Pendiente |
 | Despliegue final en producción y entrega de credenciales | Alta | ⏳ Pendiente |
 | Documentación básica de uso (manual de usuario) | Media | ⏳ Pendiente |
 
 **Entregable Sprint 4 / final:** sistema completo en producción, acceso entregado al cliente, dashboard funcional y manual de uso básico.
-**Estado del entregable:** ⏳ Pendiente.
+**Estado del entregable:** ⚠️ En progreso — dashboard, los 4 reportes y la pantalla de Configuración ya construidos; quedan UAT con el cliente, corrección de hallazgos, despliegue en producción y manual de usuario.
 
 ---
 
@@ -117,7 +118,7 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 | Firma de contrato / Pago 1 (50% anticipo) | 14 jul 2026 | ⏳ |
 | Entrega Sprint 1 (base en producción) | 25 jul 2026 | ⚠️ Adelantado en local; falta Vercel |
 | Entrega Sprint 2 (compras y stock) | 8 ago 2026 | ✅ Funcional (adelantado) |
-| Entrega Sprint 3 (ventas y clientes) | 22 ago 2026 | ⏳ |
+| Entrega Sprint 3 (ventas y clientes) | 22 ago 2026 | ✅ Funcional (adelantado) |
 | UAT con el cliente | 26–29 ago 2026 | ⏳ |
 | Entrega final / Pago 2 (50% restante) | 5 sep 2026 | ⏳ |
 
@@ -134,5 +135,8 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 
 - **Categorías/líneas:** el plan del cliente menciona "CRUD de categorías y líneas"; el diseño real las maneja como campo de texto `linea_marca` del producto (sin tabla). Si el cliente espera un catálogo administrable de líneas, es un cambio de alcance a cotizar.
 - **Despliegue en Vercel:** comprometido desde el entregable del Sprint 1; aún no realizado.
-- **Ruta PDF de venta** (`/api/pdf/venta/[id]`): aún no existe (la de proforma y la de Kardex ya están); necesaria para Sprint 3 (POS/ventas).
 - **Carga de imagen de producto a Storage:** implementada en el formulario; pendiente de verificación end-to-end.
+- **Flujo comercial de Sprint 3 (POS, PDF de venta, conversión de proforma, historial por cliente) implementado el 12 jul 2026:** falta correrlo contra un proyecto Supabase real para confirmar que las RPC (`fn_registrar_venta`, `fn_convertir_proforma_a_venta`) y los embeds de PostgREST usados en `/api/pdf/venta/[id]` (desambiguación de FK `ventas_proforma_origen_id_fkey`) funcionan como se espera.
+- **Dashboard (Sprint 4) implementado el 12 jul 2026, adelantado:** `npm run build` compila y tipa la página sin errores; falta verificarla logueado como admin contra datos reales (no se probó con credenciales — ver nota de Sprint 3 arriba, mismo motivo).
+- **Reportes (Sprint 4) implementados el 12 jul 2026:** los 4 reportes comparten `lib/reportes.ts` (server) y `lib/reportes-tipos.ts` (tipos client-safe); PDF vía ruta genérica `/api/pdf/reporte` que re-ejecuta la consulta, Excel en cliente con el helper `xlsx`. `tsc --noEmit` y `next lint` limpios; la ruta `/reportes` compila y protege por `requireAdmin`. Falta verificarla con sesión admin contra datos reales.
+- **Configuración (Sprint 4) implementada el 12 jul 2026:** edición de `configuracion_empresa` (RLS admin) y de `stock_minimo_default`; alta de usuarios con `createAdminClient()` (service_role) — el trigger `on_auth_user_created` crea el perfil desde `user_metadata`; activar/desactivar `perfiles.activo` con guarda para no bloquearse a sí mismo. Requiere `SUPABASE_SERVICE_ROLE_KEY` en el entorno (ya documentado en `.env.local.example`). **Pendiente:** subida del logo de empresa a Storage para usarlo en los PDFs (hoy el logo del sidebar es un archivo estático en `public/`).

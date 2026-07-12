@@ -57,6 +57,43 @@ export async function deleteCliente(id: string) {
   return { success: true }
 }
 
+export type HistorialProforma = {
+  id: string
+  numero: string
+  creado_en: string
+  total: number
+  estado: "vigente" | "convertida" | "vencida"
+}
+
+export type HistorialVenta = {
+  id: string
+  numero: string
+  creado_en: string
+  total: number
+}
+
+export async function getHistorialCliente(clienteId: string) {
+  const supabase = await createClient()
+
+  const [{ data: proformas }, { data: ventas }] = await Promise.all([
+    supabase
+      .from("proformas")
+      .select("id, numero, creado_en, total, estado")
+      .eq("cliente_id", clienteId)
+      .order("creado_en", { ascending: false }),
+    supabase
+      .from("ventas")
+      .select("id, numero, creado_en, total")
+      .eq("cliente_id", clienteId)
+      .order("creado_en", { ascending: false }),
+  ])
+
+  return {
+    proformas: (proformas ?? []) as HistorialProforma[],
+    ventas: (ventas ?? []) as HistorialVenta[],
+  }
+}
+
 export async function searchClientes(query: string) {
   const supabase = await createClient()
   // Sanea el termino: quita los caracteres que rompen la sintaxis de PostgREST .or()
