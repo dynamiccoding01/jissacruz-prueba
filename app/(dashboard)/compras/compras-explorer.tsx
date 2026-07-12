@@ -132,7 +132,11 @@ export function ComprasExplorer({
         />
       </div>
 
-      <TablaDatos columns={columns} data={filtradas} />
+      <TablaDatos
+        columns={columns}
+        data={filtradas}
+        mensajeVacio="Todavía no hay órdenes de compra."
+      />
     </div>
   )
 }

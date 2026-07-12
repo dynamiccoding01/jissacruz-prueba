@@ -98,7 +98,11 @@ export function ProveedoresExplorer({ proveedores }: { proveedores: ProveedorFil
           }
         />
       </div>
-      <TablaDatos columns={columns} data={proveedores} />
+      <TablaDatos
+        columns={columns}
+        data={proveedores}
+        mensajeVacio="Aún no hay proveedores registrados."
+      />
     </div>
   )
 }

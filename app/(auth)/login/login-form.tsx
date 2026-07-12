@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,6 +59,7 @@ export function LoginForm() {
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
+        {loading && <Loader2 className="size-4 animate-spin" />}
         {loading ? "Ingresando..." : "Ingresar"}
       </Button>
     </form>

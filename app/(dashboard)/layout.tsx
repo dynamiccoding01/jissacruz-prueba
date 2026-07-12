@@ -23,7 +23,9 @@ export default async function DashboardLayout({
       <Sidebar rol={perfil.rol} />
       <div className="flex min-h-screen flex-1 flex-col">
         <Header nombre={perfil.nombre_completo} rol={perfil.rol} />
-        <main className="flex-1 bg-muted/20 p-6">{children}</main>
+        <main className="flex-1 bg-muted/30">
+          <div className="mx-auto w-full max-w-[1400px] p-6">{children}</div>
+        </main>
       </div>
     </div>
   )

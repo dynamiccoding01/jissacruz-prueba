@@ -1,19 +1,51 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { ChevronsLeft, ChevronsRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { NAV_ITEMS, type Rol } from "./nav-items"
 
+const STORAGE_KEY = "sisrep:sidebar-colapsado"
+
 export function Sidebar({ rol }: { rol: Rol }) {
   const pathname = usePathname()
   const items = NAV_ITEMS.filter((item) => item.roles.includes(rol))
+  const [colapsado, setColapsado] = useState(false)
+  const [listo, setListo] = useState(false)
+
+  useEffect(() => {
+    setColapsado(localStorage.getItem(STORAGE_KEY) === "1")
+    setListo(true)
+  }, [])
+
+  function toggle() {
+    setColapsado((prev) => {
+      const next = !prev
+      localStorage.setItem(STORAGE_KEY, next ? "1" : "0")
+      return next
+    })
+  }
 
   return (
-    <aside className="flex h-screen w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center px-4 text-lg font-bold">SISREP</div>
-      <nav className="flex-1 space-y-1 px-2">
+    <aside
+      className={cn(
+        "sticky top-0 flex h-screen shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200",
+        listo ? (colapsado ? "w-[4.5rem]" : "w-60") : "w-60"
+      )}
+    >
+      <div className="flex h-14 items-center gap-2 px-4">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-sidebar-accent text-sm font-bold">
+          S
+        </div>
+        {!colapsado && (
+          <span className="truncate text-lg font-bold tracking-tight">SISREP</span>
+        )}
+      </div>
+
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 py-2">
         {items.map((item) => {
           const active = pathname === item.href || pathname.startsWith(item.href + "/")
           const Icon = item.icon
@@ -21,19 +53,45 @@ export function Sidebar({ rol }: { rol: Rol }) {
             <Link
               key={item.href}
               href={item.href}
+              title={colapsado ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                colapsado && "justify-center px-0",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "hover:bg-sidebar-accent/60"
+                  : "text-sidebar-foreground/80 hover:bg-white/10 hover:text-sidebar-foreground"
               )}
             >
-              <Icon className="size-4 shrink-0" />
-              {item.label}
+              {active && (
+                <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-white/90" />
+              )}
+              <Icon className="size-[18px] shrink-0" />
+              {!colapsado && <span className="truncate">{item.label}</span>}
             </Link>
           )
         })}
       </nav>
+
+      <div className="border-t border-sidebar-border p-2.5">
+        <button
+          type="button"
+          onClick={toggle}
+          title={colapsado ? "Expandir menú" : "Colapsar menú"}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/70 transition-colors hover:bg-white/10 hover:text-sidebar-foreground",
+            colapsado && "justify-center px-0"
+          )}
+        >
+          {colapsado ? (
+            <ChevronsRight className="size-[18px] shrink-0" />
+          ) : (
+            <>
+              <ChevronsLeft className="size-[18px] shrink-0" />
+              <span>Colapsar</span>
+            </>
+          )}
+        </button>
+      </div>
     </aside>
   )
 }

@@ -81,13 +81,11 @@ export function KardexView({
         />
       </div>
 
-      {filas.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Este producto todavía no tiene movimientos de Kardex.
-        </p>
-      ) : (
-        <TablaDatos columns={columns} data={filas} />
-      )}
+      <TablaDatos
+        columns={columns}
+        data={filas}
+        mensajeVacio="Este producto todavía no tiene movimientos de Kardex."
+      />
     </div>
   )
 }

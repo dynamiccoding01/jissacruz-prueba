@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react"
+import { useCallback, useRef, useState, useTransition } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Eye, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -54,17 +54,15 @@ export function ProductosExplorer({
     })
   }, [])
 
-  // el servidor ya trajo productosIniciales: no repetir esa misma busqueda
-  // apenas monta, solo cuando el usuario efectivamente escribe algo
-  const primerRender = useRef(true)
-  useEffect(() => {
-    if (primerRender.current) {
-      primerRender.current = false
-      return
-    }
-    const id = setTimeout(() => refrescar(query), 300)
-    return () => clearTimeout(id)
-  }, [query, refrescar])
+  // debounce atado al evento de escritura (no a un useEffect sobre `query`):
+  // asi nunca se dispara solo, ni con la doble invocacion de efectos que hace
+  // React en desarrollo. El servidor ya trajo productosIniciales al montar.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  function onQueryChange(value: string) {
+    setQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => refrescar(value), 300)
+  }
 
   async function onEliminar(id: string) {
     const result = await deleteProducto(id)
@@ -163,7 +161,7 @@ export function ProductosExplorer({
             placeholder="Buscar por código, descripción, equivalente o vehículo..."
             className="pl-8"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => onQueryChange(e.target.value)}
           />
         </div>
         {esAdmin && (
@@ -178,11 +176,12 @@ export function ProductosExplorer({
         )}
       </div>
 
-      {buscando ? (
-        <p className="text-sm text-muted-foreground">Buscando...</p>
-      ) : (
-        <TablaDatos columns={columns} data={productos} />
-      )}
+      <TablaDatos
+        columns={columns}
+        data={productos}
+        loading={buscando}
+        mensajeVacio="No se encontraron productos con ese criterio."
+      />
     </div>
   )
 }

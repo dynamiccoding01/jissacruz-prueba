@@ -90,7 +90,11 @@ export function InventarioExplorer({
           onChange={(e) => setFiltro(e.target.value)}
         />
       </div>
-      <TablaDatos columns={columns} data={filtrados} />
+      <TablaDatos
+        columns={columns}
+        data={filtrados}
+        mensajeVacio="No hay productos que coincidan con el filtro."
+      />
     </div>
   )
 }
