@@ -2,6 +2,7 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import { NextRequest, NextResponse } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getLogoEmpresa } from "@/lib/pdf/logo"
 import { VentaDocument, type VentaItemPdf, type VentaPdf } from "@/lib/pdf/venta-document"
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
@@ -68,6 +69,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       empresa={empresa ?? { nombre: "JISSACRUZ", nit: null, direccion: null, telefono: null }}
       venta={ventaPdf}
       items={items}
+      logo={getLogoEmpresa()}
     />
   )
 

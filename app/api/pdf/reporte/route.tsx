@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
 import { generarReporte, type Periodo, type ReporteTipo } from "@/lib/reportes"
+import { getLogoEmpresa } from "@/lib/pdf/logo"
 import { ReporteDocument } from "@/lib/pdf/reporte-document"
 
 const TIPOS: ReporteTipo[] = ["ventas", "proformas", "mas_vendidos", "inventario"]
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
     <ReporteDocument
       empresa={empresa ?? { nombre: "JISSACRUZ", nit: null }}
       reporte={reporte}
+      logo={getLogoEmpresa()}
     />
   )
 

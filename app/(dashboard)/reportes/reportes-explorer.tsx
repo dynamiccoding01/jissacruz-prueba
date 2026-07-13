@@ -91,15 +91,20 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
     [reporte]
   )
 
-  const columns: ColumnDef<Fila>[] = reporte.columnas.map((c) => ({
-    accessorKey: c.key,
-    header: c.label,
-    cell: ({ row }) => (
-      <span className={c.align === "right" ? "block text-right tabular-nums" : undefined}>
-        {String(row.original[c.key] ?? "")}
-      </span>
-    ),
-  }))
+  const columns: ColumnDef<Fila>[] = reporte.columnas.map((c) => {
+    // El encabezado hereda la misma alineación que su columna para que el
+    // título quede sobre sus valores (los numéricos van a la derecha).
+    const alineado = c.align === "right" ? "text-right" : undefined
+    return {
+      accessorKey: c.key,
+      header: () => <div className={alineado}>{c.label}</div>,
+      cell: ({ row }) => (
+        <div className={c.align === "right" ? "text-right tabular-nums" : undefined}>
+          {String(row.original[c.key] ?? "")}
+        </div>
+      ),
+    }
+  })
 
   return (
     <div className="space-y-5">

@@ -1,4 +1,4 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 import { format } from "date-fns"
 
 import type { Columna, Fila } from "@/lib/reportes-tipos"
@@ -8,10 +8,17 @@ const GRIS = "#B6B7B4"
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 9, fontFamily: "Helvetica", color: "#212121" },
+  encabezado: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  logo: { width: 104, height: 64, objectFit: "contain" },
   empresa: { fontSize: 13, color: AZUL, fontWeight: 700 },
-  empresaMeta: { fontSize: 8, color: "#212121", marginBottom: 12 },
-  titulo: { fontSize: 14, color: AZUL, fontWeight: 700 },
-  subtitulo: { fontSize: 9, color: "#212121", marginBottom: 10 },
+  empresaMeta: { fontSize: 8, color: "#212121", marginTop: 4, marginBottom: 12 },
+  tituloBloque: { alignItems: "flex-end" },
+  titulo: { fontSize: 14, color: AZUL, fontWeight: 700, textAlign: "right" },
+  subtitulo: { fontSize: 9, color: "#212121", textAlign: "right", marginTop: 2 },
   resumenRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   resumenBox: {
     borderWidth: 1,
@@ -50,7 +57,15 @@ export type ReportePdf = {
   resumen: { label: string; value: string }[]
 }
 
-export function ReporteDocument({ empresa, reporte }: { empresa: Empresa; reporte: ReportePdf }) {
+export function ReporteDocument({
+  empresa,
+  reporte,
+  logo,
+}: {
+  empresa: Empresa
+  reporte: ReportePdf
+  logo?: string | null
+}) {
   // Reparte el ancho: la primera columna (descriptiva) se lleva mas espacio.
   const nCols = reporte.columnas.length
   const anchoPrimera = nCols > 1 ? 30 : 100
@@ -60,11 +75,18 @@ export function ReporteDocument({ empresa, reporte }: { empresa: Empresa; report
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.empresa}>{empresa.nombre}</Text>
+        <View style={styles.encabezado}>
+          {logo ? (
+            <Image style={styles.logo} src={logo} />
+          ) : (
+            <Text style={styles.empresa}>{empresa.nombre}</Text>
+          )}
+          <View style={styles.tituloBloque}>
+            <Text style={styles.titulo}>{reporte.titulo}</Text>
+            <Text style={styles.subtitulo}>{reporte.subtitulo}</Text>
+          </View>
+        </View>
         <Text style={styles.empresaMeta}>{empresa.nit ? `NIT: ${empresa.nit}` : " "}</Text>
-
-        <Text style={styles.titulo}>{reporte.titulo}</Text>
-        <Text style={styles.subtitulo}>{reporte.subtitulo}</Text>
 
         <View style={styles.resumenRow}>
           {reporte.resumen.map((r, i) => (

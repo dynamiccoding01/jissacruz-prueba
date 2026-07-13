@@ -1,13 +1,21 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 import { format } from "date-fns"
 
 import { ETIQUETA_MOVIMIENTO, type TipoMovimiento } from "@/lib/kardex"
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 9, fontFamily: "Helvetica" },
-  title: { fontSize: 16, marginBottom: 2, color: "#0E3C6D" },
-  subtitle: { fontSize: 10, marginBottom: 2, color: "#212121" },
-  meta: { fontSize: 9, marginBottom: 12, color: "#212121" },
+  encabezado: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  logo: { width: 104, height: 64, objectFit: "contain" },
+  tituloBloque: { alignItems: "flex-end" },
+  title: { fontSize: 16, marginBottom: 2, color: "#0E3C6D", textAlign: "right" },
+  subtitle: { fontSize: 10, marginBottom: 2, color: "#212121", textAlign: "right" },
+  meta: { fontSize: 9, color: "#212121", textAlign: "right" },
   headerRow: {
     flexDirection: "row",
     backgroundColor: "#0E3C6D",
@@ -37,19 +45,26 @@ export type MovimientoPdf = {
 export function KardexDocument({
   producto,
   movimientos,
+  logo,
 }: {
   producto: { codigo: string; descripcion: string; stock_actual: number }
   movimientos: MovimientoPdf[]
+  logo?: string | null
 }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.title}>Kardex — {producto.codigo}</Text>
-        <Text style={styles.subtitle}>{producto.descripcion}</Text>
-        <Text style={styles.meta}>
-          Stock actual: {producto.stock_actual} · Generado:{" "}
-          {format(new Date(), "dd/MM/yyyy HH:mm")}
-        </Text>
+        <View style={styles.encabezado}>
+          {logo ? <Image style={styles.logo} src={logo} /> : <View />}
+          <View style={styles.tituloBloque}>
+            <Text style={styles.title}>Kardex — {producto.codigo}</Text>
+            <Text style={styles.subtitle}>{producto.descripcion}</Text>
+            <Text style={styles.meta}>
+              Stock actual: {producto.stock_actual} · Generado:{" "}
+              {format(new Date(), "dd/MM/yyyy HH:mm")}
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.headerRow}>
           <Text style={styles.headerCell}>Fecha</Text>

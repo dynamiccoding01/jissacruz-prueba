@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
 import { calcularSaldo } from "@/lib/kardex"
+import { getLogoEmpresa } from "@/lib/pdf/logo"
 import { KardexDocument } from "@/lib/pdf/kardex-document"
 
 export async function GET(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   const movimientos = calcularSaldo(movimientosRaw ?? []).reverse()
 
   const buffer = await renderToBuffer(
-    <KardexDocument producto={producto} movimientos={movimientos} />
+    <KardexDocument producto={producto} movimientos={movimientos} logo={getLogoEmpresa()} />
   )
 
   return new NextResponse(new Uint8Array(buffer), {

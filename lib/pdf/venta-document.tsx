@@ -1,4 +1,4 @@
-import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
+import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 import { format } from "date-fns"
 
 const AZUL = "#0E3C6D"
@@ -6,16 +6,16 @@ const GRIS = "#B6B7B4"
 
 const styles = StyleSheet.create({
   page: { padding: 32, fontSize: 9, fontFamily: "Helvetica", color: "#212121" },
-  empresa: { fontSize: 15, color: AZUL, fontWeight: 700 },
-  empresaMeta: { fontSize: 8, color: "#212121" },
-  tituloRow: {
-    marginTop: 14,
-    marginBottom: 10,
+  encabezado: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
   },
-  titulo: { fontSize: 14, color: AZUL, fontWeight: 700 },
+  logo: { width: 130, height: 80, objectFit: "contain" },
+  empresa: { fontSize: 15, color: AZUL, fontWeight: 700 },
+  empresaMeta: { fontSize: 8, color: "#212121", marginTop: 4, marginBottom: 12 },
+  tituloBloque: { alignItems: "flex-end" },
+  titulo: { fontSize: 14, color: AZUL, fontWeight: 700, marginBottom: 3 },
   metaRight: { fontSize: 9, textAlign: "right" },
   clienteBox: {
     borderWidth: 1,
@@ -96,10 +96,12 @@ export function VentaDocument({
   empresa,
   venta,
   items,
+  logo,
 }: {
   empresa: Empresa
   venta: VentaPdf
   items: VentaItemPdf[]
+  logo?: string | null
 }) {
   const descMonto =
     venta.descuento_tipo === "porcentaje"
@@ -113,22 +115,29 @@ export function VentaDocument({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.empresa}>{empresa.nombre}</Text>
+        <View style={styles.encabezado}>
+          {logo ? (
+            <Image style={styles.logo} src={logo} />
+          ) : (
+            <Text style={styles.empresa}>{empresa.nombre}</Text>
+          )}
+          <View style={styles.tituloBloque}>
+            <Text style={styles.titulo}>COMPROBANTE DE VENTA {venta.numero}</Text>
+            <Text style={styles.metaRight}>
+              Fecha: {format(new Date(venta.creado_en), "dd/MM/yyyy HH:mm")}
+            </Text>
+            {venta.proforma_origen_numero ? (
+              <Text style={styles.metaRight}>
+                Origen: proforma {venta.proforma_origen_numero}
+              </Text>
+            ) : null}
+          </View>
+        </View>
         <Text style={styles.empresaMeta}>
           {[empresa.nit ? `NIT: ${empresa.nit}` : null, empresa.direccion, empresa.telefono]
             .filter(Boolean)
             .join("  ·  ")}
         </Text>
-
-        <View style={styles.tituloRow}>
-          <Text style={styles.titulo}>COMPROBANTE DE VENTA {venta.numero}</Text>
-          <View style={styles.metaRight}>
-            <Text>Fecha: {format(new Date(venta.creado_en), "dd/MM/yyyy HH:mm")}</Text>
-            {venta.proforma_origen_numero ? (
-              <Text>Origen: proforma {venta.proforma_origen_numero}</Text>
-            ) : null}
-          </View>
-        </View>
 
         <View style={styles.clienteBox}>
           <Text style={styles.clienteTitulo}>CLIENTE</Text>

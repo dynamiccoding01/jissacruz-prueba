@@ -2,6 +2,7 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import { NextRequest, NextResponse } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getLogoEmpresa } from "@/lib/pdf/logo"
 import {
   ProformaDocument,
   type ProformaItemPdf,
@@ -72,6 +73,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       empresa={empresa ?? { nombre: "JISSACRUZ", nit: null, direccion: null, telefono: null }}
       proforma={proformaPdf}
       items={items}
+      logo={getLogoEmpresa()}
     />
   )
 
