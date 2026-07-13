@@ -139,4 +139,26 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 - **Flujo comercial de Sprint 3 (POS, PDF de venta, conversión de proforma, historial por cliente) implementado el 12 jul 2026:** falta correrlo contra un proyecto Supabase real para confirmar que las RPC (`fn_registrar_venta`, `fn_convertir_proforma_a_venta`) y los embeds de PostgREST usados en `/api/pdf/venta/[id]` (desambiguación de FK `ventas_proforma_origen_id_fkey`) funcionan como se espera.
 - **Dashboard (Sprint 4) implementado el 12 jul 2026, adelantado:** `npm run build` compila y tipa la página sin errores; falta verificarla logueado como admin contra datos reales (no se probó con credenciales — ver nota de Sprint 3 arriba, mismo motivo).
 - **Reportes (Sprint 4) implementados el 12 jul 2026:** los 4 reportes comparten `lib/reportes.ts` (server) y `lib/reportes-tipos.ts` (tipos client-safe); PDF vía ruta genérica `/api/pdf/reporte` que re-ejecuta la consulta, Excel en cliente con el helper `xlsx`. `tsc --noEmit` y `next lint` limpios; la ruta `/reportes` compila y protege por `requireAdmin`. Falta verificarla con sesión admin contra datos reales.
-- **Configuración (Sprint 4) implementada el 12 jul 2026:** edición de `configuracion_empresa` (RLS admin) y de `stock_minimo_default`; alta de usuarios con `createAdminClient()` (service_role) — el trigger `on_auth_user_created` crea el perfil desde `user_metadata`; activar/desactivar `perfiles.activo` con guarda para no bloquearse a sí mismo. Requiere `SUPABASE_SERVICE_ROLE_KEY` en el entorno (ya documentado en `.env.local.example`). **Pendiente:** subida del logo de empresa a Storage para usarlo en los PDFs (hoy el logo del sidebar es un archivo estático en `public/`).
+- **Configuración (Sprint 4) implementada el 12 jul 2026:** edición de `configuracion_empresa` (RLS admin) y de `stock_minimo_default`; alta de usuarios con `createAdminClient()` (service_role) — el trigger `on_auth_user_created` crea el perfil desde `user_metadata`; activar/desactivar `perfiles.activo` con guarda para no bloquearse a sí mismo. Requiere `SUPABASE_SERVICE_ROLE_KEY` en el entorno (ya documentado en `.env.local.example`). ~~**Pendiente:** subida del logo de empresa a Storage para usarlo en los PDFs~~ → ✅ resuelto el 13 jul 2026 (el logo se sirve desde `public/` e incrusta en los 4 PDFs; ver registro abajo).
+
+---
+
+## Registro de cambios recientes — 13 jul 2026
+
+Trabajo posterior al núcleo de Sprints 3–4, todo commiteado y subido a `main` (commit `60048f6`).
+
+- ✅ **Sincronización con GitHub:** se integró (fast-forward) el commit `86f2030` del equipo ("pdf corregidos, y reportes"), que agregó el helper `lib/pdf/logo.ts` y el logo de empresa a los 4 PDFs (proforma, venta, kardex, reporte) leyendo un asset de `public/`, más `outputFileTracingIncludes` en `next.config.mjs` para que el logo viaje a Vercel.
+- ✅ **Logo transparente definitivo en los PDFs:** se adoptó `public/Logo_transparente_2.png` (logo JISSACRUZ). Venía como RGB con un cuadriculado tenue "quemado" (sin transparencia real); se procesó a 500px y se recortó el fondo casi-blanco a **transparencia real (RGBA)**. Peso final ~163 KB (vs. 1 MB original) → ~217 KB por PDF. `getLogoEmpresa()` y `next.config.mjs` apuntan a ese archivo.
+- ✅ **Logo en el sidebar** (`components/shared/sidebar.tsx`): usa `public/logo-empresa.png`, centrado y ampliado; cae al recuadro "S" si el archivo falta.
+- ✅ **Optimización de carga (rendimiento):** carga diferida de librerías pesadas para aligerar bundles y compiles de dev:
+  - `xlsx` (~1 MB) se importa de forma diferida y solo se descarga al hacer clic en "Exportar Excel" (`lib/excel/export-to-excel.ts`).
+  - `recharts` se carga con `next/dynamic` (ssr:false): el gráfico del Dashboard (`ventas-chart.tsx` + `ventas-chart-inner.tsx`) y el de Reportes (`reportes-explorer.tsx`) ya no pesan en el bundle inicial.
+  - Confirmado que `@react-pdf/renderer` está aislado en `/api/pdf/*` y no contamina bundles de página.
+- 📝 **Nota de rendimiento (no es un bug):** la "lentitud al entrar a una página" que se ve en la consola de dev (`○ Compiling /ruta … ✓ Compiled in Xs`) es la **compilación bajo demanda de Next.js en modo desarrollo**, que ocurre una sola vez por ruta y **no existe en producción** (Vercel / `npm run build`).
+- ⛔ **No usar Turbopack** (`next dev --turbo`) en este proyecto: con Next 14.2.35 rompe al no respetar el `turbopackIgnore` del import opcional de `@opentelemetry/api` dentro de `@supabase/supabase-js` ("Module not found: Can't resolve '@opentelemetry/api'"). El modo normal (`npm run dev`, webpack) lo ignora correctamente y funciona.
+
+### Pendientes que siguen abiertos
+- ⏳ Despliegue en Vercel (subir `SUPABASE_SERVICE_ROLE_KEY` y demás variables de entorno).
+- ⏳ Verificación end-to-end logueado contra el Supabase real (no se pudo probar sin credenciales): PDFs con logo, POS/FIFO, conversión de proforma, alta de usuarios, dashboard y reportes con datos reales.
+- ⏳ UAT con el cliente y manual de usuario.
+- 🧹 Limpieza opcional: `public/logo_transparente.png` (versión intermedia de 500px) quedó sin uso; se puede borrar.
