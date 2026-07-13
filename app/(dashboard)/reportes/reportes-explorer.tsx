@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState, useTransition } from "react"
+import dynamic from "next/dynamic"
 import type { ColumnDef } from "@tanstack/react-table"
 import { BarChart3, FileText, Package, TrendingUp } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -26,7 +27,13 @@ import {
   type ReporteTipo,
 } from "@/lib/reportes-tipos"
 import { obtenerReporte } from "./actions"
-import { ReporteChart } from "./reporte-chart"
+
+// recharts es pesado y solo se usa en el gráfico: se carga diferido (solo en el
+// cliente) para no inflar el bundle inicial de Reportes ni su compile en dev.
+const ReporteChart = dynamic(() => import("./reporte-chart").then((m) => m.ReporteChart), {
+  ssr: false,
+  loading: () => <div className="h-[240px] animate-pulse rounded-md bg-muted/40" />,
+})
 
 const TIPOS: { tipo: ReporteTipo; icon: LucideIcon }[] = [
   { tipo: "ventas", icon: TrendingUp },

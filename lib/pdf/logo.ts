@@ -12,7 +12,7 @@ let cache: string | null | undefined
 export function getLogoEmpresa(): string | null {
   if (cache !== undefined) return cache
   try {
-    const ruta = join(process.cwd(), "public", "logo-empresa.png")
+    const ruta = join(process.cwd(), "public", "Logo_transparente_2.png")
     const data = readFileSync(ruta)
     cache = `data:image/png;base64,${data.toString("base64")}`
   } catch {

@@ -7,10 +7,10 @@ const nextConfig = {
     // con la funcion serverless. Lo incluimos explicitamente para que el logo
     // este disponible en el bundle y aparezca en los PDFs en produccion.
     outputFileTracingIncludes: {
-      "/api/pdf/proforma/[id]": ["./public/logo-empresa.png"],
-      "/api/pdf/venta/[id]": ["./public/logo-empresa.png"],
-      "/api/pdf/reporte": ["./public/logo-empresa.png"],
-      "/api/pdf/kardex": ["./public/logo-empresa.png"],
+      "/api/pdf/proforma/[id]": ["./public/Logo_transparente_2.png"],
+      "/api/pdf/venta/[id]": ["./public/Logo_transparente_2.png"],
+      "/api/pdf/reporte": ["./public/Logo_transparente_2.png"],
+      "/api/pdf/kardex": ["./public/Logo_transparente_2.png"],
     },
   },
 }
