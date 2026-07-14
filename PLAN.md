@@ -162,3 +162,13 @@ Trabajo posterior al núcleo de Sprints 3–4, todo commiteado y subido a `main`
 - ⏳ Verificación end-to-end logueado contra el Supabase real (no se pudo probar sin credenciales): PDFs con logo, POS/FIFO, conversión de proforma, alta de usuarios, dashboard y reportes con datos reales.
 - ⏳ UAT con el cliente y manual de usuario.
 - 🧹 Limpieza opcional: `public/logo_transparente.png` (versión intermedia de 500px) quedó sin uso; se puede borrar.
+
+---
+
+## Registro de cambios recientes — 14 jul 2026
+
+- ✅ **Búsqueda de productos por criterio** (integrada del commit `ed73979` "BUSQUEDA" del equipo): la RPC `fn_buscar_productos` ahora recibe `p_campos text[]`, y el usuario elige por qué campos buscar (código, descripción, equivalente, línea/marca, vehículo) con el componente compartido `components/shared/criterios-busqueda.tsx`, reutilizado en Catálogo, Compras, Proformas y POS. **Requiere** haber corrido `supabase/10_busqueda_por_criterio.sql` en Supabase (ya ejecutado ✅).
+- ✅ **Rediseño del sidebar** (`components/shared/sidebar.tsx` + `components/shared/nav-items.ts`):
+  - Botones **agrupados por función** en 5 secciones con título: Principal, Inventario, Compras, Ventas y Administración. Cada grupo se oculta si no tiene ítems visibles para el rol (p. ej. un vendedor solo ve Inventario y Ventas).
+  - Sidebar **estilo Supabase**: angosto por defecto (solo íconos + separadores entre grupos), se expande al pasar el cursor **flotando sobre el contenido** (panel `fixed` con `z-50`, sin empujar la página), y botón **"Fijar menú"** (`Pin`/`PinOff`) para dejarlo abierto de forma persistente (`localStorage`).
+  - Solo visual: sin cambios en navegación, permisos ni páginas. `tsc --noEmit` y `next lint` limpios.
