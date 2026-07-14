@@ -31,6 +31,7 @@ Si tu base ya está creada y en uso, no vuelvas a correr `00_setup_completo.sql`
 | # | Script | Fase | Qué hace |
 |---|---|---|---|
 | 9 | `09_busqueda_productos.sql` | 3 — Catálogo | Función `fn_buscar_productos(texto)`: busca por código, descripción, línea/marca, código equivalente o vehículo compatible en una sola llamada. |
+| 10 | `10_busqueda_por_criterio.sql` | 3 — Catálogo | **Reemplaza la firma de `fn_buscar_productos`** por `(texto, campos text[])`: la UI ahora manda los criterios que el usuario marca (código, descripción, equivalente, línea/marca, vehículo) y la búsqueda filtra solo por esos (OR entre ellos; vacío ⇒ todos). Elimina la firma vieja de 1 argumento para evitar ambigüedad de sobrecarga. **Obligatorio: la app llama con 2 argumentos, sin este script la búsqueda deja de funcionar.** |
 
 ### Prerrequisito antes de 06 y 08: usuarios de prueba
 

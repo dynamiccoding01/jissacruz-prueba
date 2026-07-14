@@ -147,9 +147,12 @@ export async function getProductoConDetalle(id: string) {
   }
 }
 
-export async function searchProductos(query: string) {
+export async function searchProductos(query: string, campos: string[] = []) {
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc("fn_buscar_productos", { p_query: query })
+  const { data, error } = await supabase.rpc("fn_buscar_productos", {
+    p_query: query,
+    p_campos: campos,
+  })
   if (error) return []
   return data ?? []
 }

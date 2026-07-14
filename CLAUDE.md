@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Qué es esto
 
-"SISREP": sistema web de inventario, compras y ventas de repuestos para camiones de alto tonelaje (cliente: **JISSACRUZ**, Santa Cruz, Bolivia). Implementación en curso siguiendo [PLAN.md](PLAN.md) fase por fase / sprint por sprint (ver "Estado general" al inicio de ese archivo — Sprints 1 y 2 casi completos, Sprint 3 en construcción, falta el despliegue en Vercel). Todo el dominio, la base de datos y la UI están en español; mantener el español en nombres de tablas, rutas, componentes y textos de interfaz.
+"SISREP": sistema web de inventario, compras y ventas de repuestos para camiones de alto tonelaje (cliente: **JISSACRUZ**, Santa Cruz, Bolivia). Implementación en curso siguiendo [PLAN.md](PLAN.md) fase por fase / sprint por sprint (ver "Estado general" al inicio de ese archivo — avance ~90%: Sprints 1–3 funcionales de punta a punta en la UI y el grueso del Sprint 4 construido —dashboard con KPIs, los 4 reportes con exportación PDF/Excel y la pantalla de Configuración—; quedan el **despliegue en Vercel**, la UAT y el manual de usuario). Todo el dominio, la base de datos y la UI están en español; mantener el español en nombres de tablas, rutas, componentes y textos de interfaz.
 
 ## Documentos fuente de verdad
 
@@ -43,13 +43,15 @@ Scripts en [supabase/](supabase/README.md), pensados para pegarse en el SQL Edit
 
 ## Arquitectura
 
-**Server Components por defecto; Server Actions (`"use server"`, en `actions.ts` por módulo) para toda mutación; Route Handlers solo bajo `/api/pdf/*`** para generar PDFs con `@react-pdf/renderer` (no hay API REST pública). Cada módulo de `app/(dashboard)/<modulo>/` sigue el mismo patrón: `page.tsx` (Server Component, carga inicial de datos) + `<modulo>-explorer.tsx` (Client Component, tabla/filtros con `@tanstack/react-table`) + `<modulo>-form.tsx` (react-hook-form + zod) + `actions.ts` (Server Actions, valida con el schema de `lib/validations/<modulo>.ts` antes de tocar Supabase).
+**Server Components por defecto; Server Actions (`"use server"`, en `actions.ts` por módulo) para toda mutación; Route Handlers solo bajo `/api/pdf/*`** para generar PDFs con `@react-pdf/renderer` (no hay API REST pública). Cada módulo de `app/(dashboard)/<modulo>/` sigue el mismo patrón: `page.tsx` (Server Component, carga inicial de datos) + `<modulo>-explorer.tsx` (Client Component, tabla/filtros con `@tanstack/react-table`) + `<modulo>-form.tsx` (react-hook-form + zod) + `actions.ts` (Server Actions, valida con el schema de `lib/validations/<modulo>.ts` antes de tocar Supabase). Módulos existentes: `productos`, `inventario`, `kardex`, `proveedores`, `compras`, `clientes`, `proformas`, `ventas` (POS + historial), `reportes`, `dashboard`, `configuracion`.
+
+**PDF y Excel**: cada documento PDF vive en `lib/pdf/<x>-document.tsx` y se sirve por su Route Handler en `app/api/pdf/<x>/` (`kardex`, `proforma/[id]`, `venta/[id]`, `reporte`). La exportación a Excel es cliente puro vía SheetJS en [lib/excel/export-to-excel.ts](lib/excel/export-to-excel.ts). `dashboard` y `reportes` grafican con `recharts` (cargado en un componente `*-inner`/`*-chart` cliente); la lógica de los 4 reportes está en [lib/reportes.ts](lib/reportes.ts) + [lib/reportes-tipos.ts](lib/reportes-tipos.ts).
 
 **El kardex es la fuente de verdad del stock, pero `productos.stock_actual` es una columna cacheada** mantenida por el trigger `trg_kardex_stock` sobre cada insert en `kardex_movimientos` (no una vista) — un segundo trigger bloquea que un `UPDATE` directo sobre `productos` la modifique. Valorización FIFO por lotes vía `cantidad_restante_lote`, con desempate por la columna `consecutivo` (identity) cuando dos lotes comparten `creado_en`.
 
 **Toda operación que mueva stock pasa por una función Postgres `security definer` vía `supabase.rpc()`** — nunca updates directos ni múltiples queries no atómicas desde el cliente: `fn_registrar_venta`, `fn_recibir_orden_compra`, `fn_convertir_proforma_a_venta`, `fn_ajuste_stock`. `ventas` y `kardex_movimientos` no tienen política RLS de `insert`: solo estas RPC (que corren como `security definer`) pueden escribir ahí. Ver ejemplo de uso en [app/(dashboard)/compras/actions.ts](<app/(dashboard)/compras/actions.ts>): `supabase.rpc("fn_recibir_orden_compra", { p_orden_id })` seguido de `revalidatePath` en cada ruta afectada (compras, inventario, kardex, productos).
 
-Búsqueda avanzada de productos (código, equivalente, descripción, línea/marca, vehículo compatible) va por una sola RPC, `fn_buscar_productos(texto)`, reutilizada por catálogo, compras y proformas — no reimplementar el filtro en el cliente.
+Búsqueda avanzada de productos (código, equivalente, descripción, línea/marca, vehículo compatible) va por una sola RPC, `fn_buscar_productos(texto, campos text[])`, reutilizada por catálogo, compras, ventas/POS y proformas — no reimplementar el filtro en el cliente. El usuario elige por qué campos buscar (multi-selección) con el componente compartido [components/shared/criterios-busqueda.tsx](components/shared/criterios-busqueda.tsx); esos criterios (`campos`) se pasan a la RPC, que filtra solo por los marcados (OR entre ellos; arreglo vacío ⇒ busca en todos). Los `id` de los criterios en ese componente deben coincidir con los que evalúa el SQL (`supabase/10_busqueda_por_criterio.sql`).
 
 **Auth y roles**: [lib/auth/session.ts](lib/auth/session.ts) expone `getPerfil()` (cacheado por request con `cache()` de React) y `requireAdmin()` para guardas de página. `app/(dashboard)/layout.tsx` ya valida sesión/`activo` y hace `signOut()` + redirect a `/login` si falla; las páginas exclusivas de admin deben llamar `requireAdmin()` igual, porque el layout no filtra por rol. Roles: `admin` (todo) y `vendedor` (solo Productos/Inventario en lectura, Proformas, Ventas/POS, Clientes — ver [components/shared/nav-items.ts](components/shared/nav-items.ts) para la matriz por ítem de navegación y FLUJO.md §10 para la matriz completa). RLS activo en todas las tablas; sin registro público, usuarios creados por invitación del admin desde Supabase Auth.
 
@@ -63,7 +65,7 @@ Moneda: Boliviano (Bs). Una sola sucursal.
 
 ## Reglas de ejecución (obligatorias)
 
-- Antes de tocar un módulo, revisar su estado real en PLAN.md (no asumir por el nombre de la carpeta que algo está terminado — p. ej. `app/(dashboard)/ventas/` existe como stub pero el POS todavía no está implementado).
+- Antes de tocar un módulo, revisar su estado real en la columna **Estado** de PLAN.md (no asumir por el nombre de la carpeta ni por que exista un archivo que la funcionalidad esté completa o pulida — a ~90% lo que falta es transversal: despliegue en Vercel, UAT y manual, no la implementación de módulos).
 - No introducir tecnologías fuera de las definidas en TRD.md sin consultarlo explícitamente.
 - Toda operación que modifique stock debe pasar por las funciones RPC transaccionales — nunca actualizar stock desde el cliente ni con múltiples queries no atómicas.
 - Ante ambigüedad no cubierta por los documentos, señalar la duda en lugar de asumir.

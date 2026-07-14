@@ -20,6 +20,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { StockBadge } from "@/components/shared/stock-badge"
 import { TablaDatos } from "@/components/shared/tabla-datos"
+import {
+  CriteriosBusqueda,
+  CAMPOS_DEFECTO,
+  type CampoBusqueda,
+} from "@/components/shared/criterios-busqueda"
 import type { Rol } from "@/components/shared/nav-items"
 import { deleteProducto, searchProductos } from "./actions"
 import { ProductoForm } from "./producto-form"
@@ -44,15 +49,26 @@ export function ProductosExplorer({
 }) {
   const [productos, setProductos] = useState<ProductoFila[]>(productosIniciales)
   const [query, setQuery] = useState("")
+  const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [buscando, startTransition] = useTransition()
   const esAdmin = rol === "admin"
 
+  // ref para que refrescar() lea siempre los criterios actuales sin recrearse
+  const camposRef = useRef(campos)
+  camposRef.current = campos
+
   const refrescar = useCallback((q: string) => {
     startTransition(async () => {
-      const resultado = await searchProductos(q)
+      const resultado = await searchProductos(q, camposRef.current)
       setProductos(resultado as ProductoFila[])
     })
   }, [])
+
+  function onCamposChange(next: CampoBusqueda[]) {
+    setCampos(next)
+    camposRef.current = next
+    if (query.trim()) refrescar(query)
+  }
 
   // debounce atado al evento de escritura (no a un useEffect sobre `query`):
   // asi nunca se dispara solo, ni con la doble invocacion de efectos que hace
@@ -154,26 +170,29 @@ export function ProductosExplorer({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por código, descripción, equivalente o vehículo..."
-            className="pl-8"
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-          />
+      <div className="space-y-3">
+        <CriteriosBusqueda value={campos} onChange={onCamposChange} />
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative max-w-sm flex-1">
+            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Escribí para buscar un producto..."
+              className="pl-8"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+            />
+          </div>
+          {esAdmin && (
+            <ProductoForm
+              onSaved={() => refrescar(query)}
+              trigger={
+                <Button>
+                  <Plus className="size-4" /> Nuevo producto
+                </Button>
+              }
+            />
+          )}
         </div>
-        {esAdmin && (
-          <ProductoForm
-            onSaved={() => refrescar(query)}
-            trigger={
-              <Button>
-                <Plus className="size-4" /> Nuevo producto
-              </Button>
-            }
-          />
-        )}
       </div>
 
       <TablaDatos

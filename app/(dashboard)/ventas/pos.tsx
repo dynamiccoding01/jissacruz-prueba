@@ -17,6 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  CriteriosBusqueda,
+  CAMPOS_DEFECTO,
+  type CampoBusqueda,
+} from "@/components/shared/criterios-busqueda"
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
 import { buscarProductosParaVenta, registrarVenta, type ProductoBusqueda } from "./actions"
 
@@ -33,6 +38,7 @@ const bs = (n: number) => `Bs ${n.toFixed(2)}`
 export function Pos({ clientes }: { clientes: { id: string; nombre: string }[] }) {
   const [loading, setLoading] = useState(false)
   const [busqueda, setBusqueda] = useState("")
+  const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
   const buscadorRef = useRef<HTMLInputElement>(null)
@@ -66,16 +72,21 @@ export function Pos({ clientes }: { clientes: { id: string; nombre: string }[] }
     buscadorRef.current?.focus()
   }
 
-  async function onBuscar(texto: string) {
+  async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     setBusqueda(texto)
     if (!texto.trim()) {
       setResultados([])
       return
     }
     setBuscando(true)
-    const data = await buscarProductosParaVenta(texto)
+    const data = await buscarProductosParaVenta(texto, camposBusqueda)
     setBuscando(false)
     setResultados(data)
+  }
+
+  function onCamposChange(next: CampoBusqueda[]) {
+    setCampos(next)
+    if (busqueda.trim()) onBuscar(busqueda, next)
   }
 
   function agregarProducto(p: ProductoBusqueda) {
@@ -123,13 +134,14 @@ export function Pos({ clientes }: { clientes: { id: string; nombre: string }[] }
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_26rem]">
       <div className="space-y-3">
         <Label>Buscar producto</Label>
+        <CriteriosBusqueda value={campos} onChange={onCamposChange} />
         <div className="relative">
           <Search className="absolute left-3 top-3 size-5 text-muted-foreground" />
           <Input
             ref={buscadorRef}
             autoFocus
             className="h-12 pl-10 text-base"
-            placeholder="Código, descripción, equivalente o vehículo..."
+            placeholder="Escribí para buscar un producto..."
             value={busqueda}
             onChange={(e) => onBuscar(e.target.value)}
           />

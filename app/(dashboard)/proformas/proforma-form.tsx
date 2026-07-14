@@ -28,6 +28,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import {
+  CriteriosBusqueda,
+  CAMPOS_DEFECTO,
+  type CampoBusqueda,
+} from "@/components/shared/criterios-busqueda"
+import {
   proformaSchema,
   calcularSubtotalLinea,
   calcularTotales,
@@ -58,6 +63,7 @@ export function ProformaForm({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [busqueda, setBusqueda] = useState("")
+  const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
   const router = useRouter()
@@ -90,16 +96,21 @@ export function ProformaForm({
     setBusqueda("")
   }
 
-  async function onBuscar(texto: string) {
+  async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     setBusqueda(texto)
     if (!texto.trim()) {
       setResultados([])
       return
     }
     setBuscando(true)
-    const data = await buscarProductosParaProforma(texto)
+    const data = await buscarProductosParaProforma(texto, camposBusqueda)
     setBuscando(false)
     setResultados(data)
+  }
+
+  function onCamposChange(next: CampoBusqueda[]) {
+    setCampos(next)
+    if (busqueda.trim()) onBuscar(busqueda, next)
   }
 
   function agregarProducto(p: ProductoBusqueda) {
@@ -193,11 +204,12 @@ export function ProformaForm({
 
           <div className="space-y-2">
             <Label>Agregar productos</Label>
+            <CriteriosBusqueda value={campos} onChange={onCamposChange} />
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
                 className="pl-8"
-                placeholder="Buscar por código, descripción, equivalente o vehículo..."
+                placeholder="Escribí para buscar un producto..."
                 value={busqueda}
                 onChange={(e) => onBuscar(e.target.value)}
               />

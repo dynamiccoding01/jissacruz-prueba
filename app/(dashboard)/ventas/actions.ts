@@ -12,9 +12,15 @@ export type ProductoBusqueda = {
   precio: number
 }
 
-export async function buscarProductosParaVenta(query: string): Promise<ProductoBusqueda[]> {
+export async function buscarProductosParaVenta(
+  query: string,
+  campos: string[] = []
+): Promise<ProductoBusqueda[]> {
   const supabase = await createClient()
-  const { data, error } = await supabase.rpc("fn_buscar_productos", { p_query: query })
+  const { data, error } = await supabase.rpc("fn_buscar_productos", {
+    p_query: query,
+    p_campos: campos,
+  })
   if (error) return []
   return ((data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]).map(
     (p) => ({ id: p.id, codigo: p.codigo, descripcion: p.descripcion, precio: Number(p.precio) })

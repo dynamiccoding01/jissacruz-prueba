@@ -27,6 +27,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import {
+  CriteriosBusqueda,
+  CAMPOS_DEFECTO,
+  type CampoBusqueda,
+} from "@/components/shared/criterios-busqueda"
 import { ordenCompraSchema, type OrdenCompraInput } from "@/lib/validations/compra"
 import { buscarProductosParaCompra, createOrdenCompra } from "./actions"
 
@@ -46,6 +51,7 @@ export function OrdenCompraForm({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [busquedaProducto, setBusquedaProducto] = useState("")
+  const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [resultados, setResultados] = useState<
     { id: string; codigo: string; descripcion: string }[]
   >([])
@@ -68,16 +74,21 @@ export function OrdenCompraForm({
   const items = useFieldArray({ control, name: "items" })
   const proveedorId = watch("proveedor_id")
 
-  async function onBuscarProducto(texto: string) {
+  async function onBuscarProducto(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     setBusquedaProducto(texto)
     if (!texto.trim()) {
       setResultados([])
       return
     }
     setBuscando(true)
-    const data = await buscarProductosParaCompra(texto)
+    const data = await buscarProductosParaCompra(texto, camposBusqueda)
     setBuscando(false)
     setResultados(data)
+  }
+
+  function onCamposChange(next: CampoBusqueda[]) {
+    setCampos(next)
+    if (busquedaProducto.trim()) onBuscarProducto(busquedaProducto, next)
   }
 
   function agregarProducto(producto: { id: string; codigo: string; descripcion: string }) {
@@ -157,11 +168,12 @@ export function OrdenCompraForm({
 
           <div className="space-y-2">
             <Label>Agregar productos</Label>
+            <CriteriosBusqueda value={campos} onChange={onCamposChange} />
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
               <Input
                 className="pl-8"
-                placeholder="Buscar por código, descripción o equivalente..."
+                placeholder="Escribí para buscar un producto..."
                 value={busquedaProducto}
                 onChange={(e) => onBuscarProducto(e.target.value)}
               />
