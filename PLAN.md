@@ -110,6 +110,124 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 
 ---
 
+## SPRINT 5 — Correcciones y nuevos requerimientos del cliente (15–17 jul 2026)
+
+**Origen:** reunión con el cliente (Rodrigo) del **14 jul 2026**, posterior a la entrega del plan original. Las imágenes y el PDF de referencia provienen del **sistema que el cliente usa hoy ("Velacuss")**: son modelo de estructura/formato — los datos reales son de **JISSACRUZ**.
+
+> ⚠️ **Nota de alcance:** el bloque **multi-sucursal (C2, C4, C5)** re-arquitectura el núcleo de inventario (kardex, cache de stock, FIFO, RPC) y, junto con los **precios por mayor (C3)**, son cambios de fondo respecto al plan original ("una sola sucursal", descuento simple) → **confirmar con el cliente si van como alcance adicional a cotizar** o como trabajo comprometido. **Fecha objetivo del sprint: 17 jul 2026.**
+
+**Objetivo:** sucursales (multi-almacén) con stock por sucursal, precios por mayor con vigencia, traspasos entre sucursales, búsqueda de cliente por código y adecuación de los PDF al formato del cliente.
+
+| Historia de Usuario / Tarea | Prioridad | Estado |
+|---|---|---|
+| **C1 · Búsqueda de cliente por código (= NIT)** en proforma y venta: reemplazar el `<Select>` de cliente por un buscador por código/NIT que autocomplete NIT/CI factura, nombre de factura y complemento (ver campo "Código cliente 🔍" del sistema del cliente). Implica campos nuevos en la proforma (formulario + BD). | Alta | ⏳ Pendiente |
+| **C2 · Sucursales / multi-almacén** ⚠️ *re-arquitectura*: los almacenes se manejan como sucursales; el stock deja de ser un número por producto y pasa a ser por **(producto × sucursal)**. Tabla `sucursales`, `sucursal_id` en `kardex_movimientos`, cache de stock por sucursal, FIFO por sucursal y adaptación de **todas** las RPC de movimiento (`fn_registrar_venta`, `fn_recibir_orden_compra`, `fn_ajuste_stock`, conversión). En los listados, mostrar el stock por sucursal (badges `sucursal:cantidad`, `BO` = pendiente/backorder). | Alta | ⏳ Pendiente |
+| **C3 · Precios por mayor escalonados con fecha límite**: por producto, varias escalas de precio según cantidad mínima (p. ej. ≥20, ≥100, ≥400), cada una con su precio y su **fecha de vigencia** (`Lim`); aplicar el precio correcto en proforma/venta según cantidad y fecha, validando contra el precio base. Nueva tabla de precios escalonados (distinto del descuento actual por línea). | Alta | ⏳ Pendiente |
+| **C4 · Módulo de pedido / traspaso entre sucursales**: transferir producto de una sucursal/almacén a otra (salida en origen + entrada en destino) con su documento de pedido. *(Depende de C2.)* | Alta | ⏳ Pendiente |
+| **C5 · Sucursal del usuario logueado**: asociar cada usuario (`perfiles`) a una sucursal, mostrarla en la UI (header/sidebar) y usarla por defecto en las operaciones. *(Depende de C2.)* | Media | ⏳ Pendiente |
+| **P · Adecuar los PDF de proforma y venta al modelo del cliente** — ver detalle P1–P10 abajo. | Alta | ⏳ Pendiente |
+
+**Detalle de la HU "P" — correcciones al PDF (modelo de proforma del cliente).** Ajustar `lib/pdf/proforma-document.tsx` y aplicar el mismo criterio a `lib/pdf/venta-document.tsx`:
+
+| # | Corrección | ¿Existe hoy? | Estado |
+|---|---|---|---|
+| P1 | **Encabezado tipo modelo**: a la izquierda EMPRESA / DIRECCIÓN / **SUCURSAL** (etiqueta : valor), logo al centro, a la derecha **FECHA** / **VENDEDOR**. | Parcial (hoy logo a la izq. + meta a la der.; sin sucursal ni vendedor) | ⏳ |
+| P2 | Mostrar **SUCURSAL** (número) y **VENDEDOR** (nombre del usuario que emite la proforma). | No | ⏳ (se apoya en C2/C5) |
+| P3 | Título **"PROFORMA No. NNNN"** (número correlativo). | Parcial (hoy "PROFORMA {numero}") | ⏳ |
+| P4 | Recuadro de cliente con **Señor(es) / Contacto / Dirección / TIPO DE PAGO**. | Parcial (hoy CLIENTE + CI-NIT·Tel·Dir; el pago va en el header) | ⏳ |
+| P5 | **GLOSA** ubicada arriba de la tabla de ítems. | Sí, pero abajo | ⏳ |
+| P6 | Tabla de ítems con columnas **N° · CANTIDAD · CÓDIGO · LÍNEA · DETALLE · P. UNIT. · IMPORTE** (agregar N° y **LÍNEA** = `linea_marca`, renombrar Descripción→Detalle; el modelo no lleva columna de descuento por línea). | Parcial | ⏳ |
+| P7 | Total como **"TOTAL IMPORTE Bs. X"** con separador de miles. | Parcial (hoy "TOTAL Bs X", sin separador de miles) | ⏳ |
+| P8 | **Importe en literal** ("Tres mil sesenta 00/100 Bolivianos") — requiere función número→texto en español. | No | ⏳ |
+| P9 | Leyenda **"La cotización solo tiene validez por el plazo de N día(s)."** | Parcial (texto distinto en el pie) | ⏳ |
+| P10 | **"Tiempo de entrega: N día(s)."** — campo nuevo (agregar a la proforma: formulario + BD, además del PDF). | No | ⏳ |
+
+**Notas de dependencia:** P2 (sucursal/vendedor) se apoya en C2/C5; el resto (P3–P9) se puede hacer directamente sobre el PDF actual. P10 y parte de C1 (nombre de factura / complemento) implican campos nuevos en la proforma (formulario + BD), no solo en el PDF.
+
+**Entregable Sprint 5:** sistema con sucursales y stock por almacén, traspasos entre sucursales, precios por mayor vigentes, búsqueda de cliente por código y PDF (proforma/venta) alineados al formato del cliente.
+**Estado del entregable:** ⏳ Pendiente — **fecha objetivo 17 jul 2026**; el alcance del bloque multi-sucursal y precios por mayor queda por confirmar/cotizar con el cliente.
+
+---
+
+## Anexo técnico — Análisis de integración: Sucursales (C2/C5) y Pedidos/Traspasos (C4)
+
+> Diseño para implementar después (Sprint 5). Basado en la arquitectura **real** de stock: el kardex (`kardex_movimientos`) es la fuente de verdad, `productos.stock_actual` es un **cache por trigger** (`trg_kardex_stock` → `fn_kardex_aplica_stock`), la valorización es **FIFO por lotes** vía `fn_fifo_consumir`, y todo movimiento pasa por las 4 RPC `SECURITY DEFINER` (`fn_registrar_venta`, `fn_recibir_orden_compra`, `fn_ajuste_stock`, `fn_convertir_proforma_a_venta`). **Punto de partida hoy: una sola sucursal implícita.**
+
+### 1. El cambio de fondo
+Hoy el stock es **un número por producto**. Multi-sucursal exige que el stock sea por **(producto × sucursal)**. Eso obliga a tocar el kardex, el cache de stock, el FIFO y las 4 RPC de movimiento — es **reescribir el núcleo de inventario**, no un agregado aislado.
+
+### 2. Modelo de datos nuevo / modificado
+**Tablas nuevas**
+- `sucursales`: `id uuid` PK, `numero`/`codigo` UNIQUE (para mostrar "SUCURSAL 2"), `nombre`, `direccion`, `telefono`, `activo`. Semilla con las sucursales reales del cliente.
+- `producto_stock_sucursal`: `(producto_id, sucursal_id, stock_actual int)`, PK compuesta `(producto_id, sucursal_id)` — **el nuevo cache de stock, por sucursal**. Solo lo escribe el trigger del kardex; sin políticas de insert/update (mismo criterio que `productos.stock_actual` hoy).
+
+**Columnas nuevas**
+- `kardex_movimientos.sucursal_id` NOT NULL (FK) — **cada movimiento pertenece a una sucursal**; los lotes FIFO (`cantidad_restante_lote`) quedan por (producto, sucursal) automáticamente.
+- `perfiles.sucursal_id` (FK) — sucursal del usuario (C5).
+- `ordenes_compra.sucursal_id` — a qué sucursal entra la mercadería recibida.
+- `proformas.sucursal_id` y `ventas.sucursal_id` — sucursal de emisión/venta (también alimenta el PDF, P2).
+- `productos.stock_actual` → se conserva como **total global** (suma de sucursales) para no romper reportes/vistas actuales; el detalle por sucursal vive en `producto_stock_sucursal`.
+
+### 3. Lógica a reescribir (SQL)
+- **`fn_kardex_aplica_stock`** (trigger): en vez de sumar solo a `productos.stock_actual`, hace **upsert en `producto_stock_sucursal`** por `new.sucursal_id` **y** actualiza el total global.
+- **`fn_fifo_consumir(p_producto_id, p_sucursal_id, p_cantidad)`**: bloquea la fila de `producto_stock_sucursal` de esa sucursal (`for update`), valida el stock de **esa** sucursal, y consume lotes `where producto_id = … and sucursal_id = …` ordenados por `creado_en, consecutivo`.
+- **`fn_recibir_orden_compra`**: usa `ordenes_compra.sucursal_id` en los inserts de kardex.
+- **`fn_registrar_venta`**: recibe la sucursal (del payload o derivada de `perfiles.sucursal_id`), la pasa a `fn_fifo_consumir` y al kardex de salida; guarda `ventas.sucursal_id`.
+- **`fn_ajuste_stock`**: agrega `p_sucursal_id`.
+- **`fn_convertir_proforma_a_venta`**: propaga `proformas.sucursal_id` a la venta.
+- **`fn_productos_before_update`**: se mantiene para el total global; `producto_stock_sucursal` se protege por RLS (sin insert/update para `authenticated`).
+
+### 4. Módulo de Pedidos / Traspaso (C4) — depende de §2–§3
+**Tablas nuevas**
+- `pedidos_traspaso`: `id`, `numero` PED-XXXX (secuencia + trigger BEFORE INSERT, mismo patrón que proformas/ventas), `sucursal_origen_id`, `sucursal_destino_id` (check `origen <> destino`), `estado` ∈ {`pendiente`,`enviado`,`recibido`,`cancelado`}, `creado_por`, `creado_en`, `fecha_envio`, `fecha_recepcion`, `notas`.
+- `pedido_traspaso_items`: `pedido_id`, `producto_id`, `cantidad`, `costo_fifo_unitario`.
+
+**RPC nuevas (SECURITY DEFINER, transaccionales)** — flujo en **dos pasos** (modela el "pedido" real con estado *en tránsito*):
+- `fn_enviar_traspaso(p_pedido_id)`: por ítem, `fn_fifo_consumir` en la **sucursal origen** (movimiento `salida_traspaso`), guarda el costo; marca `enviado`.
+- `fn_recibir_traspaso(p_pedido_id)`: por ítem, **entrada** en la **sucursal destino** (`entrada_traspaso`) con el costo FIFO del origen como nuevo lote; marca `recibido`.
+- Un traspaso **no crea margen**: el costo del lote en destino = costo consumido en origen.
+- Kardex: nuevos `tipo_movimiento` `salida_traspaso`/`entrada_traspaso` y `referencia_tipo` `pedido`.
+- *Alternativa simple* (si no quieren estado en tránsito): un solo `fn_traspaso` que hace salida+entrada en la misma transacción.
+
+### 5. RLS y visibilidad por rol
+- `sucursales`: lectura para todos los autenticados; alta/edición solo admin.
+- `producto_stock_sucursal`: lectura para autenticados (todos ven el stock de todas las sucursales, necesario para decidir traspasos); escritura solo vía trigger/RPC.
+- `pedidos_traspaso`/items: crear por usuario autenticado (origen = su sucursal); enviar/recibir vía RPC.
+- **Decisión abierta:** ¿el vendedor ve solo ventas/proformas/pedidos de su sucursal (RLS filtrada por `sucursal_id`) o ve todo? Afecta las políticas de ventas, proformas y pedidos.
+
+### 6. Migración de datos (la base ya está poblada)
+1. Crear `sucursales` e insertar la **sucursal por defecto** (la actual del cliente).
+2. `kardex_movimientos.sucursal_id`: agregar **nullable** → backfill de todo el histórico a la sucursal por defecto → `set NOT NULL`.
+3. Construir `producto_stock_sucursal` desde `productos.stock_actual` (todo a la sucursal por defecto) o recomputar desde el kardex.
+4. Agregar y backfillear `sucursal_id` en `perfiles`, `ordenes_compra`, `proformas`, `ventas`.
+5. Scripts nuevos e **idempotentes**: `11_sucursales.sql` (modelo + migración + RPC adaptadas) y `12_pedidos_traspaso.sql` (pedidos + RPC de traspaso). No re-correr `00`.
+
+### 7. Impacto en la app (frontend)
+- **Header**: mostrar la sucursal del usuario (C5); para admin, selector de sucursal activa.
+- **Inventario/Productos**: badges de stock por sucursal (join a `producto_stock_sucursal`) + total.
+- **Compras**: elegir sucursal destino de la orden.
+- **POS y Proformas**: operan sobre la sucursal del usuario (selector para admin); pasan `sucursal_id` a las RPC.
+- **Nuevo módulo `app/(dashboard)/pedidos/`**: crear/enviar/recibir traspasos; ítem de nav nuevo. Opcional: pantalla admin de **Sucursales**.
+- **Reportes/Dashboard**: filtro por sucursal.
+- **PDF (P1/P2)**: SUCURSAL y VENDEDOR salen de `ventas/proformas.sucursal_id` y `vendido_por`/`creado_por`.
+
+### 8. Orden de implementación sugerido
+1. **Base sucursal** (no rompe stock): `sucursales` + `perfiles.sucursal_id` + UI de sucursal del usuario (C5).
+2. **Stock por sucursal** (C2): `kardex.sucursal_id` + `producto_stock_sucursal` + trigger + FIFO + las 4 RPC + migración. *(El más riesgoso — verificar con una versión adaptada de `06_verificacion.sql`.)*
+3. UI de stock por sucursal + Compras/POS/Proformas con sucursal.
+4. **Pedidos/Traspaso** (C4).
+5. **Precios por mayor** (C3) — independiente, se puede intercalar en cualquier momento.
+
+### 9. Decisiones abiertas (definir antes de codear)
+- ¿Sucursales fijas por semilla o CRUD administrable?
+- ¿Vendedor restringido a su sucursal (RLS) o ve todas?
+- Traspaso: ¿dos pasos (envío/recepción con en-tránsito) o uno solo (instantáneo)?
+- Numeración de ventas/proformas: ¿global (como hoy) o por sucursal?
+- ¿`productos.stock_actual` como total global (recomendado) o se elimina?
+- Backfill: ¿qué sucursal por defecto para el histórico?
+
+---
+
 ## Hitos y fechas clave (del plan del cliente)
 
 | Hito | Fecha | Estado |
