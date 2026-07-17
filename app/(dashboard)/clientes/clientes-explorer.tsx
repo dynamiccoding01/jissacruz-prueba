@@ -28,6 +28,8 @@ export type ClienteFila = {
   id: string
   nombre: string
   ci_nit: string | null
+  complemento: string | null
+  nombre_factura: string | null
   telefono: string | null
   direccion: string | null
 }

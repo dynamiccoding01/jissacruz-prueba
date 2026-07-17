@@ -56,7 +56,8 @@ export async function crearUsuario(values: NuevoUsuarioValues) {
     email: v.email,
     password: v.password,
     email_confirm: true,
-    user_metadata: { nombre_completo: v.nombre_completo, rol: v.rol },
+    // El trigger on_auth_user_created (script 13) lee sucursal_id de acá.
+    user_metadata: { nombre_completo: v.nombre_completo, rol: v.rol, sucursal_id: v.sucursal_id },
   })
 
   if (error) {
@@ -67,6 +68,17 @@ export async function crearUsuario(values: NuevoUsuarioValues) {
     return { error: error.message || "No se pudo crear el usuario." }
   }
 
+  revalidatePath("/configuracion")
+  return { success: true }
+}
+
+export async function asignarSucursal(id: string, sucursalId: string) {
+  await requireAdmin()
+  const supabase = await createClient()
+  const { error } = await supabase.from("perfiles").update({ sucursal_id: sucursalId }).eq("id", id)
+  if (error) {
+    return { error: "No se pudo asignar la sucursal." }
+  }
   revalidatePath("/configuracion")
   return { success: true }
 }

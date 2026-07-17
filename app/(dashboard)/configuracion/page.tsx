@@ -7,7 +7,7 @@ export default async function ConfiguracionPage() {
   const perfil = await requireAdmin()
   const supabase = await createClient()
 
-  const [{ data: empresa }, { data: usuarios }] = await Promise.all([
+  const [{ data: empresa }, { data: usuarios }, { data: sucursales }] = await Promise.all([
     supabase
       .from("configuracion_empresa")
       .select("nombre, nit, direccion, telefono, stock_minimo_default")
@@ -15,9 +15,23 @@ export default async function ConfiguracionPage() {
       .single(),
     supabase
       .from("perfiles")
-      .select("id, nombre_completo, rol, activo, creado_en")
+      .select("id, nombre_completo, rol, activo, creado_en, sucursal_id, sucursales(id, nombre)")
       .order("creado_en"),
+    supabase.from("sucursales").select("id, nombre").eq("activo", true).order("codigo"),
   ])
+
+  const usuariosFila: UsuarioFila[] = (usuarios ?? []).map((u) => {
+    const s = (u as Record<string, unknown>).sucursales as { id: string; nombre: string } | null
+    return {
+      id: u.id as string,
+      nombre_completo: u.nombre_completo as string,
+      rol: u.rol as UsuarioFila["rol"],
+      activo: u.activo as boolean,
+      creado_en: u.creado_en as string,
+      sucursal_id: s?.id ?? null,
+      sucursal_nombre: s?.nombre ?? null,
+    }
+  })
 
   return (
     <div className="space-y-6">
@@ -38,7 +52,8 @@ export default async function ConfiguracionPage() {
       />
 
       <UsuariosPanel
-        usuarios={(usuarios ?? []) as UsuarioFila[]}
+        usuarios={usuariosFila}
+        sucursales={sucursales ?? []}
         currentUserId={perfil.id}
       />
     </div>

@@ -5,7 +5,17 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { clienteSchema, type ClienteValues } from "@/lib/validations/cliente"
 
-const CAMPOS = "id, nombre, ci_nit, telefono, direccion"
+const CAMPOS = "id, nombre, ci_nit, complemento, nombre_factura, telefono, direccion"
+
+export type ClienteBusqueda = {
+  id: string
+  nombre: string
+  ci_nit: string | null
+  complemento: string | null
+  nombre_factura: string | null
+  telefono: string | null
+  direccion: string | null
+}
 
 export async function createCliente(values: ClienteValues) {
   const parsed = clienteSchema.safeParse(values)
@@ -94,7 +104,7 @@ export async function getHistorialCliente(clienteId: string) {
   }
 }
 
-export async function searchClientes(query: string) {
+export async function searchClientes(query: string): Promise<ClienteBusqueda[]> {
   const supabase = await createClient()
   // Sanea el termino: quita los caracteres que rompen la sintaxis de PostgREST .or()
   const term = query.trim().replace(/[,()*%\\]/g, " ").trim()
@@ -102,10 +112,10 @@ export async function searchClientes(query: string) {
   let consulta = supabase.from("clientes").select(CAMPOS).order("nombre").limit(50)
   if (term) {
     consulta = consulta.or(
-      `nombre.ilike.%${term}%,ci_nit.ilike.%${term}%,telefono.ilike.%${term}%`
+      `nombre.ilike.%${term}%,ci_nit.ilike.%${term}%,nombre_factura.ilike.%${term}%,telefono.ilike.%${term}%`
     )
   }
 
   const { data } = await consulta
-  return data ?? []
+  return (data ?? []) as ClienteBusqueda[]
 }

@@ -247,7 +247,6 @@ export function ProformasExplorer({
         </div>
 
         <ProformaForm
-          clientes={clientes}
           trigger={
             <Button>
               <Plus className="size-4" /> Nueva proforma

@@ -33,9 +33,16 @@ const VACIO: NuevoUsuarioValues = {
   email: "",
   password: "",
   rol: "vendedor",
+  sucursal_id: "",
 }
 
-export function NuevoUsuarioForm({ trigger }: { trigger: React.ReactNode }) {
+export function NuevoUsuarioForm({
+  sucursales,
+  trigger,
+}: {
+  sucursales: { id: string; nombre: string }[]
+  trigger: React.ReactNode
+}) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -53,6 +60,7 @@ export function NuevoUsuarioForm({ trigger }: { trigger: React.ReactNode }) {
   })
 
   const rol = watch("rol")
+  const sucursalId = watch("sucursal_id")
 
   async function onSubmit(values: NuevoUsuarioValues) {
     setLoading(true)
@@ -117,6 +125,24 @@ export function NuevoUsuarioForm({ trigger }: { trigger: React.ReactNode }) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Sucursal</Label>
+            <Select value={sucursalId || undefined} onValueChange={(v) => setValue("sucursal_id", v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Elegí una sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                {sucursales.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.sucursal_id && (
+              <p className="text-sm text-destructive">{errors.sucursal_id.message}</p>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             Anotá la contraseña: se la tenés que comunicar al usuario. Podrá cambiarla luego.

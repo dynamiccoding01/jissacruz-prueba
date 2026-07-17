@@ -32,6 +32,7 @@ import {
   CAMPOS_DEFECTO,
   type CampoBusqueda,
 } from "@/components/shared/criterios-busqueda"
+import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-cliente"
 import {
   proformaSchema,
   calcularSubtotalLinea,
@@ -53,19 +54,14 @@ const VACIO: ProformaInput = {
 
 const bs = (n: number) => `Bs ${n.toFixed(2)}`
 
-export function ProformaForm({
-  clientes,
-  trigger,
-}: {
-  clientes: { id: string; nombre: string }[]
-  trigger: React.ReactNode
-}) {
+export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [busqueda, setBusqueda] = useState("")
   const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
+  const [clienteSel, setClienteSel] = useState<ClienteSel | null>(null)
   const router = useRouter()
 
   const {
@@ -94,6 +90,7 @@ export function ProformaForm({
     reset(VACIO)
     setResultados([])
     setBusqueda("")
+    setClienteSel(null)
   }
 
   async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
@@ -166,21 +163,13 @@ export function ProformaForm({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Cliente</Label>
-              <Select
-                value={valores.cliente_id || undefined}
-                onValueChange={(v) => setValue("cliente_id", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccioná un cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clientes.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <BuscadorCliente
+                value={clienteSel}
+                onChange={(c) => {
+                  setClienteSel(c)
+                  setValue("cliente_id", c?.id ?? "")
+                }}
+              />
               {errors.cliente_id && (
                 <p className="text-sm text-destructive">{errors.cliente_id.message}</p>
               )}

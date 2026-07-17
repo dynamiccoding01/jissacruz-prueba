@@ -20,12 +20,21 @@ import {
 import { clienteSchema, type ClienteValues } from "@/lib/validations/cliente"
 import { createCliente, updateCliente } from "./actions"
 
-const VACIO: ClienteValues = { nombre: "", ci_nit: "", telefono: "", direccion: "" }
+const VACIO: ClienteValues = {
+  nombre: "",
+  ci_nit: "",
+  complemento: "",
+  nombre_factura: "",
+  telefono: "",
+  direccion: "",
+}
 
 type ClienteExistente = {
   id: string
   nombre: string
   ci_nit: string | null
+  complemento: string | null
+  nombre_factura: string | null
   telefono: string | null
   direccion: string | null
 }
@@ -59,6 +68,8 @@ export function ClienteForm({
         ? {
             nombre: cliente.nombre,
             ci_nit: cliente.ci_nit ?? "",
+            complemento: cliente.complemento ?? "",
+            nombre_factura: cliente.nombre_factura ?? "",
             telefono: cliente.telefono ?? "",
             direccion: cliente.direccion ?? "",
           }
@@ -100,6 +111,16 @@ export function ClienteForm({
             <div className="space-y-2">
               <Label htmlFor="ci_nit">CI / NIT</Label>
               <Input id="ci_nit" {...register("ci_nit")} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="complemento">Complemento</Label>
+              <Input id="complemento" placeholder="Ej: A2" {...register("complemento")} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="nombre_factura">Nombre de factura</Label>
+              <Input id="nombre_factura" {...register("nombre_factura")} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="telefono">Teléfono</Label>

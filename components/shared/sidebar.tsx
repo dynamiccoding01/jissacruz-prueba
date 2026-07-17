@@ -83,7 +83,7 @@ export function Sidebar({ rol }: { rol: Rol }) {
         </div>
 
         {/* Navegación agrupada */}
-        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-2.5 py-3">
+        <nav className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden px-2.5 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {grupos.map((grupo, gi) => (
             <div key={grupo.label} className="space-y-0.5">
               {expandido ? (

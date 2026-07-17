@@ -22,6 +22,7 @@ import {
   CAMPOS_DEFECTO,
   type CampoBusqueda,
 } from "@/components/shared/criterios-busqueda"
+import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-cliente"
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
 import { buscarProductosParaVenta, registrarVenta, type ProductoBusqueda } from "./actions"
 
@@ -35,12 +36,13 @@ const VACIO: VentaInput = {
 
 const bs = (n: number) => `Bs ${n.toFixed(2)}`
 
-export function Pos({ clientes }: { clientes: { id: string; nombre: string }[] }) {
+export function Pos() {
   const [loading, setLoading] = useState(false)
   const [busqueda, setBusqueda] = useState("")
   const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
+  const [clienteSel, setClienteSel] = useState<ClienteSel | null>(null)
   const buscadorRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -69,6 +71,7 @@ export function Pos({ clientes }: { clientes: { id: string; nombre: string }[] }
     reset(VACIO)
     setResultados([])
     setBusqueda("")
+    setClienteSel(null)
     buscadorRef.current?.focus()
   }
 
@@ -176,21 +179,14 @@ export function Pos({ clientes }: { clientes: { id: string; nombre: string }[] }
       <div className="space-y-4 rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="space-y-2">
           <Label>Cliente (opcional)</Label>
-          <Select
-            value={valores.cliente_id || undefined}
-            onValueChange={(v) => setValue("cliente_id", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Consumidor final" />
-            </SelectTrigger>
-            <SelectContent>
-              {clientes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.nombre}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <BuscadorCliente
+            opcional
+            value={clienteSel}
+            onChange={(c) => {
+              setClienteSel(c)
+              setValue("cliente_id", c?.id ?? "")
+            }}
+          />
         </div>
 
         <div className="max-h-80 space-y-2 overflow-y-auto">

@@ -18,6 +18,7 @@ export const nuevoUsuarioSchema = z.object({
   email: z.string().min(1, "El correo es obligatorio").email("Correo inválido"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
   rol: z.enum(["admin", "vendedor"]),
+  sucursal_id: z.string().uuid("Elegí una sucursal"),
 })
 
 export type NuevoUsuarioValues = z.infer<typeof nuevoUsuarioSchema>

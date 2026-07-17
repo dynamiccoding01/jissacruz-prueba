@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { ChevronDown, LogOut } from "lucide-react"
+import { Building2, ChevronDown, LogOut } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -24,7 +24,15 @@ function iniciales(nombre: string) {
     .join("")
 }
 
-export function Header({ nombre, rol }: { nombre: string; rol: Rol }) {
+export function Header({
+  nombre,
+  rol,
+  sucursal,
+}: {
+  nombre: string
+  rol: Rol
+  sucursal: { codigo: string; nombre: string } | null
+}) {
   const pathname = usePathname()
   const seccion = NAV_ITEMS.find(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
@@ -38,8 +46,16 @@ export function Header({ nombre, rol }: { nombre: string; rol: Rol }) {
         <h1 className="text-base font-semibold">{seccion?.label ?? "SISREP"}</h1>
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 outline-none transition-colors hover:bg-muted">
+      <div className="flex items-center gap-3">
+        {sucursal && (
+          <span className="hidden items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground md:inline-flex">
+            <Building2 className="size-3.5" />
+            {sucursal.nombre}
+          </span>
+        )}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 outline-none transition-colors hover:bg-muted">
           <Avatar className="size-8">
             <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
               {iniciales(nombre)}
@@ -54,6 +70,9 @@ export function Header({ nombre, rol }: { nombre: string; rol: Rol }) {
           <DropdownMenuLabel className="font-normal">
             <p className="text-sm font-medium">{nombre}</p>
             <p className="text-xs capitalize text-muted-foreground">{rol}</p>
+            {sucursal && (
+              <p className="text-xs text-muted-foreground">Sucursal: {sucursal.nombre}</p>
+            )}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild className="text-destructive focus:text-destructive">
@@ -65,7 +84,8 @@ export function Header({ nombre, rol }: { nombre: string; rol: Rol }) {
             </form>
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
     </header>
   )
 }

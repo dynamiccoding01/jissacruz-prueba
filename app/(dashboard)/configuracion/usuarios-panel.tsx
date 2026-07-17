@@ -18,7 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { toggleUsuarioActivo } from "./actions"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { asignarSucursal, toggleUsuarioActivo } from "./actions"
 import { NuevoUsuarioForm } from "./nuevo-usuario-form"
 
 export type UsuarioFila = {
@@ -27,13 +34,17 @@ export type UsuarioFila = {
   rol: "admin" | "vendedor"
   activo: boolean
   creado_en: string
+  sucursal_id: string | null
+  sucursal_nombre: string | null
 }
 
 export function UsuariosPanel({
   usuarios,
+  sucursales,
   currentUserId,
 }: {
   usuarios: UsuarioFila[]
+  sucursales: { id: string; nombre: string }[]
   currentUserId: string
 }) {
   const [pendiente, startTransition] = useTransition()
@@ -51,6 +62,18 @@ export function UsuariosPanel({
     })
   }
 
+  function onAsignarSucursal(id: string, sucursalId: string) {
+    startTransition(async () => {
+      const result = await asignarSucursal(id, sucursalId)
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+      toast.success("Sucursal asignada.")
+      router.refresh()
+    })
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
@@ -61,6 +84,7 @@ export function UsuariosPanel({
           </CardDescription>
         </div>
         <NuevoUsuarioForm
+          sucursales={sucursales}
           trigger={
             <Button size="sm">
               <UserPlus className="size-4" /> Nuevo usuario
@@ -75,6 +99,7 @@ export function UsuariosPanel({
               <TableRow className="hover:bg-transparent">
                 <TableHead>Nombre</TableHead>
                 <TableHead>Rol</TableHead>
+                <TableHead>Sucursal</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Alta</TableHead>
                 <TableHead className="text-right">Acción</TableHead>
@@ -93,6 +118,24 @@ export function UsuariosPanel({
                       <Badge variant={u.rol === "admin" ? "default" : "secondary"} className="capitalize">
                         {u.rol}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={u.sucursal_id ?? undefined}
+                        onValueChange={(v) => onAsignarSucursal(u.id, v)}
+                        disabled={pendiente}
+                      >
+                        <SelectTrigger className="h-8 w-40">
+                          <SelectValue placeholder="Sin sucursal" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sucursales.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell>
                       {u.activo ? (

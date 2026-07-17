@@ -18,7 +18,7 @@ export default async function VentasPage() {
     <div className="space-y-8">
       <div>
         <h1 className="mb-4 text-lg font-semibold">Punto de venta</h1>
-        <Pos clientes={clientes ?? []} />
+        <Pos />
       </div>
       <Separator />
       <VentasHistorial
