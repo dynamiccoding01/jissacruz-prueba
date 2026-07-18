@@ -18,6 +18,14 @@ export const vehiculoCompatibleSchema = z.object({
   anio_hasta: anioOpcional,
 })
 
+// C3: escala de precio por mayor. La fecha viaja como string del <input type="date">
+// ("" = sin límite); la action la normaliza a null.
+export const precioMayorSchema = z.object({
+  cantidad_minima: z.coerce.number().int().min(2, "La cantidad mínima debe ser 2 o más"),
+  precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
+  vigente_hasta: z.string().optional(),
+})
+
 export const productoSchema = z.object({
   codigo: z.string().min(1, "El código es obligatorio"),
   descripcion: z.string().min(1, "La descripción es obligatoria"),
@@ -28,6 +36,7 @@ export const productoSchema = z.object({
   imagen_url: z.string().optional().nullable(),
   codigos_equivalentes: z.array(codigoEquivalenteSchema),
   vehiculos_compatibles: z.array(vehiculoCompatibleSchema),
+  precios_mayor: z.array(precioMayorSchema),
 })
 
 // Output: lo que queda despues de validar/coercionar (lo que reciben las Server Actions).

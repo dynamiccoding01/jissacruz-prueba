@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { getPerfil } from "@/lib/auth/session"
 import { ordenCompraSchema, type OrdenCompraInput } from "@/lib/validations/compra"
 
 export async function buscarProductosParaCompra(query: string, campos: string[] = []) {
@@ -22,16 +23,17 @@ export async function createOrdenCompra(values: OrdenCompraInput) {
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const perfil = await getPerfil()
 
   const { data: orden, error } = await supabase
     .from("ordenes_compra")
     .insert({
       proveedor_id: parsed.data.proveedor_id,
       notas: parsed.data.notas || null,
-      creado_por: user?.id,
+      creado_por: perfil?.id,
+      // Sucursal destino = la del usuario que crea la orden (C2 · paso 3c).
+      // La recepción (fn_recibir_orden_compra) hará entrar el stock aquí.
+      sucursal_id: perfil?.sucursal_id ?? null,
     })
     .select("id")
     .single()

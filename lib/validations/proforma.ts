@@ -28,6 +28,9 @@ export const proformaSchema = z.object({
   cliente_id: z.string().uuid("Seleccioná un cliente"),
   tipo_pago: z.string().optional(),
   plazo_validez_dias: z.coerce.number().int().min(0).default(15),
+  // P10: "Tiempo de entrega: N día(s)" del modelo del cliente. Opcional; un
+  // input vacío coerciona a 0 y la action lo guarda como null (sin leyenda).
+  tiempo_entrega_dias: z.coerce.number().int().min(0).default(0),
   glosa: z.string().optional(),
   descuento_tipo: descuentoTipo,
   descuento_valor: z.coerce.number().min(0).default(0),

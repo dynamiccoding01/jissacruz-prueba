@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import type { EscalaPrecio } from "@/lib/precios-mayor"
+import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { ventaSchema, normalizarDescuento, type VentaInput } from "@/lib/validations/venta"
 
 export type ProductoBusqueda = {
@@ -10,6 +12,9 @@ export type ProductoBusqueda = {
   codigo: string
   descripcion: string
   precio: number
+  // C3: escalas de precio por mayor VIGENTES (filtradas por fecha en el
+  // servidor), ordenadas por cantidad_minima ascendente.
+  escalas: EscalaPrecio[]
 }
 
 export async function buscarProductosParaVenta(
@@ -22,9 +27,19 @@ export async function buscarProductosParaVenta(
     p_campos: campos,
   })
   if (error) return []
-  return ((data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]).map(
-    (p) => ({ id: p.id, codigo: p.codigo, descripcion: p.descripcion, precio: Number(p.precio) })
+
+  const filas = (data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]
+  const escalas = await escalasVigentesPorProducto(
+    supabase,
+    filas.map((p) => p.id)
   )
+  return filas.map((p) => ({
+    id: p.id,
+    codigo: p.codigo,
+    descripcion: p.descripcion,
+    precio: Number(p.precio),
+    escalas: escalas.get(p.id) ?? [],
+  }))
 }
 
 export async function registrarVenta(values: VentaInput) {

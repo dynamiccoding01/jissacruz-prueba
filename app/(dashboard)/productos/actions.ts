@@ -10,8 +10,26 @@ async function guardarHijos(
   supabase: SupabaseClient,
   productoId: string,
   codigos: ProductoFormValues["codigos_equivalentes"],
-  vehiculos: ProductoFormValues["vehiculos_compatibles"]
+  vehiculos: ProductoFormValues["vehiculos_compatibles"],
+  preciosMayor: ProductoFormValues["precios_mayor"]
 ) {
+  if (preciosMayor.length > 0) {
+    const { error } = await supabase.from("producto_precios_mayor").insert(
+      preciosMayor.map((p) => ({
+        producto_id: productoId,
+        cantidad_minima: p.cantidad_minima,
+        precio: p.precio,
+        vigente_hasta: p.vigente_hasta || null,
+      }))
+    )
+    if (error)
+      throw new Error(
+        error.code === "23505"
+          ? "Hay dos escalas con la misma cantidad mínima."
+          : "No se pudieron guardar los precios por mayor."
+      )
+  }
+
   if (codigos.length > 0) {
     const { error } = await supabase.from("producto_codigos_equivalentes").insert(
       codigos.map((c) => ({
@@ -49,7 +67,7 @@ export async function createProducto(values: ProductoFormInput) {
   if (!parsed.success) {
     return { error: "Revisá los datos del formulario." }
   }
-  const { codigos_equivalentes, vehiculos_compatibles, ...producto } = parsed.data
+  const { codigos_equivalentes, vehiculos_compatibles, precios_mayor, ...producto } = parsed.data
 
   const supabase = await createClient()
   const {
@@ -72,7 +90,13 @@ export async function createProducto(values: ProductoFormInput) {
   }
 
   try {
-    await guardarHijos(supabase, nuevoProducto.id, codigos_equivalentes, vehiculos_compatibles)
+    await guardarHijos(
+      supabase,
+      nuevoProducto.id,
+      codigos_equivalentes,
+      vehiculos_compatibles,
+      precios_mayor
+    )
   } catch (e) {
     return { error: e instanceof Error ? e.message : "No se pudo completar el producto." }
   }
@@ -86,7 +110,7 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
   if (!parsed.success) {
     return { error: "Revisá los datos del formulario." }
   }
-  const { codigos_equivalentes, vehiculos_compatibles, ...producto } = parsed.data
+  const { codigos_equivalentes, vehiculos_compatibles, precios_mayor, ...producto } = parsed.data
 
   const supabase = await createClient()
 
@@ -103,9 +127,10 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
   // reemplaza los hijos por el set actual del formulario (listas chicas, mas simple que diffear)
   await supabase.from("producto_codigos_equivalentes").delete().eq("producto_id", id)
   await supabase.from("producto_vehiculos_compatibles").delete().eq("producto_id", id)
+  await supabase.from("producto_precios_mayor").delete().eq("producto_id", id)
 
   try {
-    await guardarHijos(supabase, id, codigos_equivalentes, vehiculos_compatibles)
+    await guardarHijos(supabase, id, codigos_equivalentes, vehiculos_compatibles, precios_mayor)
   } catch (e) {
     return { error: e instanceof Error ? e.message : "No se pudo completar el producto." }
   }
@@ -134,10 +159,20 @@ export async function getProductoConDetalle(id: string) {
     .from("producto_vehiculos_compatibles")
     .select("anio_desde, anio_hasta, vehiculos(marca, modelo)")
     .eq("producto_id", id)
+  const { data: preciosMayor } = await supabase
+    .from("producto_precios_mayor")
+    .select("cantidad_minima, precio, vigente_hasta")
+    .eq("producto_id", id)
+    .order("cantidad_minima")
 
   return {
     producto,
     codigos: codigos ?? [],
+    precios_mayor: (preciosMayor ?? []).map((p) => ({
+      cantidad_minima: p.cantidad_minima,
+      precio: Number(p.precio),
+      vigente_hasta: p.vigente_hasta ?? "",
+    })),
     vehiculos: (vehiculosCompat ?? []).map((v) => ({
       marca: (v.vehiculos as unknown as { marca: string; modelo: string })?.marca ?? "",
       modelo: (v.vehiculos as unknown as { marca: string; modelo: string })?.modelo ?? "",

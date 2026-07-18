@@ -1,6 +1,8 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 import { format } from "date-fns"
 
+import { importeALiteral } from "./numero-a-literal"
+
 const AZUL = "#0E3C6D"
 const GRIS = "#B6B7B4"
 
@@ -11,10 +13,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  logo: { width: 130, height: 80, objectFit: "contain" },
-  empresa: { fontSize: 15, color: AZUL, fontWeight: 700 },
-  empresaMeta: { fontSize: 8, color: "#212121", marginTop: 4, marginBottom: 12 },
-  tituloBloque: { alignItems: "flex-end" },
+  logo: { width: 120, height: 74, objectFit: "contain" },
+  empresaBloque: { width: "34%" },
+  empresa: { fontSize: 15, color: AZUL, fontWeight: 700, marginBottom: 3 },
+  empresaLinea: { fontSize: 8, color: "#212121", marginTop: 1 },
+  tituloBloque: { width: "34%", alignItems: "flex-end" },
   titulo: { fontSize: 14, color: AZUL, fontWeight: 700, marginBottom: 3 },
   metaRight: { fontSize: 9, textAlign: "right" },
   clienteBox: {
@@ -40,12 +43,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cell: { fontSize: 8 },
-  cCodigo: { width: "16%" },
-  cDesc: { width: "38%" },
+  cNum: { width: "5%" },
   cCant: { width: "10%", textAlign: "right" },
-  cPrecio: { width: "14%", textAlign: "right" },
-  cDesc2: { width: "10%", textAlign: "right" },
-  cSub: { width: "12%", textAlign: "right" },
+  cCodigo: { width: "15%" },
+  cLinea: { width: "15%" },
+  cDetalle: { width: "30%" },
+  cPrecio: { width: "12%", textAlign: "right" },
+  cImporte: { width: "13%", textAlign: "right" },
   totales: { marginTop: 10, marginLeft: "auto", width: "45%" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   totalFuerte: {
@@ -57,6 +61,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   totalFuerteTxt: { fontSize: 11, fontWeight: 700, color: AZUL },
+  literal: { marginTop: 8, fontSize: 9, fontStyle: "italic", color: "#212121" },
   pie: { marginTop: 24, fontSize: 7, color: GRIS, textAlign: "center" },
 })
 
@@ -72,11 +77,14 @@ export type VentaPdf = {
   impuesto_porcentaje: number
   total: number
   cliente: { nombre: string; ci_nit: string | null; telefono: string | null; direccion: string | null } | null
+  sucursal: { codigo: string; nombre: string } | null
+  vendedor: string | null
 }
 
 export type VentaItemPdf = {
   codigo: string
   descripcion: string
+  linea_marca: string | null
   cantidad: number
   precio_unitario: number
   descuento_tipo: "porcentaje" | "monto_fijo" | null
@@ -84,12 +92,10 @@ export type VentaItemPdf = {
   subtotal_linea: number
 }
 
-const bs = (n: number) => Number(n).toFixed(2)
-
-function etiquetaDescuento(tipo: "porcentaje" | "monto_fijo" | null, valor: number) {
-  if (tipo === "porcentaje") return `${Number(valor)}%`
-  if (tipo === "monto_fijo") return `Bs ${bs(valor)}`
-  return "—"
+// Formato boliviano con separador de miles: 1112.4 -> "1.112,40" (P7).
+const bsMiles = (n: number) => {
+  const [ent, dec] = Number(n).toFixed(2).split(".")
+  return `${ent.replace(/\B(?=(\d{3})+(?!\d))/g, ".")},${dec}`
 }
 
 export function VentaDocument({
@@ -112,20 +118,42 @@ export function VentaDocument({
   const baseImponible = Math.max(0, venta.subtotal - descMonto)
   const impMonto = (baseImponible * Number(venta.impuesto_porcentaje)) / 100
 
+  // "VEN-0003" -> "0003" para el título "COMPROBANTE DE VENTA No. 0003" (P3).
+  const numeroCorto = venta.numero.includes("-")
+    ? venta.numero.split("-").pop()
+    : venta.numero
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.encabezado}>
-          {logo ? (
-            <Image style={styles.logo} src={logo} />
-          ) : (
+          {/* Izquierda: EMPRESA / DIRECCIÓN / SUCURSAL (P1) */}
+          <View style={styles.empresaBloque}>
             <Text style={styles.empresa}>{empresa.nombre}</Text>
-          )}
+            {empresa.direccion ? (
+              <Text style={styles.empresaLinea}>Dirección: {empresa.direccion}</Text>
+            ) : null}
+            {empresa.nit ? <Text style={styles.empresaLinea}>NIT: {empresa.nit}</Text> : null}
+            {empresa.telefono ? (
+              <Text style={styles.empresaLinea}>Tel: {empresa.telefono}</Text>
+            ) : null}
+            {venta.sucursal ? (
+              <Text style={styles.empresaLinea}>Sucursal: {venta.sucursal.nombre}</Text>
+            ) : null}
+          </View>
+
+          {/* Centro: logo (P1) */}
+          {logo ? <Image style={styles.logo} src={logo} /> : null}
+
+          {/* Derecha: título / FECHA / VENDEDOR (P1, P2, P3) */}
           <View style={styles.tituloBloque}>
-            <Text style={styles.titulo}>COMPROBANTE DE VENTA {venta.numero}</Text>
+            <Text style={styles.titulo}>COMPROBANTE DE VENTA No. {numeroCorto}</Text>
             <Text style={styles.metaRight}>
               Fecha: {format(new Date(venta.creado_en), "dd/MM/yyyy HH:mm")}
             </Text>
+            {venta.vendedor ? (
+              <Text style={styles.metaRight}>Vendedor: {venta.vendedor}</Text>
+            ) : null}
             {venta.proforma_origen_numero ? (
               <Text style={styles.metaRight}>
                 Origen: proforma {venta.proforma_origen_numero}
@@ -133,72 +161,63 @@ export function VentaDocument({
             ) : null}
           </View>
         </View>
-        <Text style={styles.empresaMeta}>
-          {[empresa.nit ? `NIT: ${empresa.nit}` : null, empresa.direccion, empresa.telefono]
-            .filter(Boolean)
-            .join("  ·  ")}
-        </Text>
 
+        {/* Recuadro del cliente: Señor(es) / Contacto / Dirección (P4) */}
         <View style={styles.clienteBox}>
           <Text style={styles.clienteTitulo}>CLIENTE</Text>
-          <Text>{venta.cliente?.nombre ?? "Consumidor final"}</Text>
-          {venta.cliente ? (
-            <Text>
-              {[
-                venta.cliente.ci_nit ? `CI/NIT: ${venta.cliente.ci_nit}` : null,
-                venta.cliente.telefono ? `Tel: ${venta.cliente.telefono}` : null,
-                venta.cliente.direccion,
-              ]
-                .filter(Boolean)
-                .join("  ·  ")}
-            </Text>
-          ) : null}
+          <Text>Señor(es): {venta.cliente?.nombre ?? "Consumidor final"}</Text>
+          {venta.cliente?.ci_nit ? <Text>CI/NIT: {venta.cliente.ci_nit}</Text> : null}
+          {venta.cliente?.telefono ? <Text>Contacto: {venta.cliente.telefono}</Text> : null}
+          {venta.cliente?.direccion ? <Text>Dirección: {venta.cliente.direccion}</Text> : null}
         </View>
 
         <View style={styles.headerRow}>
+          <Text style={[styles.hCell, styles.cNum]}>N°</Text>
+          <Text style={[styles.hCell, styles.cCant]}>Cantidad</Text>
           <Text style={[styles.hCell, styles.cCodigo]}>Código</Text>
-          <Text style={[styles.hCell, styles.cDesc]}>Descripción</Text>
-          <Text style={[styles.hCell, styles.cCant]}>Cant.</Text>
-          <Text style={[styles.hCell, styles.cPrecio]}>P. Unit</Text>
-          <Text style={[styles.hCell, styles.cDesc2]}>Desc.</Text>
-          <Text style={[styles.hCell, styles.cSub]}>Subtotal</Text>
+          <Text style={[styles.hCell, styles.cLinea]}>Línea</Text>
+          <Text style={[styles.hCell, styles.cDetalle]}>Detalle</Text>
+          <Text style={[styles.hCell, styles.cPrecio]}>P. Unit.</Text>
+          <Text style={[styles.hCell, styles.cImporte]}>Importe</Text>
         </View>
 
         {items.map((it, i) => (
           <View style={styles.row} key={i} wrap={false}>
-            <Text style={[styles.cell, styles.cCodigo]}>{it.codigo}</Text>
-            <Text style={[styles.cell, styles.cDesc]}>{it.descripcion}</Text>
+            <Text style={[styles.cell, styles.cNum]}>{i + 1}</Text>
             <Text style={[styles.cell, styles.cCant]}>{it.cantidad}</Text>
-            <Text style={[styles.cell, styles.cPrecio]}>{bs(it.precio_unitario)}</Text>
-            <Text style={[styles.cell, styles.cDesc2]}>
-              {etiquetaDescuento(it.descuento_tipo, it.descuento_valor)}
-            </Text>
-            <Text style={[styles.cell, styles.cSub]}>{bs(it.subtotal_linea)}</Text>
+            <Text style={[styles.cell, styles.cCodigo]}>{it.codigo}</Text>
+            <Text style={[styles.cell, styles.cLinea]}>{it.linea_marca ?? "—"}</Text>
+            <Text style={[styles.cell, styles.cDetalle]}>{it.descripcion}</Text>
+            <Text style={[styles.cell, styles.cPrecio]}>{bsMiles(it.precio_unitario)}</Text>
+            <Text style={[styles.cell, styles.cImporte]}>{bsMiles(it.subtotal_linea)}</Text>
           </View>
         ))}
 
         <View style={styles.totales}>
           <View style={styles.totalRow}>
             <Text>Subtotal</Text>
-            <Text>Bs {bs(venta.subtotal)}</Text>
+            <Text>Bs {bsMiles(venta.subtotal)}</Text>
           </View>
           {descMonto > 0 && (
             <View style={styles.totalRow}>
               <Text>Descuento</Text>
-              <Text>− Bs {bs(descMonto)}</Text>
+              <Text>− Bs {bsMiles(descMonto)}</Text>
             </View>
           )}
           {impMonto > 0 && (
             <View style={styles.totalRow}>
               <Text>Impuesto ({Number(venta.impuesto_porcentaje)}%)</Text>
-              <Text>Bs {bs(impMonto)}</Text>
+              <Text>Bs {bsMiles(impMonto)}</Text>
             </View>
           )}
           <View style={styles.totalFuerte}>
-            <Text style={styles.totalFuerteTxt}>TOTAL</Text>
-            <Text style={styles.totalFuerteTxt}>Bs {bs(venta.total)}</Text>
+            <Text style={styles.totalFuerteTxt}>TOTAL IMPORTE</Text>
+            <Text style={styles.totalFuerteTxt}>Bs. {bsMiles(venta.total)}</Text>
           </View>
         </View>
+
+        {/* Importe en literal (P8) */}
+        <Text style={styles.literal}>Son: {importeALiteral(venta.total)}</Text>
 
         <Text style={styles.pie}>
           Comprobante sin valor fiscal. Precios en bolivianos (Bs).

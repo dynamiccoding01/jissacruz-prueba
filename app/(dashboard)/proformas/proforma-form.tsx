@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -40,11 +40,13 @@ import {
   type ProformaInput,
 } from "@/lib/validations/proforma"
 import { buscarProductosParaProforma, createProforma, type ProductoBusqueda } from "./actions"
+import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 
 const VACIO: ProformaInput = {
   cliente_id: "",
   tipo_pago: "",
   plazo_validez_dias: 15,
+  tiempo_entrega_dias: 0,
   glosa: "",
   descuento_tipo: "ninguno",
   descuento_valor: 0,
@@ -78,6 +80,9 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
   })
 
   const items = useFieldArray({ control, name: "items" })
+  // C3: precio base + escalas vigentes por producto agregado, para recalcular
+  // el precio unitario cuando cambia la cantidad.
+  const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
   const valores = watch()
   const totales = calcularTotales(
     valores.items ?? [],
@@ -110,11 +115,19 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
     if (busqueda.trim()) onBuscar(busqueda, next)
   }
 
+  // C3: si la cantidad alcanza una escala por mayor vigente, ajusta el precio.
+  function ajustarPrecioPorCantidad(index: number, productoId: string, cantidad: number) {
+    const info = preciosRef.current.get(productoId)
+    if (!info || info.escalas.length === 0) return
+    setValue(`items.${index}.precio_unitario`, precioSegunCantidad(info.base, info.escalas, cantidad))
+  }
+
   function agregarProducto(p: ProductoBusqueda) {
     if (items.fields.some((f) => f.producto_id === p.id)) {
       toast.error("Ese producto ya está en la proforma.")
       return
     }
+    preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     items.append({
       producto_id: p.id,
       codigo: p.codigo,
@@ -174,7 +187,7 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                 <p className="text-sm text-destructive">{errors.cliente_id.message}</p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="tipo_pago">Tipo de pago</Label>
                 <Input id="tipo_pago" placeholder="Contado / Crédito" {...register("tipo_pago")} />
@@ -186,6 +199,16 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                   type="number"
                   min={0}
                   {...register("plazo_validez_dias")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tiempo_entrega_dias">Entrega (días)</Label>
+                <Input
+                  id="tiempo_entrega_dias"
+                  type="number"
+                  min={0}
+                  placeholder="0 = no indicar"
+                  {...register("tiempo_entrega_dias")}
                 />
               </div>
             </div>
@@ -262,7 +285,18 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                       <div className="grid grid-cols-[4rem_6rem_1fr_5rem] items-end gap-2">
                         <div className="space-y-1">
                           <Label className="text-xs">Cant.</Label>
-                          <Input type="number" min={1} {...register(`items.${index}.cantidad`)} />
+                          <Input
+                            type="number"
+                            min={1}
+                            {...register(`items.${index}.cantidad`, {
+                              onChange: (e) =>
+                                ajustarPrecioPorCantidad(
+                                  index,
+                                  field.producto_id,
+                                  Number(e.target.value)
+                                ),
+                            })}
+                          />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Precio Bs</Label>

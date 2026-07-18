@@ -33,6 +33,7 @@ const VACIO: ProductoFormInput = {
   imagen_url: null,
   codigos_equivalentes: [],
   vehiculos_compatibles: [],
+  precios_mayor: [],
 }
 
 export function ProductoForm({
@@ -66,6 +67,7 @@ export function ProductoForm({
 
   const codigosArray = useFieldArray({ control, name: "codigos_equivalentes" })
   const vehiculosArray = useFieldArray({ control, name: "vehiculos_compatibles" })
+  const preciosMayorArray = useFieldArray({ control, name: "precios_mayor" })
   const imagenUrl = watch("imagen_url")
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export function ProductoForm({
       return
     }
     setCargandoDetalle(true)
-    getProductoConDetalle(productoId).then(({ producto, codigos, vehiculos }) => {
+    getProductoConDetalle(productoId).then(({ producto, codigos, vehiculos, precios_mayor }) => {
       if (producto) {
         reset({
           codigo: producto.codigo,
@@ -87,6 +89,7 @@ export function ProductoForm({
           imagen_url: producto.imagen_url,
           codigos_equivalentes: codigos,
           vehiculos_compatibles: vehiculos,
+          precios_mayor,
         })
       }
       setCargandoDetalle(false)
@@ -294,6 +297,70 @@ export function ProductoForm({
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* C3: precios por mayor escalonados con fecha de vigencia */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Precios por mayor</Label>
+                {!readOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      preciosMayorArray.append({
+                        cantidad_minima: 2,
+                        precio: 0,
+                        vigente_hasta: "",
+                      })
+                    }
+                  >
+                    <Plus className="size-4" /> Agregar
+                  </Button>
+                )}
+              </div>
+              {preciosMayorArray.fields.length === 0 && readOnly && (
+                <p className="text-sm text-muted-foreground">Sin precios por mayor.</p>
+              )}
+              {preciosMayorArray.fields.length > 0 && (
+                <div className="grid grid-cols-[5.5rem_1fr_1fr_auto] gap-2 text-xs text-muted-foreground">
+                  <span>Desde (cant.)</span>
+                  <span>Precio (Bs)</span>
+                  <span>Vigente hasta</span>
+                  <span />
+                </div>
+              )}
+              {preciosMayorArray.fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-[5.5rem_1fr_1fr_auto] items-end gap-2">
+                  <Input
+                    type="number"
+                    min={2}
+                    {...register(`precios_mayor.${index}.cantidad_minima`)}
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    {...register(`precios_mayor.${index}.precio`)}
+                  />
+                  <Input type="date" {...register(`precios_mayor.${index}.vigente_hasta`)} />
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => preciosMayorArray.remove(index)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {errors.precios_mayor && (
+                <p className="text-sm text-destructive">
+                  Revisá las escalas: cantidad mínima 2 o más y precio no negativo.
+                </p>
+              )}
             </div>
             </fieldset>
 

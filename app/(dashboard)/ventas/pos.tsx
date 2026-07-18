@@ -24,6 +24,7 @@ import {
 } from "@/components/shared/criterios-busqueda"
 import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-cliente"
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
+import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import { buscarProductosParaVenta, registrarVenta, type ProductoBusqueda } from "./actions"
 
 const VACIO: VentaInput = {
@@ -59,6 +60,9 @@ export function Pos() {
   })
 
   const items = useFieldArray({ control, name: "items" })
+  // C3: precio base + escalas vigentes por producto agregado, para recalcular
+  // el precio unitario cuando cambia la cantidad.
+  const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
   const valores = watch()
   const totales = calcularTotales(
     valores.items ?? [],
@@ -92,11 +96,21 @@ export function Pos() {
     if (busqueda.trim()) onBuscar(busqueda, next)
   }
 
+  // C3: si la cantidad alcanza una escala por mayor vigente, ajusta el precio.
+  function ajustarPrecioPorCantidad(index: number, productoId: string, cantidad: number) {
+    const info = preciosRef.current.get(productoId)
+    if (!info || info.escalas.length === 0) return
+    setValue(`items.${index}.precio_unitario`, precioSegunCantidad(info.base, info.escalas, cantidad))
+  }
+
   function agregarProducto(p: ProductoBusqueda) {
+    preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     const existente = items.fields.findIndex((f) => f.producto_id === p.id)
     if (existente >= 0) {
       const actual = valores.items?.[existente]
-      setValue(`items.${existente}.cantidad`, (Number(actual?.cantidad) || 0) + 1)
+      const nuevaCantidad = (Number(actual?.cantidad) || 0) + 1
+      setValue(`items.${existente}.cantidad`, nuevaCantidad)
+      ajustarPrecioPorCantidad(existente, p.id, nuevaCantidad)
     } else {
       items.append({
         producto_id: p.id,
@@ -224,7 +238,18 @@ export function Pos() {
                   <div className="grid grid-cols-[3.5rem_5.5rem_1fr_4.5rem] items-end gap-1.5">
                     <div className="space-y-1">
                       <Label className="text-xs">Cant.</Label>
-                      <Input type="number" min={1} {...register(`items.${index}.cantidad`)} />
+                      <Input
+                        type="number"
+                        min={1}
+                        {...register(`items.${index}.cantidad`, {
+                          onChange: (e) =>
+                            ajustarPrecioPorCantidad(
+                              index,
+                              field.producto_id,
+                              Number(e.target.value)
+                            ),
+                        })}
+                      />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Precio</Label>

@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { getPerfil } from "@/lib/auth/session"
+import type { EscalaPrecio } from "@/lib/precios-mayor"
+import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import {
   proformaSchema,
   calcularTotales,
@@ -16,6 +19,9 @@ export type ProductoBusqueda = {
   codigo: string
   descripcion: string
   precio: number
+  // C3: escalas de precio por mayor VIGENTES (filtradas por fecha en el
+  // servidor), ordenadas por cantidad_minima ascendente.
+  escalas: EscalaPrecio[]
 }
 
 export async function buscarProductosParaProforma(
@@ -28,9 +34,19 @@ export async function buscarProductosParaProforma(
     p_campos: campos,
   })
   if (error) return []
-  return ((data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]).map(
-    (p) => ({ id: p.id, codigo: p.codigo, descripcion: p.descripcion, precio: Number(p.precio) })
+
+  const filas = (data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]
+  const escalas = await escalasVigentesPorProducto(
+    supabase,
+    filas.map((p) => p.id)
   )
+  return filas.map((p) => ({
+    id: p.id,
+    codigo: p.codigo,
+    descripcion: p.descripcion,
+    precio: Number(p.precio),
+    escalas: escalas.get(p.id) ?? [],
+  }))
 }
 
 export async function createProforma(values: ProformaInput) {
@@ -41,9 +57,7 @@ export async function createProforma(values: ProformaInput) {
   const v = parsed.data
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const perfil = await getPerfil()
 
   // Totales calculados en el servidor: nunca se confía en los del cliente.
   const totales = calcularTotales(
@@ -59,13 +73,17 @@ export async function createProforma(values: ProformaInput) {
       cliente_id: v.cliente_id,
       tipo_pago: v.tipo_pago || null,
       plazo_validez_dias: v.plazo_validez_dias,
+      // P10: 0 (o vacío) significa "no indicar" -> null, sin leyenda en el PDF.
+      tiempo_entrega_dias: v.tiempo_entrega_dias > 0 ? v.tiempo_entrega_dias : null,
       glosa: v.glosa || null,
       subtotal: totales.subtotal,
       descuento_tipo: normalizarDescuento(v.descuento_tipo),
       descuento_valor: v.descuento_valor,
       impuesto_porcentaje: v.impuesto_porcentaje,
       total: totales.total,
-      creado_por: user?.id,
+      creado_por: perfil?.id,
+      // Sucursal de emisión = la del usuario logueado (C2 · paso 3c).
+      sucursal_id: perfil?.sucursal_id ?? null,
     })
     .select("id, numero")
     .single()

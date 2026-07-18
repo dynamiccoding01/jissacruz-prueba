@@ -10,7 +10,14 @@ import { Input } from "@/components/ui/input"
 import { StockBadge } from "@/components/shared/stock-badge"
 import { TablaDatos } from "@/components/shared/tabla-datos"
 import type { Rol } from "@/components/shared/nav-items"
+import { cn } from "@/lib/utils"
 import { AjusteStockForm } from "./ajuste-stock-form"
+
+export type DesgloseSucursal = {
+  codigo: string
+  nombre: string
+  stock: number
+}
 
 export type ProductoInventario = {
   id: string
@@ -19,14 +26,44 @@ export type ProductoInventario = {
   linea_marca: string | null
   stock_actual: number
   stock_minimo: number
+  desglose?: DesgloseSucursal[]
+}
+
+// Desglose de stock por sucursal (C2 · paso 3b): una etiqueta compacta por
+// sucursal, "S{código}: {stock}", en gris cuando la sucursal está en cero.
+function DesgloseSucursales({ items }: { items: DesgloseSucursal[] }) {
+  if (items.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {items.map((s) => (
+        <span
+          key={s.codigo}
+          title={s.nombre}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs ring-1 ring-inset",
+            s.stock === 0
+              ? "bg-muted text-muted-foreground ring-border"
+              : "bg-primary/5 text-primary ring-primary/20"
+          )}
+        >
+          <span className="font-semibold">S{s.codigo}</span>
+          {s.stock}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 export function InventarioExplorer({
   productos,
   rol,
+  multisucursal = false,
 }: {
   productos: ProductoInventario[]
   rol: Rol
+  multisucursal?: boolean
 }) {
   const [filtro, setFiltro] = useState("")
   const esAdmin = rol === "admin"
@@ -45,7 +82,7 @@ export function InventarioExplorer({
     { accessorKey: "linea_marca", header: "Línea / marca" },
     {
       accessorKey: "stock_actual",
-      header: "Stock",
+      header: multisucursal ? "Stock total" : "Stock",
       cell: ({ row }) => (
         <StockBadge
           stockActual={row.original.stock_actual}
@@ -53,6 +90,17 @@ export function InventarioExplorer({
         />
       ),
     },
+    ...(multisucursal
+      ? [
+          {
+            id: "desglose",
+            header: "Por sucursal",
+            cell: ({ row }) => (
+              <DesgloseSucursales items={row.original.desglose ?? []} />
+            ),
+          } satisfies ColumnDef<ProductoInventario>,
+        ]
+      : []),
     {
       id: "acciones",
       header: "",

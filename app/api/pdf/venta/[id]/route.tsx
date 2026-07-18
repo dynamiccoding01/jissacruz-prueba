@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const { data: venta } = await supabase
     .from("ventas")
     .select(
-      "numero, creado_en, subtotal, descuento_tipo, descuento_valor, impuesto_porcentaje, total, clientes(nombre, ci_nit, telefono, direccion), proformas!ventas_proforma_origen_id_fkey(numero)"
+      "numero, creado_en, subtotal, descuento_tipo, descuento_valor, impuesto_porcentaje, total, clientes(nombre, ci_nit, telefono, direccion), proformas!ventas_proforma_origen_id_fkey(numero), sucursal:sucursales(codigo, nombre), vendedor:perfiles!ventas_vendido_por_fkey(nombre_completo)"
     )
     .eq("id", params.id)
     .single()
@@ -23,7 +23,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const { data: itemsRaw } = await supabase
     .from("venta_items")
     .select(
-      "cantidad, precio_unitario, descuento_tipo, descuento_valor, subtotal_linea, productos(codigo, descripcion)"
+      "cantidad, precio_unitario, descuento_tipo, descuento_valor, subtotal_linea, productos(codigo, descripcion, linea_marca)"
     )
     .eq("venta_id", params.id)
 
@@ -35,6 +35,10 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
 
   const cliente = (venta as Record<string, unknown>).clientes as VentaPdf["cliente"]
   const proformaOrigen = (venta as Record<string, unknown>).proformas as { numero: string } | null
+  const sucursal = (venta as Record<string, unknown>).sucursal as VentaPdf["sucursal"]
+  const vendedor = (venta as Record<string, unknown>).vendedor as {
+    nombre_completo: string
+  } | null
 
   const ventaPdf: VentaPdf = {
     numero: venta.numero,
@@ -46,16 +50,20 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     impuesto_porcentaje: Number(venta.impuesto_porcentaje),
     total: Number(venta.total),
     cliente,
+    sucursal: sucursal ?? null,
+    vendedor: vendedor?.nombre_completo ?? null,
   }
 
   const items: VentaItemPdf[] = (itemsRaw ?? []).map((it) => {
     const producto = (it as Record<string, unknown>).productos as {
       codigo: string
       descripcion: string
+      linea_marca: string | null
     } | null
     return {
       codigo: producto?.codigo ?? "—",
       descripcion: producto?.descripcion ?? "",
+      linea_marca: producto?.linea_marca ?? null,
       cantidad: it.cantidad,
       precio_unitario: Number(it.precio_unitario),
       descuento_tipo: it.descuento_tipo,
