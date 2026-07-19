@@ -334,3 +334,15 @@ El equipo implementó en paralelo (sobre la base del commit `f6cb63f`, sin el pu
 - ⏳ Completar `00_setup_completo.sql` con los scripts 12–14 y 16.
 - ⏳ Transversales: despliegue en Vercel, verificación e2e general, UAT y manual de usuario.
 
+---
+
+## Registro de cambios recientes — 19 jul 2026
+
+- ✅ **Carga masiva del catálogo TKL 2026 (Velacuss) en la BD real** (`laedzzghoddjoxzjsfkb`), directa por la API REST con `service_role` (sin script SQL en el repo — carga de datos, no de esquema):
+  - **236 productos** insertados (todos los del PDF `TKL- VELACUSS 2026.pdf`, 67 páginas parseadas con 0 errores y 0 códigos duplicados) + **810 códigos equivalentes OEM** vinculados (fabricante "OEM").
+  - Mapeo: `codigo` = código TKL propio (ej. `TKL31012A`) · `descripcion` = descripción + aplicación del catálogo · `linea_marca` = **"TKL"** (decisión: la categoría de página —VÁLVULAS, PULMONES, etc.— queda dentro de la descripción y es buscable) · `unidad_medida` = "unidad" · `activo` = true.
+  - **Verificado**: conteos exactos en BD y prueba real de `fn_buscar_productos` por criterio "equivalente" (OEM `9730025210` → `TKL31012A`).
+  - ⚠️ **Precio = 0 en los 236** (el catálogo no trae precios) → pendiente actualización masiva cuando el cliente pase la lista de precios.
+  - **Stock = 0** en todas las sucursales, a propósito: el stock solo entra por kardex (compras o `fn_ajuste_stock` por sucursal); los productos mostrarán `BO` hasta registrar entradas. Pendiente: carga de stock inicial por sucursal cuando haya conteo real.
+  - El parseo estructurado del catálogo quedó reproducible (JSON en el scratchpad de la sesión); si llega una versión nueva del catálogo se puede re-correr como delta (la carga es idempotente por `codigo`).
+
