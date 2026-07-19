@@ -38,6 +38,10 @@ export type ProductoFila = {
   stock_actual: number
   stock_minimo: number
   imagen_url: string | null
+  producto_stock_sucursal?: Array<{
+    stock_actual: number
+    sucursales: { codigo: string; nombre: string } | null
+  }>
 }
 
 export function ProductosExplorer({
@@ -116,11 +120,12 @@ export function ProductosExplorer({
     },
     {
       accessorKey: "stock_actual",
-      header: "Stock",
+      header: "Stock por Sucursal",
       cell: ({ row }) => (
         <StockBadge
           stockActual={row.original.stock_actual}
           stockMinimo={row.original.stock_minimo}
+          stockSucursales={row.original.producto_stock_sucursal}
         />
       ),
     },

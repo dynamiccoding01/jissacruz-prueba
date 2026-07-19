@@ -8,13 +8,19 @@ export default async function ProductosPage() {
 
   const { data } = await supabase
     .from("productos")
-    .select("id, codigo, descripcion, linea_marca, precio, stock_actual, stock_minimo, imagen_url")
+    .select(`
+      id, codigo, descripcion, linea_marca, precio, stock_actual, stock_minimo, imagen_url,
+      producto_stock_sucursal (
+        stock_actual,
+        sucursales (codigo, nombre)
+      )
+    `)
     .eq("activo", true)
     .order("descripcion")
 
   return (
     <ProductosExplorer
-      productosIniciales={(data ?? []) as ProductoFila[]}
+      productosIniciales={(data ?? []) as unknown as ProductoFila[]}
       rol={perfil!.rol}
     />
   )
