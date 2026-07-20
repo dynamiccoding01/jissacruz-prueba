@@ -129,20 +129,25 @@ export function Pos() {
 
   async function onSubmit(values: VentaInput) {
     setLoading(true)
+    // la pestaña se abre ya, dentro del gesto del click, porque si se abre
+    // despues del await el bloqueador de popups del navegador la corta;
+    // si la venta falla se cierra sin que el usuario la vea
+    const ventanaPdf = window.open("about:blank", "_blank")
     const result = await registrarVenta(values)
     setLoading(false)
     if (result.error) {
+      ventanaPdf?.close()
       toast.error(result.error)
       return
     }
-    toast.success(`Venta ${result.numero} registrada.`, {
-      action: result.id
-        ? {
-            label: "Ver comprobante",
-            onClick: () => window.open(`/api/pdf/venta/${result.id}`, "_blank"),
-          }
-        : undefined,
-    })
+    if (result.id) {
+      const urlPdf = `/api/pdf/venta/${result.id}`
+      if (ventanaPdf) ventanaPdf.location.href = urlPdf
+      else window.open(urlPdf, "_blank")
+    } else {
+      ventanaPdf?.close()
+    }
+    toast.success(`Venta ${result.numero} registrada.`)
     limpiar()
     router.refresh()
   }

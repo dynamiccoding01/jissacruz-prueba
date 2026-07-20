@@ -9,6 +9,14 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { TablaDatos } from "@/components/shared/tabla-datos"
 import type { Rol } from "@/components/shared/nav-items"
 import { TraspasoForm, type SucursalOption } from "./traspaso-form"
@@ -37,6 +45,61 @@ const ESTILOS_ESTADO: Record<TraspasoFila["estado"], string> = {
   enviado: "bg-blue-100 text-blue-800 border-blue-300",
   recibido: "bg-green-100 text-green-800 border-green-300",
   cancelado: "bg-gray-100 text-gray-700 border-gray-300",
+}
+
+function DetalleTraspaso({ traspaso, esAdmin }: { traspaso: TraspasoFila; esAdmin: boolean }) {
+  const cantTotal = traspaso.items.reduce((acc, i) => acc + i.cantidad, 0)
+  // el costo FIFO se fija recien al despachar; antes es 0 y no dice nada
+  const conCosto = esAdmin && traspaso.estado !== "pendiente" && traspaso.estado !== "cancelado"
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className="text-left text-sm underline-offset-2 hover:underline"
+          title="Ver productos del pedido"
+        >
+          {traspaso.items.length} prod. ({cantTotal} un.)
+        </button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Pedido {traspaso.numero}</DialogTitle>
+          <DialogDescription>
+            {traspaso.sucursal_origen?.nombre ?? "Origen"} → {traspaso.sucursal_destino?.nombre ?? "Destino"}
+            {traspaso.notas ? ` · ${traspaso.notas}` : ""}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-80 overflow-y-auto rounded-md border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/60 text-left text-xs">
+              <tr>
+                <th className="px-3 py-2">Código</th>
+                <th className="px-3 py-2">Descripción</th>
+                <th className="px-3 py-2 text-right">Cant.</th>
+                {conCosto && <th className="px-3 py-2 text-right">Costo FIFO</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {traspaso.items.map((it) => (
+                <tr key={it.id} className="border-t border-border">
+                  <td className="px-3 py-2 font-medium">{it.producto?.codigo ?? "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{it.producto?.descripcion ?? "—"}</td>
+                  <td className="px-3 py-2 text-right">{it.cantidad}</td>
+                  {conCosto && (
+                    <td className="px-3 py-2 text-right">
+                      Bs {Number(it.costo_fifo_unitario).toFixed(2)}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export function TraspasosExplorer({
@@ -128,10 +191,7 @@ export function TraspasosExplorer({
     {
       id: "items_count",
       header: "Ítems",
-      cell: ({ row }) => {
-        const cantTotal = row.original.items.reduce((acc, i) => acc + i.cantidad, 0)
-        return `${row.original.items.length} prod. (${cantTotal} un.)`
-      },
+      cell: ({ row }) => <DetalleTraspaso traspaso={row.original} esAdmin={esAdmin} />,
     },
     {
       accessorKey: "estado",
