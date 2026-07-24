@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { ventaSchema, normalizarDescuento, type VentaInput } from "@/lib/validations/venta"
@@ -26,7 +27,10 @@ export async function buscarProductosParaVenta(
     p_query: query,
     p_campos: campos,
   })
-  if (error) return []
+  if (error) {
+    logError("ventas.buscarProductosParaVenta", error, { query, campos })
+    return []
+  }
 
   const filas = (data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]
   const escalas = await escalasVigentesPorProducto(
@@ -68,6 +72,7 @@ export async function registrarVenta(values: VentaInput) {
 
   const { data: ventaId, error } = await supabase.rpc("fn_registrar_venta", { p_venta: payload })
   if (error) {
+    logError("ventas.registrarVenta", error, { cliente_id: v.cliente_id, items: v.items.length })
     return { error: error.message || "No se pudo registrar la venta." }
   }
 

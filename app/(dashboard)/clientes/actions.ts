@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 import { clienteSchema, type ClienteValues } from "@/lib/validations/cliente"
 
 const CAMPOS = "id, nombre, ci_nit, complemento, nombre_factura, telefono, direccion"
@@ -26,6 +27,7 @@ export async function createCliente(values: ClienteValues) {
   const supabase = await createClient()
   const { error } = await supabase.from("clientes").insert(parsed.data)
   if (error) {
+    logError("clientes.createCliente", error)
     return { error: "No se pudo crear el cliente." }
   }
 
@@ -42,6 +44,7 @@ export async function updateCliente(id: string, values: ClienteValues) {
   const supabase = await createClient()
   const { error } = await supabase.from("clientes").update(parsed.data).eq("id", id)
   if (error) {
+    logError("clientes.updateCliente", error, { id })
     return { error: "No se pudo actualizar el cliente." }
   }
 
@@ -60,6 +63,7 @@ export async function deleteCliente(id: string) {
         error: "No se puede eliminar: el cliente tiene proformas o ventas registradas.",
       }
     }
+    logError("clientes.deleteCliente", error, { id })
     return { error: "No se pudo eliminar el cliente." }
   }
 

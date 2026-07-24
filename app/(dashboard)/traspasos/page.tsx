@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { getPerfil } from "@/lib/auth/session"
+import { getSucursalesActivas } from "@/lib/datos-cacheados"
 import { TraspasosExplorer, type TraspasoFila } from "./traspasos-explorer"
 import type { SucursalOption } from "./traspaso-form"
 
@@ -7,11 +8,7 @@ export default async function TraspasosPage() {
   const perfil = await getPerfil()
   const supabase = await createClient()
 
-  const { data: sucursalData } = await supabase
-    .from("sucursales")
-    .select("id, codigo, nombre")
-    .eq("activo", true)
-    .order("codigo")
+  const sucursalData = await getSucursalesActivas()
 
   const { data: traspasoData } = await supabase
     .from("pedidos_traspaso")

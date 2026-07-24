@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 import { proveedorSchema, type ProveedorValues } from "@/lib/validations/proveedor"
 
 export async function createProveedor(values: ProveedorValues) {
@@ -14,6 +15,7 @@ export async function createProveedor(values: ProveedorValues) {
   const supabase = await createClient()
   const { error } = await supabase.from("proveedores").insert(parsed.data)
   if (error) {
+    logError("proveedores.createProveedor", error)
     return { error: "No se pudo crear el proveedor." }
   }
 
@@ -30,6 +32,7 @@ export async function updateProveedor(id: string, values: ProveedorValues) {
   const supabase = await createClient()
   const { error } = await supabase.from("proveedores").update(parsed.data).eq("id", id)
   if (error) {
+    logError("proveedores.updateProveedor", error, { id })
     return { error: "No se pudo actualizar el proveedor." }
   }
 
@@ -40,7 +43,10 @@ export async function updateProveedor(id: string, values: ProveedorValues) {
 export async function deleteProveedor(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from("proveedores").update({ activo: false }).eq("id", id)
-  if (error) return { error: "No se pudo eliminar el proveedor." }
+  if (error) {
+    logError("proveedores.deleteProveedor", error, { id })
+    return { error: "No se pudo eliminar el proveedor." }
+  }
   revalidatePath("/proveedores")
   return { success: true }
 }

@@ -2,6 +2,7 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import { NextRequest, NextResponse } from "next/server"
 
 import { createClient } from "@/lib/supabase/server"
+import { getConfiguracionEmpresa } from "@/lib/datos-cacheados"
 import { getLogoEmpresa } from "@/lib/pdf/logo"
 import {
   ProformaDocument,
@@ -31,11 +32,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     )
     .eq("proforma_id", params.id)
 
-  const { data: empresa } = await supabase
-    .from("configuracion_empresa")
-    .select("nombre, nit, direccion, telefono")
-    .eq("id", 1)
-    .single()
+  const empresa = await getConfiguracionEmpresa()
 
   const cliente = (proforma as Record<string, unknown>).clientes as ProformaPdf["cliente"]
   const sucursal = (proforma as Record<string, unknown>).sucursal as ProformaPdf["sucursal"]

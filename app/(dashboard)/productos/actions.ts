@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 import { productoSchema, type ProductoFormInput, type ProductoFormValues } from "@/lib/validations/producto"
 
 async function guardarHijos(
@@ -81,6 +82,7 @@ export async function createProducto(values: ProductoFormInput) {
     .single()
 
   if (error || !nuevoProducto) {
+    logError("productos.createProducto", error)
     return {
       error:
         error?.code === "23505"
@@ -98,6 +100,7 @@ export async function createProducto(values: ProductoFormInput) {
       precios_mayor
     )
   } catch (e) {
+    logError("productos.createProducto.hijos", e, { productoId: nuevoProducto.id })
     return { error: e instanceof Error ? e.message : "No se pudo completar el producto." }
   }
 
@@ -116,6 +119,7 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
 
   const { error } = await supabase.from("productos").update(producto).eq("id", id)
   if (error) {
+    logError("productos.updateProducto", error, { id })
     return {
       error:
         error.code === "23505"
@@ -132,6 +136,7 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
   try {
     await guardarHijos(supabase, id, codigos_equivalentes, vehiculos_compatibles, precios_mayor)
   } catch (e) {
+    logError("productos.updateProducto.hijos", e, { id })
     return { error: e instanceof Error ? e.message : "No se pudo completar el producto." }
   }
 
@@ -142,7 +147,10 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
 export async function deleteProducto(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from("productos").update({ activo: false }).eq("id", id)
-  if (error) return { error: "No se pudo eliminar el producto." }
+  if (error) {
+    logError("productos.deleteProducto", error, { id })
+    return { error: "No se pudo eliminar el producto." }
+  }
   revalidatePath("/productos")
   return { success: true }
 }
@@ -188,6 +196,9 @@ export async function searchProductos(query: string, campos: string[] = []) {
     p_query: query,
     p_campos: campos,
   })
-  if (error) return []
+  if (error) {
+    logError("productos.searchProductos", error, { query, campos })
+    return []
+  }
   return data ?? []
 }

@@ -1151,9 +1151,17 @@ drop policy if exists "ppm_select_autenticados" on public.producto_precios_mayor
 create policy "ppm_select_autenticados" on public.producto_precios_mayor
   for select to authenticated using (true);
 
-drop policy if exists "ppm_all_admin" on public.producto_precios_mayor;
-create policy "ppm_all_admin" on public.producto_precios_mayor
-  for all to authenticated using (public.fn_es_admin());
+drop policy if exists "ppm_insert_admin" on public.producto_precios_mayor;
+create policy "ppm_insert_admin" on public.producto_precios_mayor
+  for insert to authenticated with check (public.fn_es_admin());
+
+drop policy if exists "ppm_update_admin" on public.producto_precios_mayor;
+create policy "ppm_update_admin" on public.producto_precios_mayor
+  for update to authenticated using (public.fn_es_admin());
+
+drop policy if exists "ppm_delete_admin" on public.producto_precios_mayor;
+create policy "ppm_delete_admin" on public.producto_precios_mayor
+  for delete to authenticated using (public.fn_es_admin());
 
 create or replace function public.fn_obtener_precio_escalonado(
   p_producto_id uuid,

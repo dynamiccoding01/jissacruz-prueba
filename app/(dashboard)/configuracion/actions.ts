@@ -1,9 +1,12 @@
 "use server"
 
-import { revalidatePath } from "next/cache"
+import { revalidatePath, revalidateTag } from "next/cache"
+
+import { TAG_CONFIG_EMPRESA } from "@/lib/datos-cacheados"
 
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { logError } from "@/lib/log"
 import { requireAdmin } from "@/lib/auth/session"
 import {
   empresaSchema,
@@ -33,9 +36,11 @@ export async function updateEmpresa(values: EmpresaValues) {
     .eq("id", 1)
 
   if (error) {
+    logError("configuracion.updateEmpresa", error)
     return { error: "No se pudo guardar la configuración de la empresa." }
   }
 
+  revalidateTag(TAG_CONFIG_EMPRESA)
   revalidatePath("/configuracion")
   return { success: true }
 }
@@ -65,6 +70,7 @@ export async function crearUsuario(values: NuevoUsuarioValues) {
     if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
       return { error: "Ya existe un usuario con ese correo." }
     }
+    logError("configuracion.crearUsuario", error, { email: v.email })
     return { error: error.message || "No se pudo crear el usuario." }
   }
 
@@ -77,6 +83,7 @@ export async function asignarSucursal(id: string, sucursalId: string) {
   const supabase = await createClient()
   const { error } = await supabase.from("perfiles").update({ sucursal_id: sucursalId }).eq("id", id)
   if (error) {
+    logError("configuracion.asignarSucursal", error, { id, sucursalId })
     return { error: "No se pudo asignar la sucursal." }
   }
   revalidatePath("/configuracion")
@@ -94,6 +101,7 @@ export async function toggleUsuarioActivo(id: string, activo: boolean) {
   const { error } = await supabase.from("perfiles").update({ activo }).eq("id", id)
 
   if (error) {
+    logError("configuracion.toggleUsuarioActivo", error, { id, activo })
     return { error: "No se pudo actualizar el estado del usuario." }
   }
 

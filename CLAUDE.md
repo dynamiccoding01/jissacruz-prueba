@@ -61,7 +61,7 @@ Búsqueda avanzada de productos (código, equivalente, descripción, línea/marc
 
 **Descuentos**: se guarda tipo (`porcentaje` | `monto_fijo`) + valor aplicado, no solo el resultado. `impuesto_porcentaje` es un campo manual (default 0), sin IVA automático. En proformas, el trigger `fn_proforma_items_validar` recalcula `subtotal_linea` y valida límites de descuento en cada insert/update — las proformas no pasan por RPC porque no tocan stock, así que ese trigger es su única red de integridad (a diferencia de ventas, donde `fn_registrar_venta` hace ese trabajo).
 
-Moneda: Boliviano (Bs). Una sola sucursal.
+Moneda: Boliviano (Bs). **Multi-sucursal** (Sprint 5, scripts `12`–`20`): tabla `sucursales`, stock cacheado por sucursal en `producto_stock_sucursal`, `kardex_movimientos.sucursal_id`, perfil con sucursal asignada (`fn_mi_sucursal()`) y pedidos de traspaso entre sucursales (`TRA-0001`, RPCs `fn_crear_pedido_traspaso` / `fn_enviar_traspaso` / `fn_recibir_traspaso` / `fn_cancelar_traspaso`).
 
 ## Reglas de ejecución (obligatorias)
 

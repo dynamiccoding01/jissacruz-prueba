@@ -1,7 +1,7 @@
 import { renderToBuffer } from "@react-pdf/renderer"
 import { NextRequest, NextResponse } from "next/server"
 
-import { createClient } from "@/lib/supabase/server"
+import { getConfiguracionEmpresa } from "@/lib/datos-cacheados"
 import { generarReporte, type Periodo, type ReporteTipo } from "@/lib/reportes"
 import { getLogoEmpresa } from "@/lib/pdf/logo"
 import { ReporteDocument } from "@/lib/pdf/reporte-document"
@@ -19,12 +19,7 @@ export async function GET(request: NextRequest) {
     periodo: (searchParams.get("periodo") as Periodo | null) ?? undefined,
   })
 
-  const supabase = await createClient()
-  const { data: empresa } = await supabase
-    .from("configuracion_empresa")
-    .select("nombre, nit")
-    .eq("id", 1)
-    .single()
+  const empresa = await getConfiguracionEmpresa()
 
   const buffer = await renderToBuffer(
     <ReporteDocument

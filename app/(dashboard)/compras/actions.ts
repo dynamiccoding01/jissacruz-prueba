@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 import { getPerfil } from "@/lib/auth/session"
 import { ordenCompraSchema, type OrdenCompraInput } from "@/lib/validations/compra"
 
@@ -12,7 +13,10 @@ export async function buscarProductosParaCompra(query: string, campos: string[] 
     p_query: query,
     p_campos: campos,
   })
-  if (error) return []
+  if (error) {
+    logError("compras.buscarProductosParaCompra", error, { query, campos })
+    return []
+  }
   return (data ?? []) as { id: string; codigo: string; descripcion: string }[]
 }
 
@@ -39,6 +43,7 @@ export async function createOrdenCompra(values: OrdenCompraInput) {
     .single()
 
   if (error || !orden) {
+    logError("compras.createOrdenCompra", error)
     return { error: "No se pudo crear la orden de compra." }
   }
 
@@ -52,6 +57,7 @@ export async function createOrdenCompra(values: OrdenCompraInput) {
   )
 
   if (itemsError) {
+    logError("compras.createOrdenCompra.items", itemsError, { ordenId: orden.id })
     return { error: "No se pudieron guardar los ítems de la orden." }
   }
 
@@ -63,6 +69,7 @@ export async function recibirOrdenCompra(ordenId: string) {
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_recibir_orden_compra", { p_orden_id: ordenId })
   if (error) {
+    logError("compras.recibirOrdenCompra", error, { ordenId })
     return { error: error.message }
   }
 

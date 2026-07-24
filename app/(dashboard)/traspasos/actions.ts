@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 
 export type TraspasoItemInput = {
   producto_id: string
@@ -22,7 +23,10 @@ export async function crearPedidoTraspaso(
     p_sucursal_origen_id: sucursalOrigenId || null,
   })
 
-  if (error) return { error: error.message || "No se pudo crear el pedido de traspaso." }
+  if (error) {
+    logError("traspasos.crearPedidoTraspaso", error, { sucursalDestinoId, items: items.length })
+    return { error: error.message || "No se pudo crear el pedido de traspaso." }
+  }
   revalidatePath("/traspasos")
   revalidatePath("/inventario")
   return { id: data as string }
@@ -31,7 +35,10 @@ export async function crearPedidoTraspaso(
 export async function enviarTraspaso(pedidoId: string) {
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_enviar_traspaso", { p_pedido_id: pedidoId })
-  if (error) return { error: error.message || "No se pudo despachar el traspaso." }
+  if (error) {
+    logError("traspasos.enviarTraspaso", error, { pedidoId })
+    return { error: error.message || "No se pudo despachar el traspaso." }
+  }
 
   revalidatePath("/traspasos")
   revalidatePath("/inventario")
@@ -42,7 +49,10 @@ export async function enviarTraspaso(pedidoId: string) {
 export async function recibirTraspaso(pedidoId: string) {
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_recibir_traspaso", { p_pedido_id: pedidoId })
-  if (error) return { error: error.message || "No se pudo recibir el traspaso." }
+  if (error) {
+    logError("traspasos.recibirTraspaso", error, { pedidoId })
+    return { error: error.message || "No se pudo recibir el traspaso." }
+  }
 
   revalidatePath("/traspasos")
   revalidatePath("/inventario")
@@ -53,7 +63,10 @@ export async function recibirTraspaso(pedidoId: string) {
 export async function cancelarTraspaso(pedidoId: string) {
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_cancelar_traspaso", { p_pedido_id: pedidoId })
-  if (error) return { error: error.message || "No se pudo cancelar el traspaso." }
+  if (error) {
+    logError("traspasos.cancelarTraspaso", error, { pedidoId })
+    return { error: error.message || "No se pudo cancelar el traspaso." }
+  }
 
   revalidatePath("/traspasos")
   return { success: true }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { logError } from "@/lib/log"
 import { getPerfil } from "@/lib/auth/session"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
@@ -33,7 +34,10 @@ export async function buscarProductosParaProforma(
     p_query: query,
     p_campos: campos,
   })
-  if (error) return []
+  if (error) {
+    logError("proformas.buscarProductosParaProforma", error, { query, campos })
+    return []
+  }
 
   const filas = (data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]
   const escalas = await escalasVigentesPorProducto(
@@ -89,6 +93,7 @@ export async function createProforma(values: ProformaInput) {
     .single()
 
   if (error || !proforma) {
+    logError("proformas.createProforma", error)
     return { error: "No se pudo crear la proforma." }
   }
 
@@ -110,6 +115,7 @@ export async function createProforma(values: ProformaInput) {
   )
 
   if (itemsError) {
+    logError("proformas.createProforma.items", itemsError, { proformaId: proforma.id })
     // Deja la cabecera sin ítems: la borramos para no dejar una proforma vacía.
     await supabase.from("proformas").delete().eq("id", proforma.id)
     return { error: "No se pudieron guardar los ítems de la proforma." }
@@ -126,6 +132,7 @@ export async function convertirProformaAVenta(proformaId: string) {
     p_proforma_id: proformaId,
   })
   if (error) {
+    logError("proformas.convertirProformaAVenta", error, { proformaId })
     return { error: error.message || "No se pudo convertir la proforma en venta." }
   }
 
