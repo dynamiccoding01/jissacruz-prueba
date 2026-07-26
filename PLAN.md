@@ -336,6 +336,12 @@ El equipo implementó en paralelo (sobre la base del commit `f6cb63f`, sin el pu
 
 ---
 
+## Registro de cambios recientes — 26 jul 2026
+
+- 🔴 **BUG CRÍTICO encontrado durante prueba manual — no se podía VENDER stock que entró por traspaso**: aunque el inventario mostraba el producto como "Disponible", la venta (y el ajuste de salida y el re-traspaso) fallaba con `Inconsistencia FIFO en producto % / sucursal %`. Es la **contraparte del bug que arregló el script 20**: aquel corrigió que `entrada_traspaso` *sumara* al cache de stock (`producto_stock_sucursal`), pero `fn_fifo_consumir` (script 14) seguía recorriendo solo lotes `entrada_compra`/`ajuste_entrada` — nunca `entrada_traspaso`. Así, el cache decía "hay stock" (pasaba la validación) pero el bucle FIFO no encontraba lotes que consumir → quedaba cantidad pendiente → excepción. **Fix: `supabase/21_fix_fifo_traspaso.sql`** — agrega `entrada_traspaso` a los tipos de lote que consume el FIFO. No requiere reparar datos (los lotes ya traen `cantidad_restante_lote`); en cuanto la función los incluye, ese stock queda vendible. **Correr en la BD real después del 20.** Idempotente. ⏳ Pendiente de correr y verificar end-to-end (crear traspaso → despachar → recibir → vender desde la sucursal destino).
+
+---
+
 ## Registro de cambios recientes — 20 jul 2026 (auditoría pre-despliegue)
 
 Revisión a profundidad del sistema completo (código + esquema real de la BD) para evaluar si está listo para desplegar:

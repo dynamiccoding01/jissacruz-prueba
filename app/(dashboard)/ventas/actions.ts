@@ -3,10 +3,19 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { getPerfil } from "@/lib/auth/session"
 import { logError } from "@/lib/log"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { ventaSchema, normalizarDescuento, type VentaInput } from "@/lib/validations/venta"
+
+// Desglose de stock por sucursal, compatible con <StockBadge /> (que solo lee
+// stock_actual + sucursales.codigo/nombre). Se agrega el id para poder ubicar
+// la sucursal desde la que opera el POS.
+export type StockSucursal = {
+  stock_actual: number
+  sucursales: { id: string; codigo: string; nombre: string } | null
+}
 
 export type ProductoBusqueda = {
   id: string
@@ -16,6 +25,15 @@ export type ProductoBusqueda = {
   // C3: escalas de precio por mayor VIGENTES (filtradas por fecha en el
   // servidor), ordenadas por cantidad_minima ascendente.
   escalas: EscalaPrecio[]
+  // Stock TOTAL (suma de sucursales) y mínimo, para el badge de color.
+  stockTotal: number
+  stockMinimo: number
+  // Stock en la sucursal del usuario que opera el POS: la venta descuenta solo
+  // de esta sucursal (fn_registrar_venta usa fn_mi_sucursal), así que es lo que
+  // limita cuánto se puede agregar al carrito.
+  stockSucursalActual: number
+  // Desglose por sucursal para mostrar (todas las sucursales), como en Productos.
+  porSucursal: StockSucursal[]
 }
 
 export async function buscarProductosParaVenta(
@@ -23,6 +41,9 @@ export async function buscarProductosParaVenta(
   campos: string[] = []
 ): Promise<ProductoBusqueda[]> {
   const supabase = await createClient()
+  const perfil = await getPerfil()
+  const sucursalActualId = perfil?.sucursal_id ?? null
+
   const { data, error } = await supabase.rpc("fn_buscar_productos", {
     p_query: query,
     p_campos: campos,
@@ -32,18 +53,61 @@ export async function buscarProductosParaVenta(
     return []
   }
 
-  const filas = (data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]
-  const escalas = await escalasVigentesPorProducto(
-    supabase,
-    filas.map((p) => p.id)
-  )
-  return filas.map((p) => ({
-    id: p.id,
-    codigo: p.codigo,
-    descripcion: p.descripcion,
-    precio: Number(p.precio),
-    escalas: escalas.get(p.id) ?? [],
-  }))
+  const filas = (data ?? []) as {
+    id: string
+    codigo: string
+    descripcion: string
+    precio: number
+    stock_actual: number
+    stock_minimo: number
+  }[]
+  const ids = filas.map((p) => p.id)
+
+  const [escalas, stockRes] = await Promise.all([
+    escalasVigentesPorProducto(supabase, ids),
+    ids.length
+      ? supabase
+          .from("producto_stock_sucursal")
+          .select("producto_id, stock_actual, sucursales(id, codigo, nombre)")
+          .in("producto_id", ids)
+      : Promise.resolve({ data: [], error: null }),
+  ])
+
+  if (stockRes.error) {
+    logError("ventas.buscarProductosParaVenta.stock", stockRes.error, { ids: ids.length })
+  }
+
+  // producto_id -> desglose por sucursal
+  const porProducto = new Map<string, StockSucursal[]>()
+  for (const r of (stockRes.data ?? []) as unknown as Array<{
+    producto_id: string
+    stock_actual: number
+    sucursales: { id: string; codigo: string; nombre: string } | null
+  }>) {
+    const arr = porProducto.get(r.producto_id) ?? []
+    arr.push({ stock_actual: r.stock_actual, sucursales: r.sucursales })
+    porProducto.set(r.producto_id, arr)
+  }
+
+  return filas.map((p) => {
+    const porSucursal = (porProducto.get(p.id) ?? [])
+      .slice()
+      .sort((a, b) => (a.sucursales?.codigo ?? "").localeCompare(b.sucursales?.codigo ?? ""))
+    const stockSucursalActual = sucursalActualId
+      ? porSucursal.find((s) => s.sucursales?.id === sucursalActualId)?.stock_actual ?? 0
+      : Number(p.stock_actual) // sin sucursal asignada: cae al total
+    return {
+      id: p.id,
+      codigo: p.codigo,
+      descripcion: p.descripcion,
+      precio: Number(p.precio),
+      escalas: escalas.get(p.id) ?? [],
+      stockTotal: Number(p.stock_actual),
+      stockMinimo: Number(p.stock_minimo),
+      stockSucursalActual,
+      porSucursal,
+    }
+  })
 }
 
 export async function registrarVenta(values: VentaInput) {

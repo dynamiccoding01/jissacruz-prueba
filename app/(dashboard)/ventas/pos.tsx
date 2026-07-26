@@ -10,6 +10,8 @@ import { Plus, Search, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { StockBadge } from "@/components/shared/stock-badge"
+import { cn } from "@/lib/utils"
 import {
   Select,
   SelectContent,
@@ -63,6 +65,9 @@ export function Pos() {
   // C3: precio base + escalas vigentes por producto agregado, para recalcular
   // el precio unitario cuando cambia la cantidad.
   const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
+  // Stock disponible en la sucursal del POS por producto agregado, para no
+  // dejar vender más de lo que hay (la venta descuenta solo de esa sucursal).
+  const stockRef = useRef(new Map<string, number>())
   const valores = watch()
   const totales = calcularTotales(
     valores.items ?? [],
@@ -76,6 +81,7 @@ export function Pos() {
     setResultados([])
     setBusqueda("")
     setClienteSel(null)
+    stockRef.current.clear()
     buscadorRef.current?.focus()
   }
 
@@ -103,14 +109,40 @@ export function Pos() {
     setValue(`items.${index}.precio_unitario`, precioSegunCantidad(info.base, info.escalas, cantidad))
   }
 
+  // Limita la cantidad de una línea al stock disponible en la sucursal del POS.
+  function onCantidadChange(index: number, productoId: string, raw: string) {
+    const max = stockRef.current.get(productoId) ?? Infinity
+    let cantidad = Number(raw)
+    if (Number.isFinite(cantidad) && cantidad > max) {
+      cantidad = max
+      setValue(`items.${index}.cantidad`, max)
+      toast.error(`Solo hay ${max} unidad(es) en stock en tu sucursal.`)
+    }
+    ajustarPrecioPorCantidad(index, productoId, cantidad)
+  }
+
   function agregarProducto(p: ProductoBusqueda) {
+    // No se puede vender lo que no hay en la sucursal desde la que opera el POS.
+    if (p.stockSucursalActual <= 0) {
+      toast.error(
+        p.stockTotal > 0
+          ? "Ese producto no tiene stock en tu sucursal (hay en otra sucursal)."
+          : "Ese producto no tiene stock."
+      )
+      return
+    }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
+    stockRef.current.set(p.id, p.stockSucursalActual)
     const existente = items.fields.findIndex((f) => f.producto_id === p.id)
     if (existente >= 0) {
-      const actual = valores.items?.[existente]
-      const nuevaCantidad = (Number(actual?.cantidad) || 0) + 1
-      setValue(`items.${existente}.cantidad`, nuevaCantidad)
-      ajustarPrecioPorCantidad(existente, p.id, nuevaCantidad)
+      const actual = Number(valores.items?.[existente]?.cantidad) || 0
+      const nuevaCantidad = Math.min(actual + 1, p.stockSucursalActual)
+      if (nuevaCantidad === actual) {
+        toast.error(`Solo hay ${p.stockSucursalActual} unidad(es) en stock en tu sucursal.`)
+      } else {
+        setValue(`items.${existente}.cantidad`, nuevaCantidad)
+        ajustarPrecioPorCantidad(existente, p.id, nuevaCantidad)
+      }
     } else {
       items.append({
         producto_id: p.id,
@@ -170,23 +202,44 @@ export function Pos() {
         </div>
         {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
         <div className="grid gap-2 sm:grid-cols-2">
-          {resultados.map((r) => (
-            <button
-              type="button"
-              key={r.id}
-              onClick={() => agregarProducto(r)}
-              className="flex items-center justify-between rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-colors hover:border-primary hover:bg-muted/40"
-            >
-              <span>
-                <span className="block font-medium">{r.codigo}</span>
-                <span className="block text-xs text-muted-foreground">{r.descripcion}</span>
-              </span>
-              <span className="flex shrink-0 items-center gap-2 font-medium text-primary">
-                {bs(r.precio)}
-                <Plus className="size-4" />
-              </span>
-            </button>
-          ))}
+          {resultados.map((r) => {
+            const sinStock = r.stockSucursalActual <= 0
+            return (
+              <button
+                type="button"
+                key={r.id}
+                disabled={sinStock}
+                onClick={() => agregarProducto(r)}
+                className={cn(
+                  "flex flex-col gap-2 rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-colors",
+                  sinStock ? "cursor-not-allowed opacity-60" : "hover:border-primary hover:bg-muted/40"
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block font-medium">{r.codigo}</span>
+                    <span className="block text-xs text-muted-foreground">{r.descripcion}</span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2 font-medium text-primary">
+                    {bs(r.precio)}
+                    {!sinStock && <Plus className="size-4" />}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <StockBadge
+                    stockActual={r.stockTotal}
+                    stockMinimo={r.stockMinimo}
+                    stockSucursales={r.porSucursal}
+                  />
+                  {sinStock && (
+                    <span className="shrink-0 text-[11px] font-medium text-red-600">
+                      {r.stockTotal > 0 ? "Sin stock en tu sucursal" : "Sin stock"}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )
+          })}
           {!buscando && busqueda.trim() && resultados.length === 0 && (
             <p className="col-span-2 text-sm text-muted-foreground">
               Sin resultados para &quot;{busqueda}&quot;.
@@ -246,13 +299,10 @@ export function Pos() {
                       <Input
                         type="number"
                         min={1}
+                        max={stockRef.current.get(field.producto_id)}
                         {...register(`items.${index}.cantidad`, {
                           onChange: (e) =>
-                            ajustarPrecioPorCantidad(
-                              index,
-                              field.producto_id,
-                              Number(e.target.value)
-                            ),
+                            onCantidadChange(index, field.producto_id, e.target.value),
                         })}
                       />
                     </div>
