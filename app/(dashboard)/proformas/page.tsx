@@ -7,7 +7,7 @@ export default async function ProformasPage() {
   const [{ data: proformas }, { data: clientes }] = await Promise.all([
     supabase
       .from("proformas")
-      .select("id, numero, creado_en, plazo_validez_dias, total, estado, clientes(id, nombre)")
+      .select("id, numero, creado_en, plazo_validez_dias, revalidada_en, total, estado, clientes(id, nombre)")
       .order("creado_en", { ascending: false }),
     supabase.from("clientes").select("id, nombre").order("nombre"),
   ])

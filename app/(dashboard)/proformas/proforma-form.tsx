@@ -44,7 +44,8 @@ import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 const VACIO: ProformaInput = {
   cliente_id: "",
   tipo_pago: "",
-  plazo_validez_dias: 15,
+  // Q20 (Sprint 6): vigencia fija en 3 días; ya no se pide en el formulario.
+  plazo_validez_dias: 3,
   tiempo_entrega_dias: 0,
   glosa: "",
   descuento_tipo: "ninguno",
@@ -188,21 +189,12 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                   <p className="text-sm text-destructive">{errors.cliente_id.message}</p>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="tipo_pago">Tipo de pago</Label>
                   <Input id="tipo_pago" className="h-11" placeholder="Contado / Crédito" {...register("tipo_pago")} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="plazo_validez_dias">Validez (días)</Label>
-                  <Input
-                    id="plazo_validez_dias"
-                    type="number"
-                    min={0}
-                    className="h-11"
-                    {...register("plazo_validez_dias")}
-                  />
-                </div>
+                {/* Q20: la "Validez" ya no se pide (vigencia fija de 3 días). */}
                 <div className="space-y-2">
                   <Label htmlFor="tiempo_entrega_dias">Entrega (días)</Label>
                   <Input

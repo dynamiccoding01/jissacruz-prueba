@@ -16,7 +16,7 @@
 | **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
 | **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
-| **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ⏳ **Pendiente** | Script `27` + páginas/acciones nuevas. |
+| **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | 🟨 **Código hecho · falta correr script 27** | ✅ `supabase/27_proformas_vigencia.sql` escrito (columna `revalidada_en`, vista con 3 estados + tope 3 meses, plazo default 3 retroactivo, validación de vigencia dentro de `fn_convertir_proforma_a_venta`). ✅ App: acciones `obtenerProformaDetalle`/`updateProforma`/`revalidarProforma`, explorer con 3 estados, **página nueva `/proformas/[id]`** (detalle + edición + comparación de precios + "traer precios actuales" + revalidar + convertir desde ahí). `tsc`/`lint` limpios. ⏳ FALTA **correr el script `27` en Supabase**. |
 | **Parte III** · Pedido (ex Traspasos) | ⏳ **Pendiente** | Script `28` + inversión de flujo + permisos. |
 | **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
 
@@ -1032,15 +1032,15 @@ end as estado_efectivo
 - [x] Limpiar el buscador, mantener el foco, cantidad 1 (reusa `agregarProducto`).
 - [x] Ignorar el Enter si el producto no tiene stock en la sucursal (POS) o si la búsqueda está en curso. En proforma, `preventDefault` evita además el submit accidental del `<form>`.
 
-### Bloque IV · Proformas 🟡
-- [ ] `27_proformas_vigencia.sql`: columna `revalidada_en`, vista con **3 estados**, `plazo_validez_dias` default 3 + update de las 5 filas existentes, y **validación de vigencia dentro de `fn_convertir_proforma_a_venta`**.
-- [ ] Página `/proformas/[id]` con detalle completo (cliente, ítems, totales) — la conversión se hace **desde ahí** (Q31).
-- [ ] Acciones nuevas: `obtenerProformaDetalle`, `updateProforma`, `revalidarProforma`.
-- [ ] Modo edición en el formulario: agregar y quitar productos, editar precios (Q24, Q25).
-- [ ] Comparación *precio de la proforma vs. precio actual* resaltando lo cambiado + botón "traer precios actuales" (Q23, Q32).
-- [ ] Quitar el campo "Validez" del formulario (Q20).
-- [ ] Estado `vencida` = solo lectura, sin acciones (Q29).
-- [ ] **Recalcular los totales de cabecera** al editar ítems (si no, el PDF no cuadra con las líneas).
+### Bloque IV · Proformas 🟡 — 🟨 Código HECHO 27 jul · falta correr el script 27
+- [x] `27_proformas_vigencia.sql`: columna `revalidada_en`, vista con **3 estados** + tope duro 3 meses, `plazo_validez_dias` default 3 + update retroactivo, y **validación de vigencia dentro de `fn_convertir_proforma_a_venta`**. *(⏳ FALTA CORRERLO EN SUPABASE.)*
+- [x] Página `/proformas/[id]` con detalle completo (cliente, ítems, totales) — la conversión se hace **desde ahí** (Q31).
+- [x] Acciones nuevas: `obtenerProformaDetalle`, `updateProforma`, `revalidarProforma`.
+- [x] Modo edición en la página de detalle: agregar y quitar productos, editar precios (Q24, Q25).
+- [x] Comparación *precio de la proforma vs. precio actual* resaltando lo cambiado + botón "traer precios actuales" (Q23, Q32).
+- [x] Quitado el campo "Validez" del formulario de alta (Q20); las proformas nuevas nacen con `plazo_validez_dias = 3`.
+- [x] Estado `vencida` = solo lectura, sin acciones (Q29). También `convertida`.
+- [x] **Recalcular los totales de cabecera** al editar ítems (`updateProforma` recalcula subtotal/total en el servidor).
 
 ### Bloque III · Pedido (ex Traspasos) 🟡
 - [ ] `28_pedidos_flujo.sql`: invertir el flujo, `cantidad_solicitada`, relajar el `check` a `cantidad >= 0`, RPC de modificación de cantidades, validación de usuario y sucursal en las 4 RPC.

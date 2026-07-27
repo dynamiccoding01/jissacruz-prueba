@@ -1,27 +1,15 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
+import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
-import { addDays, format, isBefore } from "date-fns"
-import { toast } from "sonner"
-import { ArrowRightLeft, Download, Plus } from "lucide-react"
+import { addDays, addMonths, format, isBefore } from "date-fns"
+import { Download, Eye, Plus } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import {
   Select,
   SelectContent,
@@ -29,34 +17,47 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
 import { TablaDatos } from "@/components/shared/tabla-datos"
 import { ProformaForm } from "./proforma-form"
-import { convertirProformaAVenta } from "./actions"
 
 export type ProformaFila = {
   id: string
   numero: string
   creado_en: string
   plazo_validez_dias: number
+  revalidada_en: string | null
   total: number
-  estado: "vigente" | "convertida" | "vencida"
+  estado: "vigente" | "convertida"
   clientes: { id: string; nombre: string } | null
 }
 
-type EstadoEfectivo = "vigente" | "convertida" | "vencida"
+type EstadoEfectivo = "vigente" | "pendiente" | "convertida" | "vencida"
 
-const ESTADO_VARIANT: Record<EstadoEfectivo, "default" | "secondary" | "destructive"> = {
-  vigente: "secondary",
-  convertida: "default",
-  vencida: "destructive",
+// Estilo por estado (alineado con la vista vista_proformas del script 27).
+const ESTADO_ESTILO: Record<EstadoEfectivo, string> = {
+  vigente: "bg-green-100 text-green-800 border-green-300",
+  pendiente: "bg-amber-100 text-amber-800 border-amber-300",
+  convertida: "bg-blue-100 text-blue-800 border-blue-300",
+  vencida: "bg-gray-100 text-gray-700 border-gray-300",
 }
 
-// 'vencida' se deriva de la fecha (misma regla que la vista vista_proformas)
+const ESTADO_ETIQUETA: Record<EstadoEfectivo, string> = {
+  vigente: "Vigente",
+  pendiente: "Pendiente (revisar precios)",
+  convertida: "Convertida",
+  vencida: "Vencida",
+}
+
+// Misma regla que la vista vista_proformas (script 27): 3 estados + tope duro
+// de 3 meses desde la creación (gana sobre todo).
 function estadoEfectivo(p: ProformaFila): EstadoEfectivo {
-  if (p.estado === "vigente" && isBefore(addDays(new Date(p.creado_en), p.plazo_validez_dias), new Date())) {
-    return "vencida"
-  }
-  return p.estado
+  if (p.estado === "convertida") return "convertida"
+  const ahora = new Date()
+  if (isBefore(addMonths(new Date(p.creado_en), 3), ahora)) return "vencida"
+  const base = p.revalidada_en ? new Date(p.revalidada_en) : new Date(p.creado_en)
+  if (!isBefore(addDays(base, p.plazo_validez_dias), ahora)) return "vigente"
+  return "pendiente"
 }
 
 export function ProformasExplorer({
@@ -70,29 +71,8 @@ export function ProformasExplorer({
   const [estadoFiltro, setEstadoFiltro] = useState("todos")
   const [fechaDesde, setFechaDesde] = useState("")
   const [fechaHasta, setFechaHasta] = useState("")
-  const [convirtiendo, startConvirtiendo] = useTransition()
-  const router = useRouter()
 
   const hayFiltroFecha = fechaDesde !== "" || fechaHasta !== ""
-
-  function onConvertir(p: ProformaFila) {
-    startConvirtiendo(async () => {
-      const result = await convertirProformaAVenta(p.id)
-      if (result.error) {
-        toast.error(result.error)
-        return
-      }
-      toast.success(`Proforma ${p.numero} convertida en venta ${result.numero}.`, {
-        action: result.id
-          ? {
-              label: "Ver comprobante",
-              onClick: () => window.open(`/api/pdf/venta/${result.id}`, "_blank"),
-            }
-          : undefined,
-      })
-      router.refresh()
-    })
-  }
 
   const filtradas = useMemo(
     () =>
@@ -131,8 +111,8 @@ export function ProformasExplorer({
       cell: ({ row }) => {
         const e = estadoEfectivo(row.original)
         return (
-          <Badge variant={ESTADO_VARIANT[e]} className="capitalize">
-            {e}
+          <Badge variant="outline" className={cn("font-medium", ESTADO_ESTILO[e])}>
+            {ESTADO_ETIQUETA[e]}
           </Badge>
         )
       },
@@ -141,34 +121,21 @@ export function ProformasExplorer({
       id: "acciones",
       header: "",
       cell: ({ row }) => {
-        const puedeConvertir = estadoEfectivo(row.original) === "vigente"
+        const e = estadoEfectivo(row.original)
+        const esRevisar = e === "pendiente"
         return (
           <div className="flex justify-end gap-1">
-            {puedeConvertir && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" title="Convertir a venta" disabled={convirtiendo}>
-                    <ArrowRightLeft className="size-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>¿Convertir {row.original.numero} en venta?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Se registra la venta con estos mismos ítems y descuentos, y se descuenta el
-                      stock correspondiente. La proforma queda marcada como convertida y no se
-                      puede deshacer.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onConvertir(row.original)}>
-                      Convertir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+            <Button
+              variant={esRevisar ? "default" : "ghost"}
+              size={esRevisar ? "sm" : "icon"}
+              title={esRevisar ? "Revisar precios y convertir" : "Ver detalle / convertir"}
+              asChild
+            >
+              <Link href={`/proformas/${row.original.id}`}>
+                <Eye className="size-4" />
+                {esRevisar && <span className="ml-1">Revisar precios</span>}
+              </Link>
+            </Button>
             <a href={`/api/pdf/proforma/${row.original.id}`} target="_blank" rel="noreferrer">
               <Button variant="ghost" size="icon" title="Descargar PDF">
                 <Download className="size-4" />
@@ -198,12 +165,13 @@ export function ProformasExplorer({
             </SelectContent>
           </Select>
           <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-52">
               <SelectValue placeholder="Filtrar por estado" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos los estados</SelectItem>
               <SelectItem value="vigente">Vigente</SelectItem>
+              <SelectItem value="pendiente">Pendiente (revisar precios)</SelectItem>
               <SelectItem value="convertida">Convertida</SelectItem>
               <SelectItem value="vencida">Vencida</SelectItem>
             </SelectContent>
@@ -255,11 +223,7 @@ export function ProformasExplorer({
         />
       </div>
 
-      <TablaDatos
-        columns={columns}
-        data={filtradas}
-        mensajeVacio="Todavía no hay proformas."
-      />
+      <TablaDatos columns={columns} data={filtradas} mensajeVacio="Todavía no hay proformas." />
     </div>
   )
 }
