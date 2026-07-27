@@ -15,7 +15,7 @@
 | **R8** · guardado de producto sin transacción | 🟨 **Parcial** | ✅ Mitigación **mínima** hecha (dedup de listas hijas en zod + chequeo del error de los `delete`). ⏳ Falta la **RPC transaccional `fn_guardar_producto`** (necesita nº de script SQL a coordinar — no está entre los 22–28 reservados). |
 | **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
-| **F1** · búsqueda sin acentos | 🟨 **Script escrito, falta correrlo** | ✅ `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). ⏳ FALTA **correr el script `26` en Supabase** y probar (`valvula` debe pasar de 1 a ~113). |
+| **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
 | **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ⏳ **Pendiente** | Script `27` + páginas/acciones nuevas. |
 | **Parte III** · Pedido (ex Traspasos) | ⏳ **Pendiente** | Script `28` + inversión de flujo + permisos. |
 | **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
@@ -1020,7 +1020,7 @@ end as estado_efectivo
 - [x] **No** se creó `spanish_unaccent` (Q8) ni se cambió la lógica cross-field (Q8b).
 - [x] `notify pgrst, 'reload schema';` al final del script.
 - [x] Corregida `supabase/README.md`: fila 15 anotada como "no es la que corre" + fila 26 nueva (Q12).
-- [ ] ⏳ **PENDIENTE: correr `supabase/26_busqueda_unaccent.sql` en Supabase** y probar que `valvula` devuelve ~113 (hoy 1). *(No se pudo verificar en esta sesión: sin acceso a la BD.)*
+- [x] ✅ **HECHO 27 jul: `supabase/26_busqueda_unaccent.sql` corrido y verificado en la BD real.** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). **F1 cerrado.**
 
 ### Bloque F4 · Quitar descuento por porcentaje 🟢 — ✅ HECHO 27 jul
 - [x] Quitar `<SelectItem value="porcentaje">` de POS (línea y global) y de proforma (Q10, Q11).
