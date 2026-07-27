@@ -19,14 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import {
   CriteriosBusqueda,
   CAMPOS_DEFECTO,
@@ -156,277 +155,298 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
   }
 
   return (
-    <Sheet
+    <Dialog
       open={open}
       onOpenChange={(v) => {
         setOpen(v)
         if (!v) limpiar()
       }}
     >
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
-        <SheetHeader>
-          <SheetTitle>Nueva proforma</SheetTitle>
-          <SheetDescription>
-            Elegí el cliente, agregá productos y definí descuentos e impuesto.
-          </SheetDescription>
-        </SheetHeader>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogContent className="max-h-[92vh] w-[95vw] max-w-5xl overflow-hidden p-0 sm:rounded-2xl">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[92vh] flex-col">
+          <DialogHeader className="border-b border-border px-6 py-4 text-left">
+            <DialogTitle className="text-xl">Nueva proforma</DialogTitle>
+            <DialogDescription>
+              Elegí el cliente, agregá productos y definí descuentos e impuesto.
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-6">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex-1 space-y-6 overflow-y-auto p-6">
+            {/* Datos generales */}
+            <div className="grid gap-4 rounded-xl border border-border bg-muted/30 p-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Cliente</Label>
+                <BuscadorCliente
+                  value={clienteSel}
+                  onChange={(c) => {
+                    setClienteSel(c)
+                    setValue("cliente_id", c?.id ?? "")
+                  }}
+                />
+                {errors.cliente_id && (
+                  <p className="text-sm text-destructive">{errors.cliente_id.message}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="tipo_pago">Tipo de pago</Label>
+                  <Input id="tipo_pago" className="h-11" placeholder="Contado / Crédito" {...register("tipo_pago")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="plazo_validez_dias">Validez (días)</Label>
+                  <Input
+                    id="plazo_validez_dias"
+                    type="number"
+                    min={0}
+                    className="h-11"
+                    {...register("plazo_validez_dias")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tiempo_entrega_dias">Entrega (días)</Label>
+                  <Input
+                    id="tiempo_entrega_dias"
+                    type="number"
+                    min={0}
+                    className="h-11"
+                    placeholder="0 = no indicar"
+                    {...register("tiempo_entrega_dias")}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Buscar productos */}
             <div className="space-y-2">
-              <Label>Cliente</Label>
-              <BuscadorCliente
-                value={clienteSel}
-                onChange={(c) => {
-                  setClienteSel(c)
-                  setValue("cliente_id", c?.id ?? "")
-                }}
-              />
-              {errors.cliente_id && (
-                <p className="text-sm text-destructive">{errors.cliente_id.message}</p>
+              <Label className="text-base">Agregar productos</Label>
+              <CriteriosBusqueda value={campos} onChange={onCamposChange} />
+              <div className="relative">
+                <Search className="absolute left-3 top-3 size-5 text-muted-foreground" />
+                <Input
+                  className="h-12 pl-10 text-base"
+                  placeholder="Escribí para buscar un producto..."
+                  value={busqueda}
+                  onChange={(e) => onBuscar(e.target.value)}
+                />
+              </div>
+              {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
+              {resultados.length > 0 && (
+                <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+                  {resultados.map((r) => (
+                    <button
+                      type="button"
+                      key={r.id}
+                      onClick={() => agregarProducto(r)}
+                      className="flex w-full items-center justify-between gap-2 border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-muted"
+                    >
+                      <span className="min-w-0">
+                        <span className="text-base font-semibold">{r.codigo}</span>{" "}
+                        <span className="text-muted-foreground">— {r.descripcion}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2 text-base font-semibold text-primary">
+                        {bs(r.precio)}
+                        <Plus className="size-5" />
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="tipo_pago">Tipo de pago</Label>
-                <Input id="tipo_pago" placeholder="Contado / Crédito" {...register("tipo_pago")} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="plazo_validez_dias">Validez (días)</Label>
-                <Input
-                  id="plazo_validez_dias"
-                  type="number"
-                  min={0}
-                  {...register("plazo_validez_dias")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tiempo_entrega_dias">Entrega (días)</Label>
-                <Input
-                  id="tiempo_entrega_dias"
-                  type="number"
-                  min={0}
-                  placeholder="0 = no indicar"
-                  {...register("tiempo_entrega_dias")}
-                />
-              </div>
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Agregar productos</Label>
-            <CriteriosBusqueda value={campos} onChange={onCamposChange} />
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-              <Input
-                className="pl-8"
-                placeholder="Escribí para buscar un producto..."
-                value={busqueda}
-                onChange={(e) => onBuscar(e.target.value)}
-              />
-            </div>
-            {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
-            {resultados.length > 0 && (
-              <div className="max-h-40 overflow-y-auto rounded-md border border-border">
-                {resultados.map((r) => (
-                  <button
-                    type="button"
-                    key={r.id}
-                    onClick={() => agregarProducto(r)}
-                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
-                  >
-                    <span>
-                      <span className="font-medium">{r.codigo}</span> — {r.descripcion}
-                    </span>
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      {bs(r.precio)}
-                      <Plus className="size-4" />
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            <Label>Ítems</Label>
-            {errors.items && <p className="text-sm text-destructive">{errors.items.message}</p>}
-            {items.fields.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Todavía no agregaste productos.</p>
-            ) : (
-              <div className="space-y-2">
-                {items.fields.map((field, index) => {
-                  const linea = valores.items?.[index]
-                  const subtotalLinea = linea
-                    ? calcularSubtotalLinea(
-                        linea.cantidad,
-                        linea.precio_unitario,
-                        linea.descuento_tipo,
-                        linea.descuento_valor
-                      )
-                    : 0
-                  return (
-                    <div key={field.id} className="space-y-2 rounded-md border border-border p-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-medium">{field.codigo}</p>
-                          <p className="text-xs text-muted-foreground">{field.descripcion}</p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => items.remove(index)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-[4rem_6rem_1fr_5rem] items-end gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Cant.</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            {...register(`items.${index}.cantidad`, {
-                              onChange: (e) =>
-                                ajustarPrecioPorCantidad(
-                                  index,
-                                  field.producto_id,
-                                  Number(e.target.value)
-                                ),
-                            })}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Precio Bs</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            {...register(`items.${index}.precio_unitario`)}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Descuento</Label>
-                          <div className="flex gap-1">
-                            <Select
-                              value={linea?.descuento_tipo ?? "ninguno"}
-                              onValueChange={(v) =>
-                                setValue(
-                                  `items.${index}.descuento_tipo`,
-                                  v as ProformaInput["items"][number]["descuento_tipo"]
-                                )
-                              }
+            {/* Ítems + resumen (2 columnas) */}
+            <div className="grid gap-6 lg:grid-cols-[1fr_23rem]">
+              <div className="space-y-3">
+                <Label className="text-base">Ítems</Label>
+                {errors.items && <p className="text-sm text-destructive">{errors.items.message}</p>}
+                {items.fields.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border py-12 text-center text-base text-muted-foreground">
+                    Todavía no agregaste productos.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {items.fields.map((field, index) => {
+                      const linea = valores.items?.[index]
+                      const subtotalLinea = linea
+                        ? calcularSubtotalLinea(
+                            linea.cantidad,
+                            linea.precio_unitario,
+                            linea.descuento_tipo,
+                            linea.descuento_valor
+                          )
+                        : 0
+                      return (
+                        <div key={field.id} className="space-y-2.5 rounded-lg border border-border bg-background p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-base font-semibold">{field.codigo}</p>
+                              <p className="text-sm text-muted-foreground">{field.descripcion}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => items.remove(index)}
                             >
-                              <SelectTrigger className="w-[4.5rem]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ninguno">—</SelectItem>
-                                <SelectItem value="porcentaje">%</SelectItem>
-                                <SelectItem value="monto_fijo">Bs</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
-                              {...register(`items.${index}.descuento_valor`)}
-                            />
+                              <Trash2 className="size-5" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-[4.5rem_7rem_1fr_auto] items-end gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Cant.</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                className="h-11 text-base font-medium"
+                                {...register(`items.${index}.cantidad`, {
+                                  onChange: (e) =>
+                                    ajustarPrecioPorCantidad(
+                                      index,
+                                      field.producto_id,
+                                      Number(e.target.value)
+                                    ),
+                                })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Precio Bs</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min={0}
+                                className="h-11 text-base"
+                                {...register(`items.${index}.precio_unitario`)}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Descuento</Label>
+                              <div className="flex gap-1">
+                                <Select
+                                  value={linea?.descuento_tipo ?? "ninguno"}
+                                  onValueChange={(v) =>
+                                    setValue(
+                                      `items.${index}.descuento_tipo`,
+                                      v as ProformaInput["items"][number]["descuento_tipo"]
+                                    )
+                                  }
+                                >
+                                  <SelectTrigger className="h-11 w-[4.5rem]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ninguno">—</SelectItem>
+                                    <SelectItem value="porcentaje">%</SelectItem>
+                                    <SelectItem value="monto_fijo">Bs</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min={0}
+                                  className="h-11 text-base"
+                                  disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
+                                  {...register(`items.${index}.descuento_valor`)}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-right">
+                              <Label className="text-xs">Subtotal</Label>
+                              <p className="whitespace-nowrap pb-2 text-lg font-bold text-primary">{bs(subtotalLinea)}</p>
+                            </div>
                           </div>
                         </div>
-                        <div className="space-y-1 text-right">
-                          <Label className="text-xs">Subtotal</Label>
-                          <p className="pb-2 text-sm font-medium">{bs(subtotalLinea)}</p>
-                        </div>
-                      </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Resumen */}
+              <div className="space-y-4 lg:sticky lg:top-0 lg:self-start">
+                <div className="grid grid-cols-2 gap-3 rounded-md border border-border p-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Descuento global</Label>
+                    <div className="flex gap-1">
+                      <Select
+                        value={valores.descuento_tipo ?? "ninguno"}
+                        onValueChange={(v) =>
+                          setValue("descuento_tipo", v as ProformaInput["descuento_tipo"])
+                        }
+                      >
+                        <SelectTrigger className="h-11 w-[4.5rem]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ninguno">—</SelectItem>
+                          <SelectItem value="porcentaje">%</SelectItem>
+                          <SelectItem value="monto_fijo">Bs</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        className="h-11 text-base"
+                        disabled={!valores.descuento_tipo || valores.descuento_tipo === "ninguno"}
+                        {...register("descuento_valor")}
+                      />
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs" htmlFor="impuesto_porcentaje">
+                      Impuesto %
+                    </Label>
+                    <Input
+                      id="impuesto_porcentaje"
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      max={100}
+                      className="h-11 text-base"
+                      {...register("impuesto_porcentaje")}
+                    />
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-2 gap-3 rounded-md border border-border p-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Descuento global</Label>
-              <div className="flex gap-1">
-                <Select
-                  value={valores.descuento_tipo ?? "ninguno"}
-                  onValueChange={(v) =>
-                    setValue("descuento_tipo", v as ProformaInput["descuento_tipo"])
-                  }
-                >
-                  <SelectTrigger className="w-[4.5rem]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ninguno">—</SelectItem>
-                    <SelectItem value="porcentaje">%</SelectItem>
-                    <SelectItem value="monto_fijo">Bs</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  disabled={!valores.descuento_tipo || valores.descuento_tipo === "ninguno"}
-                  {...register("descuento_valor")}
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs" htmlFor="impuesto_porcentaje">
-                Impuesto %
-              </Label>
-              <Input
-                id="impuesto_porcentaje"
-                type="number"
-                step="0.01"
-                min={0}
-                max={100}
-                {...register("impuesto_porcentaje")}
-              />
-            </div>
-          </div>
+                <div className="space-y-2 rounded-lg border border-border p-4">
+                  <div className="flex justify-between text-base">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className="font-medium">{bs(totales.subtotal)}</span>
+                  </div>
+                  {totales.descuento > 0 && (
+                    <div className="flex justify-between text-base">
+                      <span className="text-muted-foreground">Descuento</span>
+                      <span className="font-medium">−{bs(totales.descuento)}</span>
+                    </div>
+                  )}
+                  {totales.impuesto > 0 && (
+                    <div className="flex justify-between text-base">
+                      <span className="text-muted-foreground">Impuesto</span>
+                      <span className="font-medium">{bs(totales.impuesto)}</span>
+                    </div>
+                  )}
+                  <div className="mt-1 flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground">
+                    <span className="text-lg font-semibold uppercase tracking-wide">Total</span>
+                    <span className="text-3xl font-bold tabular-nums">{bs(totales.total)}</span>
+                  </div>
+                </div>
 
-          <div className="space-y-1 rounded-md bg-muted/40 p-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{bs(totales.subtotal)}</span>
-            </div>
-            {totales.descuento > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Descuento</span>
-                <span>−{bs(totales.descuento)}</span>
+                <div className="space-y-2">
+                  <Label htmlFor="glosa">Glosa (opcional)</Label>
+                  <Textarea id="glosa" rows={2} {...register("glosa")} />
+                </div>
               </div>
-            )}
-            {totales.impuesto > 0 && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Impuesto</span>
-                <span>{bs(totales.impuesto)}</span>
-              </div>
-            )}
-            <div className="flex justify-between border-t border-border pt-1 text-base font-semibold">
-              <span>Total</span>
-              <span>{bs(totales.total)}</span>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="glosa">Glosa (opcional)</Label>
-            <Textarea id="glosa" rows={2} {...register("glosa")} />
-          </div>
-
-          <SheetFooter>
-            <Button type="submit" disabled={loading}>
+          <div className="border-t border-border p-4">
+            <Button type="submit" className="h-14 w-full text-lg font-semibold" disabled={loading}>
               {loading ? "Guardando..." : "Crear proforma"}
             </Button>
-          </SheetFooter>
+          </div>
         </form>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
