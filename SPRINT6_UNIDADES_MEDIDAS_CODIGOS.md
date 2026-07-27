@@ -6,6 +6,27 @@
 
 ---
 
+## 🟩 ESTADO DE IMPLEMENTACIÓN — actualizado 27 jul 2026
+
+> Lo que ya se implementó en esta sesión y lo que falta. **Todo lo hecho es solo código (sin SQL), verificado con `tsc --noEmit` y `next lint` limpios.** El detalle está tildado en el checklist del final.
+
+| Bloque | Estado | Notas |
+|---|---|---|
+| **R8** · guardado de producto sin transacción | 🟨 **Parcial** | ✅ Mitigación **mínima** hecha (dedup de listas hijas en zod + chequeo del error de los `delete`). ⏳ Falta la **RPC transaccional `fn_guardar_producto`** (necesita nº de script SQL a coordinar — no está entre los 22–28 reservados). |
+| **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
+| **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
+| **F1** · búsqueda sin acentos | ⏳ **Pendiente** | Necesita `create extension unaccent` + script `26` corrido en Supabase. **Ojo: partir de la versión VIVA de `fn_buscar_productos`, no del script 15** (ver F1). |
+| **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ⏳ **Pendiente** | Script `27` + páginas/acciones nuevas. |
+| **Parte III** · Pedido (ex Traspasos) | ⏳ **Pendiente** | Script `28` + inversión de flujo + permisos. |
+| **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
+
+**Archivos tocados en esta sesión (R8 + F4 + F3):**
+`lib/validations/producto.ts` · `lib/validations/venta.ts` · `lib/validations/proforma.ts` · `app/(dashboard)/productos/actions.ts` · `app/(dashboard)/ventas/pos.tsx` · `app/(dashboard)/proformas/proforma-form.tsx`
+
+**Para quien retome:** empezar por lo pendiente de menor riesgo — **F1** (arregla el bug de acentos del POS), y luego las Partes IV → III → I. La única capa a mano de R8 es la RPC (opcional pero recomendada antes de la Parte I).
+
+---
+
 ## 📖 Cómo usar este documento
 
 Este documento es **autosuficiente**: contiene el análisis del estado actual, todas las decisiones ya tomadas con el cliente, los riesgos detectados y el plan paso a paso. Está escrito para que **cualquier dev (o Claude Code) pueda ejecutarlo sin haber estado en la conversación original**.
@@ -990,7 +1011,8 @@ end as estado_efectivo
 ## ✅ Checklist de implementación (marcar a medida que se avanza)
 
 ### Bloque 0 · Previo (🔴 hacer primero)
-- [ ] **R8** — `updateProducto` deja de borrar hijos y reinsertarlos sin transacción. Mínimo: deduplicar listas en zod + verificar el error de los `delete`. Correcto: RPC transaccional `fn_guardar_producto`. *(Protege los 810 códigos OEM antes de que la Parte I los cargue en ese mismo patrón.)*
+- [x] **R8 (mínimo) — HECHO 27 jul:** deduplicar listas hijas en zod (`lib/validations/producto.ts`) + verificar el error de los `delete` en `updateProducto` (`productos/actions.ts`). *(Mata el disparador del `unique` que amplifica la Parte I.)*
+- [ ] **R8 (correcto) — PENDIENTE:** RPC transaccional `fn_guardar_producto`. Necesita nº de script SQL a coordinar (no está entre los 22–28 reservados). Cierra el hueco residual "delete OK → insert falla por RLS/red".
 
 ### Bloque F1 · Acentos en la búsqueda 🟢
 - [ ] `create extension if not exists unaccent with schema extensions;`
@@ -1000,15 +1022,15 @@ end as estado_efectivo
 - [ ] Corregir `supabase/README.md`: la fila 15 apunta a una función que no es la que corre (Q12).
 - [ ] Probar: `valvula` debe devolver ~113 productos (hoy devuelve 1).
 
-### Bloque F4 · Quitar descuento por porcentaje 🟢
-- [ ] Quitar `<SelectItem value="porcentaje">` de POS (línea y global) y de proforma (Q10, Q11).
-- [ ] Quitar `porcentaje` del enum en `lib/validations/venta.ts` y `lib/validations/proforma.ts`.
-- [ ] **NO tocar** el `check` de la BD (hay 12 registros históricos con porcentaje) ni la rama `'porcentaje'` de `fn_registrar_venta`.
+### Bloque F4 · Quitar descuento por porcentaje 🟢 — ✅ HECHO 27 jul
+- [x] Quitar `<SelectItem value="porcentaje">` de POS (línea y global) y de proforma (Q10, Q11).
+- [x] Quitar `porcentaje` del enum en `lib/validations/venta.ts` y `lib/validations/proforma.ts`.
+- [x] **NO se tocó** el `check` de la BD (hay 12 registros históricos con porcentaje) ni la rama `'porcentaje'` de `fn_registrar_venta`.
 
-### Bloque F3 · Enter agrega al carrito 🟢
-- [ ] `onKeyDown` en el buscador de POS y de proforma: Enter agrega **el primero** de la lista (Q9).
-- [ ] Limpiar el buscador, mantener el foco, cantidad 1.
-- [ ] Ignorar el Enter si el producto no tiene stock en la sucursal o si la búsqueda está en curso.
+### Bloque F3 · Enter agrega al carrito 🟢 — ✅ HECHO 27 jul
+- [x] `onKeyDown` en el buscador de POS y de proforma: Enter agrega **el primero** de la lista (Q9).
+- [x] Limpiar el buscador, mantener el foco, cantidad 1 (reusa `agregarProducto`).
+- [x] Ignorar el Enter si el producto no tiene stock en la sucursal (POS) o si la búsqueda está en curso. En proforma, `preventDefault` evita además el submit accidental del `<form>`.
 
 ### Bloque IV · Proformas 🟡
 - [ ] `27_proformas_vigencia.sql`: columna `revalidada_en`, vista con **3 estados**, `plazo_validez_dias` default 3 + update de las 5 filas existentes, y **validación de vigencia dentro de `fn_convertir_proforma_a_venta`**.

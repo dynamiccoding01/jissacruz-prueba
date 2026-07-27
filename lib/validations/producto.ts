@@ -26,6 +26,23 @@ export const precioMayorSchema = z.object({
   vigente_hasta: z.string().optional(),
 })
 
+// R8 · Deduplica las listas hijas ANTES de que la Server Action las escriba.
+// El guardado de producto borra los hijos y los reinserta sin transacción; si
+// el usuario tipea dos veces la misma clave, el insert falla por el UNIQUE
+// DESPUÉS de que el delete ya borró todo. Deduplicar acá mata ese disparador.
+// Conserva la primera aparición de cada clave.
+function dedupePorClave<T>(clave: (item: T) => string) {
+  return (items: T[]): T[] => {
+    const vistos = new Set<string>()
+    return items.filter((item) => {
+      const k = clave(item)
+      if (vistos.has(k)) return false
+      vistos.add(k)
+      return true
+    })
+  }
+}
+
 export const productoSchema = z.object({
   codigo: z.string().min(1, "El código es obligatorio"),
   descripcion: z.string().min(1, "La descripción es obligatoria"),
@@ -34,9 +51,17 @@ export const productoSchema = z.object({
   precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
   stock_minimo: z.coerce.number().int().min(0, "El stock mínimo no puede ser negativo"),
   imagen_url: z.string().optional().nullable(),
-  codigos_equivalentes: z.array(codigoEquivalenteSchema),
-  vehiculos_compatibles: z.array(vehiculoCompatibleSchema),
-  precios_mayor: z.array(precioMayorSchema),
+  codigos_equivalentes: z
+    .array(codigoEquivalenteSchema)
+    .transform(dedupePorClave((c) => c.codigo_equivalente.trim().toUpperCase())),
+  vehiculos_compatibles: z
+    .array(vehiculoCompatibleSchema)
+    .transform(
+      dedupePorClave((v) => `${v.marca.trim().toUpperCase()}|${v.modelo.trim().toUpperCase()}`)
+    ),
+  precios_mayor: z
+    .array(precioMayorSchema)
+    .transform(dedupePorClave((p) => String(p.cantidad_minima))),
 })
 
 // Output: lo que queda despues de validar/coercionar (lo que reciben las Server Actions).

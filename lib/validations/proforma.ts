@@ -5,7 +5,10 @@ export type DescuentoTipo = "porcentaje" | "monto_fijo" | null
 // El formulario usa "ninguno" como centinela. NO se transforma en el schema
 // (un transform haría input≠output y rompería el Resolver de react-hook-form).
 // La normalización "ninguno" -> null se hace en la action con normalizarDescuento().
-const descuentoTipo = z.enum(["ninguno", "porcentaje", "monto_fijo"]).default("ninguno")
+// F4 (Sprint 6): se quita "porcentaje" del formulario — el descuento solo puede
+// ser monto fijo. Se conserva la rama 'porcentaje' en montoDescuento() de abajo
+// para seguir mostrando bien las proformas historicas que ya lo tenian.
+const descuentoTipo = z.enum(["ninguno", "monto_fijo"]).default("ninguno")
 
 export type DescuentoTipoForm = "ninguno" | "porcentaje" | "monto_fijo"
 

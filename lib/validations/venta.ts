@@ -13,7 +13,10 @@ export type { DescuentoTipo, LineaCalculable }
 
 // El formulario usa "ninguno" como centinela, igual que en proformas;
 // la normalizacion a null la hace registrarVenta() antes de llamar la RPC.
-const descuentoTipo = z.enum(["ninguno", "porcentaje", "monto_fijo"]).default("ninguno")
+// F4 (Sprint 6): se quita "porcentaje" — el descuento solo puede ser monto fijo.
+// NO se toca el check de la BD ni la rama 'porcentaje' de fn_registrar_venta
+// (hay registros historicos con porcentaje que deben seguir siendo legibles).
+const descuentoTipo = z.enum(["ninguno", "monto_fijo"]).default("ninguno")
 
 export const ventaItemSchema = z.object({
   producto_id: z.string().uuid("Seleccioná un producto"),

@@ -209,6 +209,16 @@ export function Pos() {
             placeholder="Escribí para buscar un producto..."
             value={busqueda}
             onChange={(e) => onBuscar(e.target.value)}
+            onKeyDown={(e) => {
+              // F3: Enter agrega el primer resultado. Se ignora mientras la
+              // busqueda esta en curso o si no hay resultados. agregarProducto
+              // ya bloquea los productos sin stock en la sucursal y reenfoca.
+              if (e.key === "Enter") {
+                e.preventDefault()
+                if (buscando || resultados.length === 0) return
+                agregarProducto(resultados[0])
+              }
+            }}
           />
         </div>
         {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
@@ -382,7 +392,6 @@ export function Pos() {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="ninguno">—</SelectItem>
-                                    <SelectItem value="porcentaje">%</SelectItem>
                                     <SelectItem value="monto_fijo">Bs</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -423,7 +432,6 @@ export function Pos() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="ninguno">—</SelectItem>
-                          <SelectItem value="porcentaje">%</SelectItem>
                           <SelectItem value="monto_fijo">Bs</SelectItem>
                         </SelectContent>
                       </Select>

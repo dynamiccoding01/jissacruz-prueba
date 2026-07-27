@@ -128,10 +128,22 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
     }
   }
 
-  // reemplaza los hijos por el set actual del formulario (listas chicas, mas simple que diffear)
-  await supabase.from("producto_codigos_equivalentes").delete().eq("producto_id", id)
-  await supabase.from("producto_vehiculos_compatibles").delete().eq("producto_id", id)
-  await supabase.from("producto_precios_mayor").delete().eq("producto_id", id)
+  // R8 · reemplaza los hijos por el set actual del formulario. Los delete se
+  // verifican y abortan ante el primer error: si no se pueden borrar, NO se
+  // sigue (evita quedar con hijos a medias). El fix atómico completo es la RPC
+  // transaccional fn_guardar_producto (Q4), pendiente de coordinar nº de script.
+  const tablasHijas = [
+    "producto_codigos_equivalentes",
+    "producto_vehiculos_compatibles",
+    "producto_precios_mayor",
+  ] as const
+  for (const tabla of tablasHijas) {
+    const { error: delError } = await supabase.from(tabla).delete().eq("producto_id", id)
+    if (delError) {
+      logError("productos.updateProducto.delete", delError, { id, tabla })
+      return { error: "No se pudieron actualizar los datos relacionados del producto." }
+    }
+  }
 
   try {
     await guardarHijos(supabase, id, codigos_equivalentes, vehiculos_compatibles, precios_mayor)

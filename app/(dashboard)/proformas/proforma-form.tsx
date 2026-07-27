@@ -228,6 +228,16 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                   placeholder="Escribí para buscar un producto..."
                   value={busqueda}
                   onChange={(e) => onBuscar(e.target.value)}
+                  onKeyDown={(e) => {
+                    // F3: Enter agrega el primer resultado. preventDefault ademas
+                    // evita que el Enter dispare el submit del <form> del modal.
+                    // Se ignora mientras busca o si no hay resultados.
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      if (buscando || resultados.length === 0) return
+                      agregarProducto(resultados[0])
+                    }
+                  }}
                 />
               </div>
               {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
@@ -336,7 +346,6 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="ninguno">—</SelectItem>
-                                    <SelectItem value="porcentaje">%</SelectItem>
                                     <SelectItem value="monto_fijo">Bs</SelectItem>
                                   </SelectContent>
                                 </Select>
@@ -379,7 +388,6 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="ninguno">—</SelectItem>
-                          <SelectItem value="porcentaje">%</SelectItem>
                           <SelectItem value="monto_fijo">Bs</SelectItem>
                         </SelectContent>
                       </Select>
