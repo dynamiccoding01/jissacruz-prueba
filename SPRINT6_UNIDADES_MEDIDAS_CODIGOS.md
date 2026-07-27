@@ -15,7 +15,7 @@
 | **R8** · guardado de producto sin transacción | 🟨 **Parcial** | ✅ Mitigación **mínima** hecha (dedup de listas hijas en zod + chequeo del error de los `delete`). ⏳ Falta la **RPC transaccional `fn_guardar_producto`** (necesita nº de script SQL a coordinar — no está entre los 22–28 reservados). |
 | **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
-| **F1** · búsqueda sin acentos | ⏳ **Pendiente** | Necesita `create extension unaccent` + script `26` corrido en Supabase. **Ojo: partir de la versión VIVA de `fn_buscar_productos`, no del script 15** (ver F1). |
+| **F1** · búsqueda sin acentos | 🟨 **Script escrito, falta correrlo** | ✅ `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). ⏳ FALTA **correr el script `26` en Supabase** y probar (`valvula` debe pasar de 1 a ~113). |
 | **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ⏳ **Pendiente** | Script `27` + páginas/acciones nuevas. |
 | **Parte III** · Pedido (ex Traspasos) | ⏳ **Pendiente** | Script `28` + inversión de flujo + permisos. |
 | **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
@@ -1014,13 +1014,13 @@ end as estado_efectivo
 - [x] **R8 (mínimo) — HECHO 27 jul:** deduplicar listas hijas en zod (`lib/validations/producto.ts`) + verificar el error de los `delete` en `updateProducto` (`productos/actions.ts`). *(Mata el disparador del `unique` que amplifica la Parte I.)*
 - [ ] **R8 (correcto) — PENDIENTE:** RPC transaccional `fn_guardar_producto`. Necesita nº de script SQL a coordinar (no está entre los 22–28 reservados). Cierra el hueco residual "delete OK → insert falla por RLS/red".
 
-### Bloque F1 · Acentos en la búsqueda 🟢
-- [ ] `create extension if not exists unaccent with schema extensions;`
-- [ ] `26_busqueda_unaccent.sql`: envolver **ambos lados** con `extensions.unaccent(...)` en **todos** los campos (Q7). **Partir de la versión VIVA de la función, no del script 15** (ver F1).
-- [ ] **No** crear la configuración `spanish_unaccent` (Q8) ni cambiar la lógica cross-field (Q8b).
-- [ ] `notify pgrst, 'reload schema';`
-- [ ] Corregir `supabase/README.md`: la fila 15 apunta a una función que no es la que corre (Q12).
-- [ ] Probar: `valvula` debe devolver ~113 productos (hoy devuelve 1).
+### Bloque F1 · Acentos en la búsqueda 🟢 — 🟨 Script escrito 27 jul, FALTA correrlo en Supabase
+- [x] `create extension if not exists unaccent with schema extensions;` (dentro del script 26)
+- [x] `26_busqueda_unaccent.sql`: envuelve **ambos lados** con `extensions.unaccent(...)` en **todos** los campos (Q7), partiendo de la versión **VIVA** (00_setup), no del script 15.
+- [x] **No** se creó `spanish_unaccent` (Q8) ni se cambió la lógica cross-field (Q8b).
+- [x] `notify pgrst, 'reload schema';` al final del script.
+- [x] Corregida `supabase/README.md`: fila 15 anotada como "no es la que corre" + fila 26 nueva (Q12).
+- [ ] ⏳ **PENDIENTE: correr `supabase/26_busqueda_unaccent.sql` en Supabase** y probar que `valvula` devuelve ~113 (hoy 1). *(No se pudo verificar en esta sesión: sin acceso a la BD.)*
 
 ### Bloque F4 · Quitar descuento por porcentaje 🟢 — ✅ HECHO 27 jul
 - [x] Quitar `<SelectItem value="porcentaje">` de POS (línea y global) y de proforma (Q10, Q11).
