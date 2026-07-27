@@ -9,22 +9,25 @@ export type TraspasoItemInput = {
   cantidad: number
 }
 
+// Parte III: el pedido lo crea el DESTINO (solicitante) y elige el ORIGEN al que
+// le pide. Para un vendedor, destino = su sucursal (la RPC lo deriva); un admin
+// puede pasar el destino explícito.
 export async function crearPedidoTraspaso(
-  sucursalDestinoId: string,
+  sucursalOrigenId: string,
   items: TraspasoItemInput[],
   notas?: string,
-  sucursalOrigenId?: string
+  sucursalDestinoId?: string
 ) {
   const supabase = await createClient()
   const { data, error } = await supabase.rpc("fn_crear_pedido_traspaso", {
-    p_sucursal_destino_id: sucursalDestinoId,
+    p_sucursal_origen_id: sucursalOrigenId,
     p_items: items,
     p_notas: notas || null,
-    p_sucursal_origen_id: sucursalOrigenId || null,
+    p_sucursal_destino_id: sucursalDestinoId || null,
   })
 
   if (error) {
-    logError("traspasos.crearPedidoTraspaso", error, { sucursalDestinoId, items: items.length })
+    logError("traspasos.crearPedidoTraspaso", error, { sucursalOrigenId, items: items.length })
     return { error: error.message || "No se pudo crear el pedido de traspaso." }
   }
   revalidatePath("/traspasos")
@@ -32,9 +35,13 @@ export async function crearPedidoTraspaso(
   return { id: data as string }
 }
 
-export async function enviarTraspaso(pedidoId: string) {
+// El origen puede recortar cantidades antes de despachar (0 = no manda ese ítem).
+export async function enviarTraspaso(pedidoId: string, cantidades?: TraspasoItemInput[]) {
   const supabase = await createClient()
-  const { error } = await supabase.rpc("fn_enviar_traspaso", { p_pedido_id: pedidoId })
+  const { error } = await supabase.rpc("fn_enviar_traspaso", {
+    p_pedido_id: pedidoId,
+    p_items: cantidades && cantidades.length > 0 ? cantidades : null,
+  })
   if (error) {
     logError("traspasos.enviarTraspaso", error, { pedidoId })
     return { error: error.message || "No se pudo despachar el traspaso." }

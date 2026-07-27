@@ -17,7 +17,7 @@ export default async function TraspasosPage() {
       sucursal_origen:sucursales!pedidos_traspaso_sucursal_origen_id_fkey(id, codigo, nombre),
       sucursal_destino:sucursales!pedidos_traspaso_sucursal_destino_id_fkey(id, codigo, nombre),
       items:pedido_traspaso_items(
-        id, cantidad, costo_fifo_unitario,
+        id, cantidad, cantidad_solicitada, costo_fifo_unitario,
         producto:productos(id, codigo, descripcion)
       )
     `)
@@ -26,9 +26,9 @@ export default async function TraspasosPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pedidos y Traspasos de Stock</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Pedidos entre sucursales</h1>
         <p className="text-sm text-muted-foreground">
-          Gestión de transferencias de productos entre sucursales y almacenes.
+          La sucursal que necesita el producto lo pide; la de origen lo despacha.
         </p>
       </div>
 

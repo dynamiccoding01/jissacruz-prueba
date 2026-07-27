@@ -16,8 +16,8 @@
 | **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
 | **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
-| **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | 🟨 **Código hecho · falta correr script 27** | ✅ `supabase/27_proformas_vigencia.sql` escrito (columna `revalidada_en`, vista con 3 estados + tope 3 meses, plazo default 3 retroactivo, validación de vigencia dentro de `fn_convertir_proforma_a_venta`). ✅ App: acciones `obtenerProformaDetalle`/`updateProforma`/`revalidarProforma`, explorer con 3 estados, **página nueva `/proformas/[id]`** (detalle + edición + comparación de precios + "traer precios actuales" + revalidar + convertir desde ahí). `tsc`/`lint` limpios. ⏳ FALTA **correr el script `27` en Supabase**. |
-| **Parte III** · Pedido (ex Traspasos) | ⏳ **Pendiente** | Script `28` + inversión de flujo + permisos. |
+| **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ✅ **Hecho y verificado en la BD (27 jul)** | Script `27` corrido y verificado. App: acciones `obtenerProformaDetalle`/`updateProforma`/`revalidarProforma`, explorer con 3 estados, **página `/proformas/[id]`** (detalle + edición + comparación de precios + "traer precios actuales" + revalidar + convertir). Alta sin campo "Validez" (Q20). `tsc`/`lint`/`build` limpios. |
+| **Parte III** · Pedido (ex Traspasos) | 🟨 **Núcleo hecho · falta correr script 28 · falta III-b** | ✅ `supabase/28_pedidos_flujo.sql` (invierte el flujo: crea el destino/elige origen; `cantidad_solicitada`; despacho con ajuste de cantidades en 1 paso; permisos H7/H8 en las 4 RPC). ✅ App: acciones flipeadas, formulario invertido, explorer renombrado a **"Pedido"** con diálogo de despacho editable (solicitado vs enviado), nav "Pedidos". `tsc`/`build` limpios. ⏳ FALTA **correr el script `28`**. ⏳ **III-b pendiente:** stock en tránsito en el reporte de inventario (H2, pantalla+PDF+Excel) y recibir los 2 pedidos en `enviado` (Q19, operativo). |
 | **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
 
 **Archivos tocados en esta sesión (R8 + F4 + F3):**
@@ -1042,14 +1042,14 @@ end as estado_efectivo
 - [x] Estado `vencida` = solo lectura, sin acciones (Q29). También `convertida`.
 - [x] **Recalcular los totales de cabecera** al editar ítems (`updateProforma` recalcula subtotal/total en el servidor).
 
-### Bloque III · Pedido (ex Traspasos) 🟡
-- [ ] `28_pedidos_flujo.sql`: invertir el flujo, `cantidad_solicitada`, relajar el `check` a `cantidad >= 0`, RPC de modificación de cantidades, validación de usuario y sucursal en las 4 RPC.
-- [ ] `fn_enviar_traspaso` debe **saltear los ítems en 0** (no llamar al FIFO ni insertar kardex).
-- [ ] Renombrar el módulo a **"Pedido"** (nav, títulos, textos).
-- [ ] Formulario: el creador es el **destino**; se elige la sucursal **origen** a la que se le pide.
-- [ ] Pantalla del origen: ajustar cantidades y despachar en un solo paso.
-- [ ] Stock en tránsito en el **reporte de inventario**, con recorrido `origen → destino`, en pantalla + PDF + Excel.
-- [ ] **Recibir los 2 pedidos que hoy están en `enviado`** (logueado desde la app, no por SQL).
+### Bloque III · Pedido (ex Traspasos) 🟡 — 🟨 Núcleo HECHO 27 jul (III-a) · falta correr script 28 y III-b
+- [x] `28_pedidos_flujo.sql`: invertir el flujo, `cantidad_solicitada`, relajar el `check` a `cantidad >= 0`, ajuste de cantidades al despachar, validación de usuario y sucursal en las 4 RPC. *(⏳ FALTA CORRERLO EN SUPABASE.)*
+- [x] `fn_enviar_traspaso` **saltea los ítems en 0** (no llama al FIFO ni inserta kardex) y exige al menos uno > 0.
+- [x] Renombrado el módulo a **"Pedido"** (nav, títulos, textos, toasts).
+- [x] Formulario: el creador es el **destino**; se elige la sucursal **origen** a la que se le pide.
+- [x] Pantalla del origen: **diálogo de despacho** que ajusta cantidades y despacha en un solo paso.
+- [ ] ⏳ **III-b — Stock en tránsito en el reporte de inventario**, con recorrido `origen → destino`, en pantalla + PDF + Excel. *(Pendiente.)*
+- [ ] ⏳ **Recibir los 2 pedidos que hoy están en `enviado`** (logueado desde la app, no por SQL). *(Operativo, hacerlo tras correr el 28.)*
 
 ### Bloque I · Unidades, medidas y códigos originales 🟠
 - [ ] Fases 1 a 5 según §3. Respetar el **orden dentro del script 22** (migrar los 810 **antes** de borrar `fabricante`).

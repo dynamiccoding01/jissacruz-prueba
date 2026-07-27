@@ -8,11 +8,13 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -20,7 +22,15 @@ import {
 import { TablaDatos } from "@/components/shared/tabla-datos"
 import type { Rol } from "@/components/shared/nav-items"
 import { TraspasoForm, type SucursalOption } from "./traspaso-form"
-import { cancelarTraspaso, enviarTraspaso, recibirTraspaso } from "./actions"
+import { cancelarTraspaso, enviarTraspaso, recibirTraspaso, type TraspasoItemInput } from "./actions"
+
+export type TraspasoItem = {
+  id: string
+  cantidad: number
+  cantidad_solicitada: number
+  costo_fifo_unitario: number
+  producto: { id: string; codigo: string; descripcion: string } | null
+}
 
 export type TraspasoFila = {
   id: string
@@ -32,12 +42,7 @@ export type TraspasoFila = {
   notas: string | null
   sucursal_origen: { id: string; codigo: string; nombre: string } | null
   sucursal_destino: { id: string; codigo: string; nombre: string } | null
-  items: Array<{
-    id: string
-    cantidad: number
-    costo_fifo_unitario: number
-    producto: { id: string; codigo: string; descripcion: string } | null
-  }>
+  items: TraspasoItem[]
 }
 
 const ESTILOS_ESTADO: Record<TraspasoFila["estado"], string> = {
@@ -48,9 +53,11 @@ const ESTILOS_ESTADO: Record<TraspasoFila["estado"], string> = {
 }
 
 function DetalleTraspaso({ traspaso, esAdmin }: { traspaso: TraspasoFila; esAdmin: boolean }) {
-  const cantTotal = traspaso.items.reduce((acc, i) => acc + i.cantidad, 0)
+  const cantTotal = traspaso.items.reduce((acc, i) => acc + i.cantidad_solicitada, 0)
   // el costo FIFO se fija recien al despachar; antes es 0 y no dice nada
   const conCosto = esAdmin && traspaso.estado !== "pendiente" && traspaso.estado !== "cancelado"
+  // una vez enviado, tiene sentido mostrar lo despachado vs lo pedido
+  const yaEnviado = traspaso.estado === "enviado" || traspaso.estado === "recibido"
 
   return (
     <Dialog>
@@ -67,7 +74,8 @@ function DetalleTraspaso({ traspaso, esAdmin }: { traspaso: TraspasoFila; esAdmi
         <DialogHeader>
           <DialogTitle>Pedido {traspaso.numero}</DialogTitle>
           <DialogDescription>
-            {traspaso.sucursal_origen?.nombre ?? "Origen"} → {traspaso.sucursal_destino?.nombre ?? "Destino"}
+            {traspaso.sucursal_destino?.nombre ?? "Destino"} le pide a{" "}
+            {traspaso.sucursal_origen?.nombre ?? "Origen"}
             {traspaso.notas ? ` · ${traspaso.notas}` : ""}
           </DialogDescription>
         </DialogHeader>
@@ -77,7 +85,8 @@ function DetalleTraspaso({ traspaso, esAdmin }: { traspaso: TraspasoFila; esAdmi
               <tr>
                 <th className="px-3 py-2">Código</th>
                 <th className="px-3 py-2">Descripción</th>
-                <th className="px-3 py-2 text-right">Cant.</th>
+                <th className="px-3 py-2 text-right">Pedido</th>
+                {yaEnviado && <th className="px-3 py-2 text-right">Enviado</th>}
                 {conCosto && <th className="px-3 py-2 text-right">Costo FIFO</th>}
               </tr>
             </thead>
@@ -86,17 +95,104 @@ function DetalleTraspaso({ traspaso, esAdmin }: { traspaso: TraspasoFila; esAdmi
                 <tr key={it.id} className="border-t border-border">
                   <td className="px-3 py-2 font-medium">{it.producto?.codigo ?? "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground">{it.producto?.descripcion ?? "—"}</td>
-                  <td className="px-3 py-2 text-right">{it.cantidad}</td>
-                  {conCosto && (
-                    <td className="px-3 py-2 text-right">
-                      Bs {Number(it.costo_fifo_unitario).toFixed(2)}
+                  <td className="px-3 py-2 text-right">{it.cantidad_solicitada}</td>
+                  {yaEnviado && (
+                    <td className="px-3 py-2 text-right font-medium">
+                      {it.cantidad}
+                      {it.cantidad !== it.cantidad_solicitada && (
+                        <span className="ml-1 text-xs text-amber-700">(ajustado)</span>
+                      )}
                     </td>
+                  )}
+                  {conCosto && (
+                    <td className="px-3 py-2 text-right">Bs {Number(it.costo_fifo_unitario).toFixed(2)}</td>
                   )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// Diálogo de despacho: el origen ajusta las cantidades (0 = no enviar ese ítem)
+// y despacha en un solo paso.
+function DespacharDialog({
+  traspaso,
+  disabled,
+  onConfirmar,
+}: {
+  traspaso: TraspasoFila
+  disabled: boolean
+  onConfirmar: (cantidades: TraspasoItemInput[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const productoIdDe = (it: TraspasoItem) => it.producto?.id ?? it.id
+
+  const [cant, setCant] = useState<Record<string, number>>(() =>
+    Object.fromEntries(traspaso.items.map((i) => [productoIdDe(i), i.cantidad_solicitada]))
+  )
+
+  function confirmar() {
+    const cantidades: TraspasoItemInput[] = traspaso.items.map((it) => ({
+      producto_id: productoIdDe(it),
+      cantidad: Math.max(0, Number(cant[productoIdDe(it)] ?? 0)),
+    }))
+    setOpen(false)
+    onConfirmar(cantidades)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+          disabled={disabled}
+        >
+          <PackageCheck className="size-3.5" /> Despachar
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Despachar {traspaso.numero}</DialogTitle>
+          <DialogDescription>
+            Ajustá cuánto vas a enviar de cada ítem. Poné 0 para no despachar uno. Se descuenta el
+            stock de {traspaso.sucursal_origen?.nombre ?? "origen"} por FIFO.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-80 space-y-2 overflow-y-auto">
+          {traspaso.items.map((it) => {
+            const pid = productoIdDe(it)
+            return (
+              <div key={it.id} className="flex items-center justify-between gap-3 rounded-md border border-border p-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{it.producto?.codigo ?? "—"}</p>
+                  <p className="text-xs text-muted-foreground">Pedido: {it.cantidad_solicitada}</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs text-muted-foreground">Enviar</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-9 w-20"
+                    value={cant[pid] ?? 0}
+                    onChange={(e) => setCant((prev) => ({ ...prev, [pid]: Number(e.target.value) }))}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={confirmar}>Despachar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -130,14 +226,14 @@ export function TraspasosExplorer({
     )
   }, [traspasos, filtro])
 
-  function handleEnviar(id: string, numero: string) {
+  function handleEnviar(id: string, numero: string, cantidades: TraspasoItemInput[]) {
     startTransition(async () => {
-      const res = await enviarTraspaso(id)
+      const res = await enviarTraspaso(id, cantidades)
       if (res.error) {
         toast.error(res.error)
         return
       }
-      toast.success(`Traspaso ${numero} despachado (salida FIFO registrada).`)
+      toast.success(`Pedido ${numero} despachado (salida FIFO registrada).`)
       router.refresh()
     })
   }
@@ -149,7 +245,7 @@ export function TraspasosExplorer({
         toast.error(res.error)
         return
       }
-      toast.success(`Traspaso ${numero} recibido (entrada de lote FIFO registrada).`)
+      toast.success(`Pedido ${numero} recibido (entrada de lote FIFO registrada).`)
       router.refresh()
     })
   }
@@ -161,7 +257,7 @@ export function TraspasosExplorer({
         toast.error(res.error)
         return
       }
-      toast.success(`Traspaso ${numero} cancelado.`)
+      toast.success(`Pedido ${numero} cancelado.`)
       router.refresh()
     })
   }
@@ -179,12 +275,12 @@ export function TraspasosExplorer({
     },
     {
       id: "ruta",
-      header: "Origen → Destino",
+      header: "Pide → Le pide a",
       cell: ({ row }) => (
         <span className="flex items-center gap-1.5 text-xs font-medium">
-          <span className="rounded bg-muted px-1.5 py-0.5">{row.original.sucursal_origen?.codigo ?? "Origen"}</span>
-          <ArrowLeftRight className="size-3 text-muted-foreground" />
           <span className="rounded bg-muted px-1.5 py-0.5">{row.original.sucursal_destino?.codigo ?? "Destino"}</span>
+          <ArrowLeftRight className="size-3 text-muted-foreground" />
+          <span className="rounded bg-muted px-1.5 py-0.5">{row.original.sucursal_origen?.codigo ?? "Origen"}</span>
         </span>
       ),
     },
@@ -213,15 +309,11 @@ export function TraspasosExplorer({
         return (
           <div className="flex justify-end gap-1">
             {t.estado === "pendiente" && esOrigen && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1 border-blue-300 text-blue-700 hover:bg-blue-50"
+              <DespacharDialog
+                traspaso={t}
                 disabled={isPending}
-                onClick={() => handleEnviar(t.id, t.numero)}
-              >
-                <PackageCheck className="size-3.5" /> Despachar
-              </Button>
+                onConfirmar={(cantidades) => handleEnviar(t.id, t.numero, cantidades)}
+              />
             )}
 
             {t.estado === "enviado" && esDestino && (
@@ -236,7 +328,7 @@ export function TraspasosExplorer({
               </Button>
             )}
 
-            {t.estado === "pendiente" && esOrigen && (
+            {t.estado === "pendiente" && esDestino && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -273,7 +365,7 @@ export function TraspasosExplorer({
           esAdmin={esAdmin}
           trigger={
             <Button>
-              <Plus className="size-4" /> Solicitud de Traspaso
+              <Plus className="size-4" /> Nuevo Pedido
             </Button>
           }
         />
@@ -283,7 +375,7 @@ export function TraspasosExplorer({
         columns={columns}
         data={filtrados}
         loading={isPending}
-        mensajeVacio="No se encontraron pedidos de traspaso."
+        mensajeVacio="No se encontraron pedidos."
       />
     </div>
   )

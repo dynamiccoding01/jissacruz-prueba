@@ -54,8 +54,10 @@ export function TraspasoForm({
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [origenId, setOrigenId] = useState<string>(userSucursalId ?? sucursales[0]?.id ?? "")
-  const [destinoId, setDestinoId] = useState<string>(
+  // El creador es el DESTINO (solicitante): por defecto su propia sucursal.
+  const [destinoId, setDestinoId] = useState<string>(userSucursalId ?? sucursales[0]?.id ?? "")
+  // Origen = la sucursal a la que le pide el producto (otra).
+  const [origenId, setOrigenId] = useState<string>(
     sucursales.find((s) => s.id !== (userSucursalId ?? sucursales[0]?.id))?.id ?? ""
   )
   const [notas, setNotas] = useState("")
@@ -107,8 +109,8 @@ export function TraspasoForm({
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!destinoId) {
-      toast.error("Seleccioná la sucursal de destino.")
+    if (!origenId) {
+      toast.error("Elegí la sucursal a la que le pedís (origen).")
       return
     }
     if (origenId === destinoId) {
@@ -126,7 +128,8 @@ export function TraspasoForm({
       cantidad: i.cantidad,
     }))
 
-    const result = await crearPedidoTraspaso(destinoId, payload, notas, esAdmin ? origenId : undefined)
+    // origen = a quién le pido; destino = mi sucursal (admin puede elegirlo)
+    const result = await crearPedidoTraspaso(origenId, payload, notas, esAdmin ? destinoId : undefined)
     setLoading(false)
 
     if (result.error) {
@@ -145,18 +148,18 @@ export function TraspasoForm({
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle>Nuevo Pedido de Traspaso</SheetTitle>
+          <SheetTitle>Nuevo Pedido</SheetTitle>
           <SheetDescription>
-            Solicitá la transferencia de repuestos entre sucursales.
+            Pedí repuestos a otra sucursal. Vos sos el destino; el origen los despacha.
           </SheetDescription>
         </SheetHeader>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-6">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Sucursal Origen</Label>
+              <Label>Mi sucursal (destino)</Label>
               {esAdmin ? (
-                <Select value={origenId} onValueChange={setOrigenId}>
+                <Select value={destinoId} onValueChange={setDestinoId}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -177,14 +180,14 @@ export function TraspasoForm({
             </div>
 
             <div className="space-y-2">
-              <Label>Sucursal Destino</Label>
-              <Select value={destinoId} onValueChange={setDestinoId}>
+              <Label>Le pido a (origen)</Label>
+              <Select value={origenId} onValueChange={setOrigenId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar..." />
                 </SelectTrigger>
                 <SelectContent>
                   {sucursales
-                    .filter((s) => s.id !== origenId)
+                    .filter((s) => s.id !== destinoId)
                     .map((s) => (
                       <SelectItem key={s.id} value={s.id}>
                         {s.nombre} ({s.codigo})
@@ -228,7 +231,7 @@ export function TraspasoForm({
           </div>
 
           <div className="space-y-3">
-            <Label>Ítems a transferir ({items.length})</Label>
+            <Label>Ítems a pedir ({items.length})</Label>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">No agregaste productos aún.</p>
             ) : (
