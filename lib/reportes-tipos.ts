@@ -14,6 +14,10 @@ export const REPORTE_LABEL: Record<ReporteTipo, string> = {
 export type Columna = { key: string; label: string; align?: "left" | "right" }
 export type Fila = Record<string, string | number>
 
+// Bloque adicional opcional dentro de un reporte (p. ej. el stock en tránsito
+// dentro del reporte de inventario): su propia tabla con título.
+export type BloqueReporte = { titulo: string; columnas: Columna[]; filas: Fila[] }
+
 export type ReporteResultado = {
   tipo: ReporteTipo
   titulo: string
@@ -22,4 +26,5 @@ export type ReporteResultado = {
   filas: Fila[]
   resumen: { label: string; value: string }[]
   grafico?: { etiqueta: string; total: number }[]
+  bloqueExtra?: BloqueReporte
 }

@@ -98,20 +98,38 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
     [reporte]
   )
 
-  const columns: ColumnDef<Fila>[] = reporte.columnas.map((c) => {
-    // El encabezado hereda la misma alineación que su columna para que el
-    // título quede sobre sus valores (los numéricos van a la derecha).
-    const alineado = c.align === "right" ? "text-right" : undefined
-    return {
-      accessorKey: c.key,
-      header: () => <div className={alineado}>{c.label}</div>,
-      cell: ({ row }) => (
-        <div className={c.align === "right" ? "text-right tabular-nums" : undefined}>
-          {String(row.original[c.key] ?? "")}
-        </div>
-      ),
-    }
-  })
+  // El bloque extra (p. ej. stock en tránsito) va en una hoja aparte del Excel.
+  const excelHojasExtra = useMemo(() => {
+    if (!reporte.bloqueExtra) return undefined
+    const b = reporte.bloqueExtra
+    return [
+      {
+        nombre: "En tránsito",
+        data: b.filas.map((fila) =>
+          Object.fromEntries(b.columnas.map((c) => [c.label, fila[c.key] ?? ""]))
+        ),
+      },
+    ]
+  }, [reporte])
+
+  // Construye las columnas de tabla a partir de la definición del reporte.
+  const construirColumnas = (cols: typeof reporte.columnas): ColumnDef<Fila>[] =>
+    cols.map((c) => {
+      // El encabezado hereda la misma alineación que su columna para que el
+      // título quede sobre sus valores (los numéricos van a la derecha).
+      const alineado = c.align === "right" ? "text-right" : undefined
+      return {
+        accessorKey: c.key,
+        header: () => <div className={alineado}>{c.label}</div>,
+        cell: ({ row }) => (
+          <div className={c.align === "right" ? "text-right tabular-nums" : undefined}>
+            {String(row.original[c.key] ?? "")}
+          </div>
+        ),
+      }
+    })
+
+  const columns = construirColumnas(reporte.columnas)
 
   return (
     <div className="space-y-5">
@@ -203,6 +221,7 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
             pdfHref={pdfHref}
             excelData={excelData}
             excelFilename={`reporte-${tipo}`}
+            excelHojasExtra={excelHojasExtra}
           />
         </CardContent>
       </Card>
@@ -237,6 +256,17 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
         loading={cargando}
         mensajeVacio="No hay datos para el período seleccionado."
       />
+
+      {reporte.bloqueExtra && reporte.bloqueExtra.filas.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-base font-semibold">{reporte.bloqueExtra.titulo}</h3>
+          <TablaDatos
+            columns={construirColumnas(reporte.bloqueExtra.columnas)}
+            data={reporte.bloqueExtra.filas}
+            mensajeVacio="Sin stock en tránsito."
+          />
+        </div>
+      )}
     </div>
   )
 }

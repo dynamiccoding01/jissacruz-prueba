@@ -17,23 +17,23 @@
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
 | **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
 | **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ✅ **Hecho y verificado en la BD (27 jul)** | Script `27` corrido y verificado. App: acciones `obtenerProformaDetalle`/`updateProforma`/`revalidarProforma`, explorer con 3 estados, **página `/proformas/[id]`** (detalle + edición + comparación de precios + "traer precios actuales" + revalidar + convertir). Alta sin campo "Validez" (Q20). `tsc`/`lint`/`build` limpios. |
-| **Parte III** · Pedido (ex Traspasos) | 🟨 **III-a hecho y verificado en la BD (27 jul) · falta III-b** | ✅ `supabase/28_pedidos_flujo.sql` **corrido y verificado** (invierte el flujo: crea el destino/elige origen; `cantidad_solicitada`; despacho con ajuste de cantidades en 1 paso; permisos H7/H8 en las 4 RPC). ✅ App: acciones flipeadas, formulario invertido, explorer renombrado a **"Pedido"** con diálogo de despacho editable (solicitado vs enviado), nav "Pedidos". `tsc`/`build` limpios. ⏳ **III-b pendiente:** stock en tránsito en el reporte de inventario (H2, pantalla+PDF+Excel) y recibir los 2 pedidos en `enviado` (Q19, operativo). |
+| **Parte III** · Pedido (ex Traspasos) | ✅ **Hecho** (III-a verificado en la BD; III-b código listo) | ✅ III-a: `supabase/28_pedidos_flujo.sql` **corrido y verificado** (invierte el flujo; `cantidad_solicitada`; despacho con ajuste de cantidades; permisos H7/H8) + app (acciones flipeadas, formulario invertido, explorer "Pedido" con diálogo de despacho, nav "Pedidos"). ✅ III-b: **stock en tránsito** en el reporte de inventario (bloque aparte, recorrido origen→destino, valorizado a costo FIFO) en **pantalla, PDF y Excel** (hoja "En tránsito"); de paso se corrigió el conteo de proformas para el estado `pendiente`. Sin SQL nuevo. `tsc`/`lint`/`build` limpios. ⏳ Solo queda **recibir los 2 pedidos en `enviado`** (Q19, operativo — desde la app). |
 | **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
 
 **Para quien retome, en este orden:**
 
-1. **III-b** — stock en tránsito en el reporte de inventario (`lib/reportes.ts` todavía sin tocar).
-2. **Q19** — recibir los 2 pedidos que siguen en `enviado`, logueado desde la app.
+1. ~~**III-b** — stock en tránsito en el reporte de inventario.~~ ✅ **HECHO 27 jul** (pantalla + PDF + Excel).
+2. **Q19** — recibir los 2 pedidos que siguen en `enviado`, logueado desde la app. *(Operativo, no es código.)*
 3. **R8 correcto** — la RPC `fn_guardar_producto`. **Usar el script `29`** (ver más abajo). Conviene tenerlo antes de la Parte I.
 4. **Parte I** completa — scripts `22`–`25`, el bloque más grande.
 
-### ⚠️ Hallazgos de la revisión del 27 jul (pendientes de corregir)
+### ⚠️ Hallazgos de la revisión del 27 jul — ✅ TODOS CORREGIDOS (27 jul)
 
-| # | Dónde | Qué pasa |
-|---|---|---|
-| **R15** 🔴 | [proformas/actions.ts](<app/(dashboard)/proformas/actions.ts>) · `updateProforma` | Aplica el criterio R8 (verifica el error del `delete`) pero **el orden de operaciones deja un estado peor si falla el insert**: primero actualiza la cabecera *incluyendo `revalidada_en = now()`*, después borra los ítems, después los reinserta. Si el insert falla, la proforma queda **con cero ítems, el total viejo en la cabecera y recién revalidada** — o sea, se muestra `vigente` y **convertible**. Es más grave que el R8 de productos porque la proforma es el compromiso con el cliente. **Fix mínimo:** mover el `revalidada_en` a un `update` posterior al insert de ítems. **Fix correcto:** RPC transaccional. |
-| **R16** 🟡 | `27_proformas_vigencia.sql` | El `update` retroactivo de `plazo_validez_dias = 3` alcanzó también a las **3 proformas ya convertidas**, cuyo plazo original era 15/7/30. Sus PDF ahora declaran una validez que no es la que se pactó. Con datos de prueba es irrelevante; **con datos reales sería reescribir un documento emitido** — excluir `where estado <> 'convertida'` si esto se repite en producción. |
-| **R17** 🟢 | [traspasos-explorer.tsx](<app/(dashboard)/traspasos/traspasos-explorer.tsx>) · `DespacharDialog` | `productoIdDe` cae a `it.id` (el id del ítem) si `producto` viene `null`. Con ese valor el `update ... where producto_id = ...` de la RPC no matchea nada y el ítem **se despacha con la cantidad original**, ignorando el ajuste, sin avisar. |
+| # | Dónde | Qué pasaba | Estado |
+|---|---|---|---|
+| **R15** 🔴 | [proformas/actions.ts](<app/(dashboard)/proformas/actions.ts>) · `updateProforma` | El orden de operaciones dejaba un estado peor si fallaba el insert: actualizaba la cabecera (incl. `revalidada_en = now()`) **antes** de reemplazar los ítems, así que un insert fallido dejaba la proforma con cero ítems, total viejo y "revalidada"/convertible. | ✅ **Corregido:** ahora primero se reemplazan los ítems y **al final** se actualiza la cabecera + `revalidada_en`. Si el insert falla, la cabecera no se tocó (sigue pendiente, no convertible). Fix atómico total = RPC (queda como mejora). |
+| **R16** 🟡 | `27_proformas_vigencia.sql` | El `update` retroactivo de `plazo_validez_dias = 3` alcanzaba también a las proformas ya convertidas, reescribiendo la validez pactada en su PDF. | ✅ **Corregido:** el `update` ahora excluye `estado = 'convertida'` (aplica solo a futuras corridas/instalaciones; las ya convertidas en la BD actual eran de prueba). |
+| **R17** 🟢 | [traspasos-explorer.tsx](<app/(dashboard)/traspasos/traspasos-explorer.tsx>) · `DespacharDialog` | `productoIdDe` caía a `it.id` (id del ítem) si `producto` venía `null`, y el ajuste de cantidad no matcheaba en la RPC (el ítem se despachaba con la cantidad original, sin avisar). | ✅ **Corregido:** se trae `producto_id` en la consulta y se usa ese valor real (no un fallback). |
 
 **Además:** el commit `809937f` ("cambio importante") **está vacío** — no toca ningún archivo.
 
@@ -1059,13 +1059,13 @@ end as estado_efectivo
 - [x] Estado `vencida` = solo lectura, sin acciones (Q29). También `convertida`.
 - [x] **Recalcular los totales de cabecera** al editar ítems (`updateProforma` recalcula subtotal/total en el servidor).
 
-### Bloque III · Pedido (ex Traspasos) 🟡 — 🟨 III-a HECHO y corrido en la BD 27 jul · falta III-b
+### Bloque III · Pedido (ex Traspasos) 🟡 — ✅ III-a + III-b HECHOS 27 jul (III-a corrido en la BD)
 - [x] `28_pedidos_flujo.sql`: invertir el flujo, `cantidad_solicitada`, relajar el `check` a `cantidad >= 0`, ajuste de cantidades al despachar, validación de usuario y sucursal en las 4 RPC. ✅ **Corrido y verificado en la BD el 27 jul** (`cantidad_solicitada` existe, check `cantidad >= 0` activo, `fn_enviar_traspaso` con firma de 2 args y sin overload huérfano de la vieja de 1).
 - [x] `fn_enviar_traspaso` **saltea los ítems en 0** (no llama al FIFO ni inserta kardex) y exige al menos uno > 0.
 - [x] Renombrado el módulo a **"Pedido"** (nav, títulos, textos, toasts).
 - [x] Formulario: el creador es el **destino**; se elige la sucursal **origen** a la que se le pide.
 - [x] Pantalla del origen: **diálogo de despacho** que ajusta cantidades y despacha en un solo paso.
-- [ ] ⏳ **III-b — Stock en tránsito en el reporte de inventario**, con recorrido `origen → destino`, en pantalla + PDF + Excel. *(Pendiente.)*
+- [x] ✅ **III-b — Stock en tránsito en el reporte de inventario** (27 jul), con recorrido `origen → destino`, valorizado a costo FIFO, en **pantalla + PDF + Excel** (hoja "En tránsito"). Sin SQL nuevo. También se corrigió el conteo de proformas para el estado `pendiente` (daba `NaN`).
 - [ ] ⏳ **Recibir los 2 pedidos que hoy están en `enviado`** (logueado desde la app, no por SQL). *(Operativo. El script 28 ya está corrido, así que se puede hacer cuando quieras. Verificado 27 jul: `enviado: 2`, `recibido: 4`, `cancelado: 2`.)*
 
 ### Bloque I · Unidades, medidas y códigos originales 🟠

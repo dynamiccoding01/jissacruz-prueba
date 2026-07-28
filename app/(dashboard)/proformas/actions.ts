@@ -264,29 +264,10 @@ export async function updateProforma(id: string, values: ProformaInput) {
 
   const totales = calcularTotales(v.items, v.descuento_tipo, v.descuento_valor, v.impuesto_porcentaje)
 
-  // Guardar los precios revisados revalida la proforma: vuelve a estar vigente
-  // por su plazo desde ahora (Q22/Q23).
-  const { error: updError } = await supabase
-    .from("proformas")
-    .update({
-      tipo_pago: v.tipo_pago || null,
-      tiempo_entrega_dias: v.tiempo_entrega_dias > 0 ? v.tiempo_entrega_dias : null,
-      glosa: v.glosa || null,
-      subtotal: totales.subtotal,
-      descuento_tipo: normalizarDescuento(v.descuento_tipo),
-      descuento_valor: v.descuento_valor,
-      impuesto_porcentaje: v.impuesto_porcentaje,
-      total: totales.total,
-      revalidada_en: new Date().toISOString(),
-    })
-    .eq("id", id)
-
-  if (updError) {
-    logError("proformas.updateProforma", updError, { id })
-    return { error: "No se pudo actualizar la proforma." }
-  }
-
-  // Reemplaza los ítems. El delete se verifica y aborta ante error (criterio R8).
+  // R15: PRIMERO se reemplazan los ítems y RECIÉN AL FINAL se actualiza la cabecera
+  // (totales + revalidada_en). Así, si el insert de ítems falla, la proforma NO
+  // queda con el total viejo y "revalidada"/convertible: la cabecera no se tocó y
+  // sigue mostrándose como pendiente (no convertible). El fix atómico es una RPC.
   const { error: delError } = await supabase.from("proforma_items").delete().eq("proforma_id", id)
   if (delError) {
     logError("proformas.updateProforma.delete", delError, { id })
@@ -313,6 +294,28 @@ export async function updateProforma(id: string, values: ProformaInput) {
   if (itemsError) {
     logError("proformas.updateProforma.items", itemsError, { id })
     return { error: "No se pudieron guardar los ítems de la proforma." }
+  }
+
+  // Con los ítems ya guardados, se actualiza la cabecera y se revalida (Q22/Q23):
+  // vuelve a estar vigente por su plazo desde ahora.
+  const { error: updError } = await supabase
+    .from("proformas")
+    .update({
+      tipo_pago: v.tipo_pago || null,
+      tiempo_entrega_dias: v.tiempo_entrega_dias > 0 ? v.tiempo_entrega_dias : null,
+      glosa: v.glosa || null,
+      subtotal: totales.subtotal,
+      descuento_tipo: normalizarDescuento(v.descuento_tipo),
+      descuento_valor: v.descuento_valor,
+      impuesto_porcentaje: v.impuesto_porcentaje,
+      total: totales.total,
+      revalidada_en: new Date().toISOString(),
+    })
+    .eq("id", id)
+
+  if (updError) {
+    logError("proformas.updateProforma", updError, { id })
+    return { error: "No se pudo actualizar la proforma." }
   }
 
   revalidatePath("/proformas")

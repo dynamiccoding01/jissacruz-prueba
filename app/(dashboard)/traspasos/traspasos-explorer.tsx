@@ -26,6 +26,7 @@ import { cancelarTraspaso, enviarTraspaso, recibirTraspaso, type TraspasoItemInp
 
 export type TraspasoItem = {
   id: string
+  producto_id: string
   cantidad: number
   cantidad_solicitada: number
   costo_fifo_unitario: number
@@ -129,7 +130,9 @@ function DespacharDialog({
   onConfirmar: (cantidades: TraspasoItemInput[]) => void
 }) {
   const [open, setOpen] = useState(false)
-  const productoIdDe = (it: TraspasoItem) => it.producto?.id ?? it.id
+  // R17: usar el producto_id real de la fila (no un fallback al id del ítem), para
+  // que el ajuste de cantidad matchee en la RPC de despacho.
+  const productoIdDe = (it: TraspasoItem) => it.producto_id
 
   const [cant, setCant] = useState<Record<string, number>>(() =>
     Object.fromEntries(traspaso.items.map((i) => [productoIdDe(i), i.cantidad_solicitada]))

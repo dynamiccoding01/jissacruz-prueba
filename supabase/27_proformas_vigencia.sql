@@ -29,9 +29,12 @@ alter table public.proformas
 alter table public.proformas
   alter column plazo_validez_dias set default 3;
 
+-- R16: NO se toca el plazo de las ya convertidas (su PDF documenta la validez
+-- pactada en su momento). Solo aplica a las que aún pueden convertirse.
 update public.proformas
 set plazo_validez_dias = 3
-where plazo_validez_dias is distinct from 3;
+where plazo_validez_dias is distinct from 3
+  and estado <> 'convertida';
 
 -- ---------- 3. Vista con 3 estados ----------
 -- Se DROPEA y recrea (no create-or-replace) porque p.* ahora trae una columna

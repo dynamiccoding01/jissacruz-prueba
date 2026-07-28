@@ -17,7 +17,7 @@ export default async function TraspasosPage() {
       sucursal_origen:sucursales!pedidos_traspaso_sucursal_origen_id_fkey(id, codigo, nombre),
       sucursal_destino:sucursales!pedidos_traspaso_sucursal_destino_id_fkey(id, codigo, nombre),
       items:pedido_traspaso_items(
-        id, cantidad, cantidad_solicitada, costo_fifo_unitario,
+        id, producto_id, cantidad, cantidad_solicitada, costo_fifo_unitario,
         producto:productos(id, codigo, descripcion)
       )
     `)

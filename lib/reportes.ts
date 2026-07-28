@@ -117,14 +117,20 @@ async function reporteProformas(desdeStr?: string, hastaStr?: string): Promise<R
     numero: string
     creado_en: string
     total: number
-    estado_efectivo: "vigente" | "convertida" | "vencida"
+    estado_efectivo: "vigente" | "pendiente" | "convertida" | "vencida"
     clientes: { nombre: string } | null
   }[]
 
-  const cuenta = { vigente: 0, convertida: 0, vencida: 0 }
+  // 'pendiente' se agregó en el Sprint 6 (Parte IV): sin contemplarlo, el conteo daba NaN.
+  const cuenta = { vigente: 0, pendiente: 0, convertida: 0, vencida: 0 }
   for (const p of proformas) cuenta[p.estado_efectivo] += 1
 
-  const ETIQUETA_ESTADO = { vigente: "Vigente", convertida: "Convertida", vencida: "Vencida" }
+  const ETIQUETA_ESTADO = {
+    vigente: "Vigente",
+    pendiente: "Pendiente",
+    convertida: "Convertida",
+    vencida: "Vencida",
+  }
 
   return {
     tipo: "proformas",
@@ -148,6 +154,7 @@ async function reporteProformas(desdeStr?: string, hastaStr?: string): Promise<R
       { label: "Emitidas", value: String(proformas.length) },
       { label: "Convertidas", value: String(cuenta.convertida) },
       { label: "Vigentes", value: String(cuenta.vigente) },
+      { label: "Pendientes", value: String(cuenta.pendiente) },
       { label: "Vencidas", value: String(cuenta.vencida) },
     ],
   }
@@ -246,6 +253,64 @@ async function reporteInventario(): Promise<ReporteResultado> {
   const unidadesTotal = ordenados.reduce((acc, l) => acc + l.unidades, 0)
   const bajoMinimoTotal = ordenados.reduce((acc, l) => acc + l.bajoMinimo, 0)
 
+  // ---------- Stock en tránsito (Parte III · H2) ----------
+  // Pedidos despachados y no recibidos: el stock salió del origen pero todavía no
+  // entró al destino, así que NO está en ninguna sucursal. Se muestra como bloque
+  // aparte (no se suma al inventario), valorizado al costo FIFO del origen y con
+  // el recorrido origen → destino.
+  const { data: transitoData } = await supabase
+    .from("pedido_traspaso_items")
+    .select(
+      `cantidad, costo_fifo_unitario,
+       producto:productos(codigo, descripcion),
+       pedido:pedidos_traspaso!inner(
+         numero, fecha_envio, estado,
+         origen:sucursales!pedidos_traspaso_sucursal_origen_id_fkey(nombre),
+         destino:sucursales!pedidos_traspaso_sucursal_destino_id_fkey(nombre)
+       )`
+    )
+    .eq("pedido.estado", "enviado")
+    .gt("cantidad", 0)
+
+  const transito = (transitoData ?? []) as unknown as {
+    cantidad: number
+    costo_fifo_unitario: number
+    producto: { codigo: string; descripcion: string } | null
+    pedido: {
+      numero: string
+      fecha_envio: string | null
+      origen: { nombre: string } | null
+      destino: { nombre: string } | null
+    } | null
+  }[]
+
+  const valorTransito = transito.reduce((acc, t) => acc + t.cantidad * Number(t.costo_fifo_unitario), 0)
+
+  const bloqueExtra =
+    transito.length > 0
+      ? {
+          titulo: "Stock en tránsito (despachado, aún no recibido)",
+          columnas: [
+            { key: "pedido", label: "Pedido" },
+            { key: "producto", label: "Producto" },
+            { key: "cantidad", label: "Cantidad", align: "right" as const },
+            { key: "recorrido", label: "Recorrido" },
+            { key: "enviado", label: "Enviado" },
+            { key: "valor", label: "Valor (costo FIFO)", align: "right" as const },
+          ],
+          filas: transito.map((t) => ({
+            pedido: t.pedido?.numero ?? "—",
+            producto: `${t.producto?.codigo ?? "—"} — ${t.producto?.descripcion ?? ""}`,
+            cantidad: t.cantidad,
+            recorrido: `${t.pedido?.origen?.nombre ?? "?"} → ${t.pedido?.destino?.nombre ?? "?"}`,
+            enviado: t.pedido?.fecha_envio
+              ? format(new Date(t.pedido.fecha_envio), "dd/MM/yyyy", { locale: es })
+              : "—",
+            valor: bs(t.cantidad * Number(t.costo_fifo_unitario)),
+          })),
+        }
+      : undefined
+
   return {
     tipo: "inventario",
     titulo: "Estado de inventario por línea",
@@ -268,7 +333,9 @@ async function reporteInventario(): Promise<ReporteResultado> {
       { label: "Valorización total", value: bs(valorTotal) },
       { label: "Unidades en stock", value: String(unidadesTotal) },
       { label: "Productos bajo mínimo", value: String(bajoMinimoTotal) },
+      { label: "Valor en tránsito", value: bs(valorTransito) },
     ],
+    bloqueExtra,
   }
 }
 

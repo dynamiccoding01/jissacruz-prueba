@@ -9,10 +9,12 @@ export function ExportButtons({
   pdfHref,
   excelData,
   excelFilename,
+  excelHojasExtra,
 }: {
   pdfHref: string
   excelData: Record<string, unknown>[]
   excelFilename: string
+  excelHojasExtra?: { nombre: string; data: Record<string, unknown>[] }[]
 }) {
   return (
     <div className="flex gap-2">
@@ -24,7 +26,7 @@ export function ExportButtons({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => exportToExcel(excelData, excelFilename)}
+        onClick={() => exportToExcel(excelData, excelFilename, excelHojasExtra)}
         disabled={excelData.length === 0}
       >
         <FileSpreadsheet className="size-4" /> Exportar Excel
