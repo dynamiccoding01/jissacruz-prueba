@@ -11,6 +11,13 @@ export const codigoOriginalSchema = z.object({
   codigo_original: z.string().min(1, "El código es obligatorio"),
 })
 
+// Medida estructurada del producto (Q2: la etiqueta es obligatoria).
+export const medidaSchema = z.object({
+  etiqueta: z.string().min(1, "La etiqueta es obligatoria"),
+  valor: z.coerce.number().positive("El valor debe ser mayor a 0"),
+  unidad: z.enum(["MM", "CM", "PULG"]).default("MM"),
+})
+
 // convierte "" (input vacio) en undefined antes de intentar coercionar a numero
 const anioOpcional = z.preprocess(
   (val) => (val === "" || val === null || val === undefined ? undefined : val),
@@ -63,6 +70,9 @@ export const productoSchema = z.object({
   codigos_originales: z
     .array(codigoOriginalSchema)
     .transform(dedupePorClave((c) => c.codigo_original.trim().toUpperCase())),
+  medidas: z
+    .array(medidaSchema)
+    .transform(dedupePorClave((m) => m.etiqueta.trim().toUpperCase())),
   vehiculos_compatibles: z
     .array(vehiculoCompatibleSchema)
     .transform(

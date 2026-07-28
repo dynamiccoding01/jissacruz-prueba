@@ -33,6 +33,7 @@ const VACIO: ProductoFormInput = {
   imagen_url: null,
   codigos_equivalentes: [],
   codigos_originales: [],
+  medidas: [],
   vehiculos_compatibles: [],
   precios_mayor: [],
 }
@@ -68,6 +69,7 @@ export function ProductoForm({
 
   const codigosArray = useFieldArray({ control, name: "codigos_equivalentes" })
   const originalesArray = useFieldArray({ control, name: "codigos_originales" })
+  const medidasArray = useFieldArray({ control, name: "medidas" })
   const vehiculosArray = useFieldArray({ control, name: "vehiculos_compatibles" })
   const preciosMayorArray = useFieldArray({ control, name: "precios_mayor" })
   const imagenUrl = watch("imagen_url")
@@ -80,7 +82,7 @@ export function ProductoForm({
     }
     setCargandoDetalle(true)
     getProductoConDetalle(productoId).then(
-      ({ producto, codigos, originales, vehiculos, precios_mayor }) => {
+      ({ producto, codigos, originales, medidas, vehiculos, precios_mayor }) => {
         if (producto) {
           reset({
             codigo: producto.codigo,
@@ -92,6 +94,7 @@ export function ProductoForm({
             imagen_url: producto.imagen_url,
             codigos_equivalentes: codigos,
             codigos_originales: originales,
+            medidas,
             vehiculos_compatibles: vehiculos,
             precios_mayor,
           })
@@ -283,6 +286,67 @@ export function ProductoForm({
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Medidas</Label>
+                {!readOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => medidasArray.append({ etiqueta: "", valor: 0, unidad: "MM" })}
+                  >
+                    <Plus className="size-4" /> Agregar
+                  </Button>
+                )}
+              </div>
+              {medidasArray.fields.length === 0 && readOnly && (
+                <p className="text-sm text-muted-foreground">Sin medidas.</p>
+              )}
+              {medidasArray.fields.length > 0 && (
+                <div className="grid grid-cols-[1fr_1fr_5rem_auto] gap-2 text-xs text-muted-foreground">
+                  <span>Etiqueta (A, B…)</span>
+                  <span>Valor</span>
+                  <span>Unidad</span>
+                  <span />
+                </div>
+              )}
+              {medidasArray.fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-[1fr_1fr_5rem_auto] items-end gap-2">
+                  <Input placeholder="A" {...register(`medidas.${index}.etiqueta`)} />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="45.40"
+                    {...register(`medidas.${index}.valor`)}
+                  />
+                  <select
+                    className="h-10 rounded-md border border-input bg-background px-2 text-sm"
+                    {...register(`medidas.${index}.unidad`)}
+                  >
+                    <option value="MM">MM</option>
+                    <option value="CM">CM</option>
+                    <option value="PULG">PULG</option>
+                  </select>
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => medidasArray.remove(index)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              {errors.medidas && (
+                <p className="text-sm text-destructive">
+                  Revisá las medidas: la etiqueta es obligatoria y el valor debe ser mayor a 0.
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">
