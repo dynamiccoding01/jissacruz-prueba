@@ -12,7 +12,7 @@
 
 | Bloque | Estado | Notas |
 |---|---|---|
-| **R8** · guardado de producto sin transacción | 🟨 **Parcial** | ✅ Mitigación **mínima** hecha (dedup de listas hijas en zod + chequeo del error de los `delete`). ⏳ Falta la **RPC transaccional `fn_guardar_producto`** → asignada al **script `29`**. |
+| **R8** · guardado de producto sin transacción | 🟨 **Código completo · falta correr script 29** | ✅ Mitigación mínima (dedup + chequeo de `delete`) **y** la **RPC transaccional `fn_guardar_producto`** (`supabase/29_fn_guardar_producto.sql`): crear/editar producto ahora hace cabecera + reemplazo de hijos en UNA transacción atómica. `createProducto`/`updateProducto` la llaman (se eliminó `guardarHijos`). `tsc`/`lint`/`build` limpios. ⏳ FALTA **correr el script `29`** en Supabase (hasta entonces guardar un producto dará error de función inexistente). |
 | **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
 | **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
@@ -24,8 +24,8 @@
 
 1. ~~**III-b** — stock en tránsito en el reporte de inventario.~~ ✅ **HECHO 27 jul** (pantalla + PDF + Excel).
 2. **Q19** — recibir los 2 pedidos que siguen en `enviado`, logueado desde la app. *(Operativo, no es código.)*
-3. **R8 correcto** — la RPC `fn_guardar_producto`. **Usar el script `29`** (ver más abajo). Conviene tenerlo antes de la Parte I.
-4. **Parte I** completa — scripts `22`–`25`, el bloque más grande.
+3. ~~**R8 correcto** — la RPC `fn_guardar_producto` (script `29`).~~ ✅ **HECHO 27 jul** (código listo). ⚠️ **Falta correr `supabase/29_fn_guardar_producto.sql` en Supabase** antes de guardar productos.
+4. **Parte I** completa — scripts `22`–`25`, el bloque más grande. Al hacerla, **extender `fn_guardar_producto`** (script 29) para los nuevos hijos (originales, medidas) y para quitar `fabricante`.
 
 ### ⚠️ Hallazgos de la revisión del 27 jul — ✅ TODOS CORREGIDOS (27 jul)
 
@@ -1027,9 +1027,10 @@ end as estado_efectivo
 
 ### Bloque 0 · Previo (🔴 hacer primero)
 - [x] **R8 (mínimo) — HECHO 27 jul:** deduplicar listas hijas en zod (`lib/validations/producto.ts`) + verificar el error de los `delete` en `updateProducto` (`productos/actions.ts`). *(Mata el disparador del `unique` que amplifica la Parte I.)*
-- [ ] **R8 (correcto) — PENDIENTE:** RPC transaccional `fn_guardar_producto`, **script `29`**. Cierra el hueco residual "delete OK → insert falla por RLS/red".
-- [ ] **R15 (nuevo, 🔴) — PENDIENTE:** `updateProforma` marca `revalidada_en` **antes** de reinsertar los ítems; si el insert falla, la proforma queda vacía, con el total viejo y aparentando estar vigente. Mover el `revalidada_en` después del insert, o meter todo en una RPC transaccional (aprovechar el mismo script `29`).
-- [ ] **R17 (nuevo, 🟢) — PENDIENTE:** en `DespacharDialog`, `productoIdDe` cae a `it.id` si `producto` es `null` y el ajuste de cantidad se pierde en silencio.
+- [x] ✅ **R8 (correcto) — HECHO 27 jul:** RPC transaccional `fn_guardar_producto` (`supabase/29_fn_guardar_producto.sql`); `createProducto`/`updateProducto` la llaman (se eliminó `guardarHijos`). ⏳ Falta **correr el script `29`** en Supabase.
+- [x] ✅ **R15 (🔴) — HECHO 27 jul:** `updateProforma` ahora reemplaza los ítems primero y actualiza la cabecera + `revalidada_en` al final; un insert fallido ya no deja la proforma revalidada/convertible con total viejo.
+- [x] ✅ **R16 (🟡) — HECHO 27 jul:** el `update` retroactivo del script 27 excluye `estado = 'convertida'`.
+- [x] ✅ **R17 (🟢) — HECHO 27 jul:** `DespacharDialog` usa el `producto_id` real de la fila (traído en la consulta), no un fallback al id del ítem.
 
 ### Bloque F1 · Acentos en la búsqueda 🟢 — ✅ HECHO Y CORRIDO EN LA BD 27 jul
 - [x] `create extension if not exists unaccent with schema extensions;` (dentro del script 26)
