@@ -8,22 +8,34 @@
 
 ## 🟩 ESTADO DE IMPLEMENTACIÓN — actualizado 27 jul 2026
 
-> Lo que ya se implementó en esta sesión y lo que falta. **Todo lo hecho es solo código (sin SQL), verificado con `tsc --noEmit` y `next lint` limpios.** El detalle está tildado en el checklist del final.
+> Lo que ya se implementó y lo que falta. **Los scripts `26`, `27` y `28` ya están corridos y verificados contra la BD real** (comprobado el 27 jul consultando `pg_proc` / `information_schema`, no solo confiando en el repo). `tsc --noEmit` y `next lint` limpios. El detalle está tildado en el checklist del final.
 
 | Bloque | Estado | Notas |
 |---|---|---|
-| **R8** · guardado de producto sin transacción | 🟨 **Parcial** | ✅ Mitigación **mínima** hecha (dedup de listas hijas en zod + chequeo del error de los `delete`). ⏳ Falta la **RPC transaccional `fn_guardar_producto`** (necesita nº de script SQL a coordinar — no está entre los 22–28 reservados). |
+| **R8** · guardado de producto sin transacción | 🟨 **Parcial** | ✅ Mitigación **mínima** hecha (dedup de listas hijas en zod + chequeo del error de los `delete`). ⏳ Falta la **RPC transaccional `fn_guardar_producto`** → asignada al **script `29`**. |
 | **F4** · quitar descuento por % | ✅ **Hecho** | Fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta` (histórico intacto). Sin SQL. |
 | **F3** · Enter agrega al carrito | ✅ **Hecho** | POS y proforma. Agrega el primero, ignora si busca o sin resultados; en POS respeta el bloqueo de stock; en proforma `preventDefault` evita el submit accidental. Sin SQL. |
 | **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
 | **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ✅ **Hecho y verificado en la BD (27 jul)** | Script `27` corrido y verificado. App: acciones `obtenerProformaDetalle`/`updateProforma`/`revalidarProforma`, explorer con 3 estados, **página `/proformas/[id]`** (detalle + edición + comparación de precios + "traer precios actuales" + revalidar + convertir). Alta sin campo "Validez" (Q20). `tsc`/`lint`/`build` limpios. |
-| **Parte III** · Pedido (ex Traspasos) | 🟨 **Núcleo hecho · falta correr script 28 · falta III-b** | ✅ `supabase/28_pedidos_flujo.sql` (invierte el flujo: crea el destino/elige origen; `cantidad_solicitada`; despacho con ajuste de cantidades en 1 paso; permisos H7/H8 en las 4 RPC). ✅ App: acciones flipeadas, formulario invertido, explorer renombrado a **"Pedido"** con diálogo de despacho editable (solicitado vs enviado), nav "Pedidos". `tsc`/`build` limpios. ⏳ FALTA **correr el script `28`**. ⏳ **III-b pendiente:** stock en tránsito en el reporte de inventario (H2, pantalla+PDF+Excel) y recibir los 2 pedidos en `enviado` (Q19, operativo). |
+| **Parte III** · Pedido (ex Traspasos) | 🟨 **III-a hecho y verificado en la BD (27 jul) · falta III-b** | ✅ `supabase/28_pedidos_flujo.sql` **corrido y verificado** (invierte el flujo: crea el destino/elige origen; `cantidad_solicitada`; despacho con ajuste de cantidades en 1 paso; permisos H7/H8 en las 4 RPC). ✅ App: acciones flipeadas, formulario invertido, explorer renombrado a **"Pedido"** con diálogo de despacho editable (solicitado vs enviado), nav "Pedidos". `tsc`/`build` limpios. ⏳ **III-b pendiente:** stock en tránsito en el reporte de inventario (H2, pantalla+PDF+Excel) y recibir los 2 pedidos en `enviado` (Q19, operativo). |
 | **Parte I** · Unidades / medidas / códigos originales | ⏳ **Pendiente** | Scripts `22`–`25`. Es el bloque más grande. Snapshot de la BD antes del `22`. |
 
-**Archivos tocados en esta sesión (R8 + F4 + F3):**
-`lib/validations/producto.ts` · `lib/validations/venta.ts` · `lib/validations/proforma.ts` · `app/(dashboard)/productos/actions.ts` · `app/(dashboard)/ventas/pos.tsx` · `app/(dashboard)/proformas/proforma-form.tsx`
+**Para quien retome, en este orden:**
 
-**Para quien retome:** empezar por lo pendiente de menor riesgo — **F1** (arregla el bug de acentos del POS), y luego las Partes IV → III → I. La única capa a mano de R8 es la RPC (opcional pero recomendada antes de la Parte I).
+1. **III-b** — stock en tránsito en el reporte de inventario (`lib/reportes.ts` todavía sin tocar).
+2. **Q19** — recibir los 2 pedidos que siguen en `enviado`, logueado desde la app.
+3. **R8 correcto** — la RPC `fn_guardar_producto`. **Usar el script `29`** (ver más abajo). Conviene tenerlo antes de la Parte I.
+4. **Parte I** completa — scripts `22`–`25`, el bloque más grande.
+
+### ⚠️ Hallazgos de la revisión del 27 jul (pendientes de corregir)
+
+| # | Dónde | Qué pasa |
+|---|---|---|
+| **R15** 🔴 | [proformas/actions.ts](<app/(dashboard)/proformas/actions.ts>) · `updateProforma` | Aplica el criterio R8 (verifica el error del `delete`) pero **el orden de operaciones deja un estado peor si falla el insert**: primero actualiza la cabecera *incluyendo `revalidada_en = now()`*, después borra los ítems, después los reinserta. Si el insert falla, la proforma queda **con cero ítems, el total viejo en la cabecera y recién revalidada** — o sea, se muestra `vigente` y **convertible**. Es más grave que el R8 de productos porque la proforma es el compromiso con el cliente. **Fix mínimo:** mover el `revalidada_en` a un `update` posterior al insert de ítems. **Fix correcto:** RPC transaccional. |
+| **R16** 🟡 | `27_proformas_vigencia.sql` | El `update` retroactivo de `plazo_validez_dias = 3` alcanzó también a las **3 proformas ya convertidas**, cuyo plazo original era 15/7/30. Sus PDF ahora declaran una validez que no es la que se pactó. Con datos de prueba es irrelevante; **con datos reales sería reescribir un documento emitido** — excluir `where estado <> 'convertida'` si esto se repite en producción. |
+| **R17** 🟢 | [traspasos-explorer.tsx](<app/(dashboard)/traspasos/traspasos-explorer.tsx>) · `DespacharDialog` | `productoIdDe` cae a `it.id` (el id del ítem) si `producto` viene `null`. Con ese valor el `update ... where producto_id = ...` de la RPC no matchea nada y el ítem **se despacha con la cantidad original**, ignorando el ajuste, sin avisar. |
+
+**Además:** el commit `809937f` ("cambio importante") **está vacío** — no toca ningún archivo.
 
 ---
 
@@ -65,19 +77,22 @@ Este documento es **autosuficiente**: contiene el análisis del estado actual, t
 
 ## 🔢 Asignación de números de script SQL (¡respetar!)
 
-El último script del repo es el `21`. **Para que dos devs trabajando en paralelo no choquen, los números ya están asignados:**
+El último script del repo era el `21`. **Para que dos devs trabajando en paralelo no choquen, los números ya están asignados:**
 
-| Script | Bloque | Qué hace |
-|---|---|---|
-| `22_codigos_originales.sql` | Parte I · Fase 1 | Tabla de códigos originales + migración de los 810 + quitar `fabricante` |
-| `23_producto_medidas.sql` | Parte I · Fase 2 | Tabla de medidas |
-| `24_unidades_medida.sql` | Parte I · Fase 3 | Catálogo de unidades (vacío) + FK en productos |
-| `25_busqueda_original_medida.sql` | Parte I · Fase 4 | Criterios `original` y `medida` en `fn_buscar_productos` |
-| `26_busqueda_unaccent.sql` | Parte II · F1 | Acentos ignorados en `fn_buscar_productos` |
-| `27_proformas_vigencia.sql` | Parte IV | `revalidada_en` + vista con 3 estados + validación en la RPC de conversión |
-| `28_pedidos_flujo.sql` | Parte III | Inversión del flujo + `cantidad_solicitada` + RPC de modificación + permisos |
+| Script | Bloque | Qué hace | Estado |
+|---|---|---|---|
+| `22_codigos_originales.sql` | Parte I · Fase 1 | Tabla de códigos originales + migración de los 810 + quitar `fabricante` | ⏳ por escribir |
+| `23_producto_medidas.sql` | Parte I · Fase 2 | Tabla de medidas | ⏳ por escribir |
+| `24_unidades_medida.sql` | Parte I · Fase 3 | Catálogo de unidades (vacío) + FK en productos | ⏳ por escribir |
+| `25_busqueda_original_medida.sql` | Parte I · Fase 4 | Criterios `original` y `medida` en `fn_buscar_productos` | ⏳ por escribir |
+| `26_busqueda_unaccent.sql` | Parte II · F1 | Acentos ignorados en `fn_buscar_productos` | ✅ **corrido 27 jul** |
+| `27_proformas_vigencia.sql` | Parte IV | `revalidada_en` + vista con 3 estados + validación en la RPC de conversión | ✅ **corrido 27 jul** |
+| `28_pedidos_flujo.sql` | Parte III | Inversión del flujo + `cantidad_solicitada` + ajuste de cantidades al despachar + permisos | ✅ **corrido 27 jul** |
+| `29_guardar_producto.sql` | R8 · fix correcto | RPC transaccional `fn_guardar_producto` (reemplaza el delete-all + reinsert de `updateProducto`) | ⏳ por escribir |
 
-> ⚠️ **Coordinación obligatoria entre devs:** los scripts **25 y 26 reescriben la MISMA función** (`fn_buscar_productos`). **Los tiene que hacer la misma persona, en orden, o fusionarlos en un solo script.** Si dos personas los escriben por separado, el segundo pisa al primero. Este proyecto ya tuvo que reconciliar trabajo en paralelo dos veces (ver PLAN.md, 18 jul) y hay un caso real de función pisada documentado en **F1**.
+> 🔴 **El `25` se escribe DESPUÉS del `26`, partiendo de la función que quedó viva tras el `26`** (la que ya tiene `unaccent`). Si se escribe sobre la versión anterior, **revierte el arreglo de acentos sin que nadie lo note**. Verificar siempre con `select prosrc from pg_proc where proname='fn_buscar_productos'` antes de tocarla.
+
+> ⚠️ **Coordinación obligatoria entre devs:** los scripts **25 y 26 reescriben la MISMA función** (`fn_buscar_productos`). El `26` ya está corrido, así que el riesgo que queda es en una sola dirección: **quien escriba el `25` debe partir de la versión viva con `unaccent`.** Este proyecto ya tuvo que reconciliar trabajo en paralelo dos veces (ver PLAN.md, 18 jul) y hay un caso real de función pisada documentado en **F1**.
 
 ---
 
@@ -1012,9 +1027,11 @@ end as estado_efectivo
 
 ### Bloque 0 · Previo (🔴 hacer primero)
 - [x] **R8 (mínimo) — HECHO 27 jul:** deduplicar listas hijas en zod (`lib/validations/producto.ts`) + verificar el error de los `delete` en `updateProducto` (`productos/actions.ts`). *(Mata el disparador del `unique` que amplifica la Parte I.)*
-- [ ] **R8 (correcto) — PENDIENTE:** RPC transaccional `fn_guardar_producto`. Necesita nº de script SQL a coordinar (no está entre los 22–28 reservados). Cierra el hueco residual "delete OK → insert falla por RLS/red".
+- [ ] **R8 (correcto) — PENDIENTE:** RPC transaccional `fn_guardar_producto`, **script `29`**. Cierra el hueco residual "delete OK → insert falla por RLS/red".
+- [ ] **R15 (nuevo, 🔴) — PENDIENTE:** `updateProforma` marca `revalidada_en` **antes** de reinsertar los ítems; si el insert falla, la proforma queda vacía, con el total viejo y aparentando estar vigente. Mover el `revalidada_en` después del insert, o meter todo en una RPC transaccional (aprovechar el mismo script `29`).
+- [ ] **R17 (nuevo, 🟢) — PENDIENTE:** en `DespacharDialog`, `productoIdDe` cae a `it.id` si `producto` es `null` y el ajuste de cantidad se pierde en silencio.
 
-### Bloque F1 · Acentos en la búsqueda 🟢 — 🟨 Script escrito 27 jul, FALTA correrlo en Supabase
+### Bloque F1 · Acentos en la búsqueda 🟢 — ✅ HECHO Y CORRIDO EN LA BD 27 jul
 - [x] `create extension if not exists unaccent with schema extensions;` (dentro del script 26)
 - [x] `26_busqueda_unaccent.sql`: envuelve **ambos lados** con `extensions.unaccent(...)` en **todos** los campos (Q7), partiendo de la versión **VIVA** (00_setup), no del script 15.
 - [x] **No** se creó `spanish_unaccent` (Q8) ni se cambió la lógica cross-field (Q8b).
@@ -1032,8 +1049,8 @@ end as estado_efectivo
 - [x] Limpiar el buscador, mantener el foco, cantidad 1 (reusa `agregarProducto`).
 - [x] Ignorar el Enter si el producto no tiene stock en la sucursal (POS) o si la búsqueda está en curso. En proforma, `preventDefault` evita además el submit accidental del `<form>`.
 
-### Bloque IV · Proformas 🟡 — 🟨 Código HECHO 27 jul · falta correr el script 27
-- [x] `27_proformas_vigencia.sql`: columna `revalidada_en`, vista con **3 estados** + tope duro 3 meses, `plazo_validez_dias` default 3 + update retroactivo, y **validación de vigencia dentro de `fn_convertir_proforma_a_venta`**. *(⏳ FALTA CORRERLO EN SUPABASE.)*
+### Bloque IV · Proformas 🟡 — ✅ HECHO Y CORRIDO EN LA BD 27 jul
+- [x] `27_proformas_vigencia.sql`: columna `revalidada_en`, vista con **3 estados** + tope duro 3 meses, `plazo_validez_dias` default 3 + update retroactivo, y **validación de vigencia dentro de `fn_convertir_proforma_a_venta`**. ✅ **Corrido y verificado en la BD el 27 jul** (la vista devuelve `convertida: 3`, `pendiente: 2`).
 - [x] Página `/proformas/[id]` con detalle completo (cliente, ítems, totales) — la conversión se hace **desde ahí** (Q31).
 - [x] Acciones nuevas: `obtenerProformaDetalle`, `updateProforma`, `revalidarProforma`.
 - [x] Modo edición en la página de detalle: agregar y quitar productos, editar precios (Q24, Q25).
@@ -1042,14 +1059,14 @@ end as estado_efectivo
 - [x] Estado `vencida` = solo lectura, sin acciones (Q29). También `convertida`.
 - [x] **Recalcular los totales de cabecera** al editar ítems (`updateProforma` recalcula subtotal/total en el servidor).
 
-### Bloque III · Pedido (ex Traspasos) 🟡 — 🟨 Núcleo HECHO 27 jul (III-a) · falta correr script 28 y III-b
-- [x] `28_pedidos_flujo.sql`: invertir el flujo, `cantidad_solicitada`, relajar el `check` a `cantidad >= 0`, ajuste de cantidades al despachar, validación de usuario y sucursal en las 4 RPC. *(⏳ FALTA CORRERLO EN SUPABASE.)*
+### Bloque III · Pedido (ex Traspasos) 🟡 — 🟨 III-a HECHO y corrido en la BD 27 jul · falta III-b
+- [x] `28_pedidos_flujo.sql`: invertir el flujo, `cantidad_solicitada`, relajar el `check` a `cantidad >= 0`, ajuste de cantidades al despachar, validación de usuario y sucursal en las 4 RPC. ✅ **Corrido y verificado en la BD el 27 jul** (`cantidad_solicitada` existe, check `cantidad >= 0` activo, `fn_enviar_traspaso` con firma de 2 args y sin overload huérfano de la vieja de 1).
 - [x] `fn_enviar_traspaso` **saltea los ítems en 0** (no llama al FIFO ni inserta kardex) y exige al menos uno > 0.
 - [x] Renombrado el módulo a **"Pedido"** (nav, títulos, textos, toasts).
 - [x] Formulario: el creador es el **destino**; se elige la sucursal **origen** a la que se le pide.
 - [x] Pantalla del origen: **diálogo de despacho** que ajusta cantidades y despacha en un solo paso.
 - [ ] ⏳ **III-b — Stock en tránsito en el reporte de inventario**, con recorrido `origen → destino`, en pantalla + PDF + Excel. *(Pendiente.)*
-- [ ] ⏳ **Recibir los 2 pedidos que hoy están en `enviado`** (logueado desde la app, no por SQL). *(Operativo, hacerlo tras correr el 28.)*
+- [ ] ⏳ **Recibir los 2 pedidos que hoy están en `enviado`** (logueado desde la app, no por SQL). *(Operativo. El script 28 ya está corrido, así que se puede hacer cuando quieras. Verificado 27 jul: `enviado: 2`, `recibido: 4`, `cancelado: 2`.)*
 
 ### Bloque I · Unidades, medidas y códigos originales 🟠
 - [ ] Fases 1 a 5 según §3. Respetar el **orden dentro del script 22** (migrar los 810 **antes** de borrar `fabricante`).
@@ -1059,8 +1076,8 @@ end as estado_efectivo
 - [ ] **R14**: en el PDF, la unidad va dentro de la celda CANTIDAD y originales/medidas como líneas dentro de DETALLE. No agregar columnas.
 
 ### Cierre
-- [ ] Actualizar `supabase/README.md` con los scripts 22–28.
-- [ ] Actualizar `PLAN.md` (sección Sprint 6 + registro de cambios).
+- [x] `supabase/README.md` con los scripts **26, 27 y 28** documentados y marcados como corridos *(hecho 27 jul)*. ⏳ Falta agregar el `22`–`25` y el `29` a medida que se escriban.
+- [x] `PLAN.md`: sección Sprint 6 *(hecho 27 jul)*.
 - [ ] `BACKEND.md` está desactualizado **desde el Sprint 5**: actualizarlo o marcarlo como histórico.
 - [ ] `npm run build` + `npx tsc --noEmit` + `npm run lint` limpios.
 

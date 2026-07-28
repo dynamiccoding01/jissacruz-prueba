@@ -9,7 +9,9 @@
 
 ---
 
-## Estado general — corte al 12 jul 2026
+## Estado general — corte al 27 jul 2026
+
+> **Sprints 5 y 6 son alcance adicional** surgido de reuniones con el cliente (14 y 26 jul), posteriores al plan original de 4 sprints. El avance de abajo se refiere al plan original.
 
 **Avance global: ~90%.** Sprint 1 y Sprint 2 prácticamente completos (el backend de toda la app —tablas, funciones RPC, RLS— ya está construido y verificado en Supabase). Sprint 3 (proformas, POS/ventas, clientes) ya está funcional de punta a punta en la interfaz. De Sprint 4, están construidos el dashboard con KPIs, los 4 reportes (con exportación PDF/Excel) y la pantalla de Configuración (datos de empresa, stock mínimo default y gestión de usuarios); quedan la UAT, el manual de usuario y el despliegue. Único pendiente transversal de Sprint 1: **despliegue en Vercel**.
 
@@ -150,6 +152,29 @@ Sprint 1 → Fases 0–4 · Sprint 2 → Fase 5 · Sprint 3 → Fases 6–8 · S
 
 ---
 
+## SPRINT 6 — Cambios pedidos por el cliente (reunión del 26 jul 2026)
+
+**Origen:** reunión con el cliente del **26 jul 2026**. El diseño completo, las decisiones cerradas (Q1–Q32), los riesgos detectados (R8–R17) y el plan paso a paso viven en **[SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md](SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md)** — ese archivo es la fuente de verdad de este sprint; esta tabla es solo el resumen de avance.
+
+**Esfuerzo estimado total: ≈11,5 días.**
+
+| Bloque | Prioridad | Estado |
+|---|---|---|
+| **R8 · Guardado de producto sin transacción** — `updateProducto` borra los hijos (códigos equivalentes, vehículos, precios por mayor) y los reinserta sin transacción; si el insert falla, el producto queda sin ellos. | Alta | ⚠️ Parcial (27 jul) — mitigación mínima: deduplicación de las listas hijas en zod ([lib/validations/producto.ts](lib/validations/producto.ts)) + verificación del error de los `delete` ([productos/actions.ts](<app/(dashboard)/productos/actions.ts>)). **Falta la RPC transaccional `fn_guardar_producto` → script `29`.** Conviene cerrarlo **antes** de la Parte I, que carga los 810 códigos OEM en ese mismo patrón. |
+| **F1 · Búsqueda ignorando acentos** — buscar `valvula` no encontraba `VÁLVULA` (147 de 239 productos tienen acentos). | Alta | ✅ Hecho y verificado en la BD (27 jul) — `supabase/26_busqueda_unaccent.sql`. `valvula` pasó de **1 a ~113** resultados. Escrito sobre la versión **viva** de `fn_buscar_productos` (la de `00_setup_completo.sql`), no sobre el script 15. |
+| **F3 · Enter agrega el producto al carrito** en POS y proforma. | Media | ✅ Hecho (27 jul) — agrega el primer resultado; ignora si la búsqueda está en curso o sin resultados; en POS respeta el bloqueo por falta de stock. Sin SQL. |
+| **F4 · Quitar el descuento por porcentaje** de ventas y proformas. | Media | ✅ Hecho (27 jul) — fuera del POS y de proforma (línea y global) + de los enums zod. **No** se tocó el `check` de la BD ni `fn_registrar_venta`: hay 12 registros históricos con porcentaje. Sin SQL. |
+| **Parte IV · Vigencia de proformas** — 3 días de validez, estado `pendiente` que bloquea la conversión, detalle visible, edición y revalidación de precios. | Alta | ✅ Hecho y verificado en la BD (27 jul) — `supabase/27_proformas_vigencia.sql`: `revalidada_en`, `vista_proformas` con 3 estados (`vigente`/`pendiente`/`convertida`) + tope duro de 3 meses (`vencida`), y **`fn_convertir_proforma_a_venta` ahora rechaza pendientes y vencidas** (antes el bloqueo era solo cosmético en la UI). App: página `/proformas/[id]` con detalle, edición, comparación de precios y revalidación. ⚠️ **Riesgo R15 abierto:** `updateProforma` marca `revalidada_en` antes de reinsertar los ítems. |
+| **Parte III-a · Rediseño del módulo Pedido (ex Traspasos)** — se invierte el flujo: lo crea la sucursal que **necesita** el producto y elige a quién se lo pide; el origen ajusta cantidades y despacha en un solo paso. | Alta | ✅ Hecho y verificado en la BD (27 jul) — `supabase/28_pedidos_flujo.sql`: `cantidad_solicitada` vs `cantidad`, check relajado a `>= 0` (0 = no despacho ese ítem), y las 4 RPC validando usuario activo y sucursal (cierra H7/H8). Módulo renombrado a **"Pedido"**. Las columnas `sucursal_origen_id`/`sucursal_destino_id` no cambian de significado → **sin migración de datos**. |
+| **Parte III-b · Stock en tránsito en el reporte de inventario** (H2) — con recorrido `origen → destino`, en pantalla + PDF + Excel. | Media | ⏳ Pendiente — `lib/reportes.ts` sin tocar. Además quedan **2 pedidos en estado `enviado`** por recibir desde la app (Q19). |
+| **Parte I · Unidades de medida, medidas y códigos originales** — tabla `unidades_medida` (un producto se vende **solo** en su unidad, sin conversión), medidas múltiples por producto y tabla de códigos originales de fabricante, migrando los **810** códigos hoy mal clasificados como equivalentes con `fabricante = 'OEM'`. | Alta | ⏳ Pendiente — scripts `22`–`25`. Es el bloque más grande. **Snapshot de la BD antes del `22`** (única operación que mueve datos existentes). |
+
+**Fuera de alcance por decisión del cliente:** conversión de unidades, código de barras, cancelar un traspaso ya enviado (H1), recepción parcial de traspasos (H3), stemming/plurales en la búsqueda. Ver la sección "Lo que este documento decidió NO hacer" del documento del sprint.
+
+**Estado del entregable:** ⚠️ Parcial — F1, F3, F4 y las Partes III-a y IV cerradas y verificadas contra la BD real; quedan III-b, R8 (RPC) y la Parte I completa.
+
+---
+
 ## Anexo técnico — Análisis de integración: Sucursales (C2/C5) y Pedidos/Traspasos (C4)
 
 > Diseño para implementar después (Sprint 5). Basado en la arquitectura **real** de stock: el kardex (`kardex_movimientos`) es la fuente de verdad, `productos.stock_actual` es un **cache por trigger** (`trg_kardex_stock` → `fn_kardex_aplica_stock`), la valorización es **FIFO por lotes** vía `fn_fifo_consumir`, y todo movimiento pasa por las 4 RPC `SECURITY DEFINER` (`fn_registrar_venta`, `fn_recibir_orden_compra`, `fn_ajuste_stock`, `fn_convertir_proforma_a_venta`). **Punto de partida hoy: una sola sucursal implícita.**
@@ -254,6 +279,9 @@ Hoy el stock es **un número por producto**. Multi-sucursal exige que el stock s
 
 - **Categorías/líneas:** el plan del cliente menciona "CRUD de categorías y líneas"; el diseño real las maneja como campo de texto `linea_marca` del producto (sin tabla). Si el cliente espera un catálogo administrable de líneas, es un cambio de alcance a cotizar.
 - **Despliegue en Vercel:** comprometido desde el entregable del Sprint 1; aún no realizado.
+- **Sprint 6 en curso (desde el 27 jul 2026):** F1, F3, F4 y las Partes III-a y IV cerradas y verificadas contra la BD real. Quedan **III-b** (stock en tránsito en el reporte de inventario + recibir los 2 pedidos en `enviado`), **R8** (RPC transaccional `fn_guardar_producto`, script `29`), **R15** (`updateProforma` revalida antes de reinsertar los ítems) y la **Parte I** completa (unidades de medida, medidas y códigos originales — scripts `22`–`25`). Detalle en [SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md](SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md).
+- **`BACKEND.md` desactualizado desde el Sprint 5:** no refleja sucursales, stock por sucursal, traspasos/pedidos ni los cambios del Sprint 6. Mientras no se actualice, `supabase/README.md` es la referencia real del esquema.
+- **Verificar contra la BD, no contra el repo:** el 27 jul se confirmó que la `fn_buscar_productos` que corría **no era la que el README declaraba** (script 15) sino la de `00_setup_completo.sql`. Antes de reescribir cualquier función, correr `select prosrc from pg_proc where proname='...'`.
 - **Carga de imagen de producto a Storage:** implementada en el formulario; pendiente de verificación end-to-end.
 - **Flujo comercial de Sprint 3 (POS, PDF de venta, conversión de proforma, historial por cliente) implementado el 12 jul 2026:** falta correrlo contra un proyecto Supabase real para confirmar que las RPC (`fn_registrar_venta`, `fn_convertir_proforma_a_venta`) y los embeds de PostgREST usados en `/api/pdf/venta/[id]` (desambiguación de FK `ventas_proforma_origen_id_fkey`) funcionan como se espera.
 - **Dashboard (Sprint 4) implementado el 12 jul 2026, adelantado:** `npm run build` compila y tipa la página sin errores; falta verificarla logueado como admin contra datos reales (no se probó con credenciales — ver nota de Sprint 3 arriba, mismo motivo).
@@ -315,6 +343,22 @@ Trabajo posterior al núcleo de Sprints 3–4, todo commiteado y subido a `main`
 - ✅ **C2 · paso 3c (sucursal en los documentos)** — script `supabase/16_sucursal_en_documentos.sql` **corrido y verificado en Supabase** (columnas creadas + backfill 0/0/0 + 3 funciones recreadas): `proformas`, `ventas` y `ordenes_compra` tienen `sucursal_id`; `fn_recibir_orden_compra` entra a la sucursal destino de la orden, `fn_registrar_venta` guarda la sucursal, y `fn_convertir_proforma_a_venta` propaga la de la proforma. **App conectada y probada:** [proformas/actions.ts](<app/(dashboard)/proformas/actions.ts>) y [compras/actions.ts](<app/(dashboard)/compras/actions.ts>) guardan la sucursal del usuario al crear (verificado: proforma nueva sale con `sucursal_id`). `tsc`/`lint` limpios. **Con esto el motor de sucursales ya está conectado a los documentos** — habilita mostrar SUCURSAL/VENDEDOR en los PDF (P2) y reportes por sucursal.
 - ⏳ *Optimización opcional:* si el catálogo crece, un índice GIN `pg_trgm` sobre `codigo`/`descripcion`/`linea_marca` aceleraría los `ilike '%frag%'` (hoy hacen scan; aceptable para un catálogo de una sola tienda).
 - ⏳ Continúa Sprint 5: **C2 pasos 3b–4** (UI de stock por sucursal + RLS del vendedor), **C3** (precios por mayor), **C4** (traspasos), **P** (PDF al formato del cliente).
+
+---
+
+## Registro de cambios recientes — 27 jul 2026 (Sprint 6: F1, F3, F4, Partes III-a y IV)
+
+Primera tanda de implementación del **Sprint 6** (cambios pedidos en la reunión del 26 jul). Diseño completo en [SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md](SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md).
+
+- ✅ **F1 · Búsqueda ignorando acentos** (`supabase/26_busqueda_unaccent.sql`, **corrido y verificado en la BD**): buscar `valvula` devolvía **1** producto de los **113** que dicen `VÁLVULA`. Se instaló la extensión `unaccent` y se reescribió `fn_buscar_productos` envolviendo campo y token. **Hallazgo de fondo:** la función que corría en la BD **no era la del script 15** (la que el README declaraba vigente) sino la de `00_setup_completo.sql` — ILIKE puro, cross-field, sin tsvector. El script 26 se construyó sobre la versión **viva**; el README quedó anotado para que nadie vuelva a partir del 15.
+- ✅ **F4 · Descuento por porcentaje eliminado** del POS y de proformas (línea y global) y de los enums zod. **No** se tocó el `check` de la BD ni la rama `'porcentaje'` de `fn_registrar_venta`: hay 12 registros históricos que quedarían inválidos.
+- ✅ **F3 · Enter agrega al carrito** en POS y proforma (agrega el primer resultado, respeta el bloqueo por falta de stock).
+- ⚠️ **R8 · Guardado de producto sin transacción — mitigado parcialmente**: `updateProducto` borraba los tres conjuntos de hijos y los reinsertaba sin transacción y **sin revisar el error de los `delete`**. Se agregó deduplicación de las listas en zod (mata el disparador del `unique`) y verificación de los `delete`. **Falta la RPC transaccional `fn_guardar_producto` (script `29`)** — conviene cerrarla antes de la Parte I, que carga los 810 códigos OEM por ese mismo camino.
+- ✅ **Parte IV · Vigencia de proformas** (`supabase/27_proformas_vigencia.sql`, **corrido y verificado**): `revalidada_en` + `vista_proformas` con tres estados derivados y tope duro de 3 meses. 🔴 **Hallazgo:** el bloqueo de conversión de una proforma vencida era **solo cosmético** — la RPC únicamente miraba `estado = 'convertida'` y como el vencimiento se deriva en la vista, `fn_convertir_proforma_a_venta` convertía una proforma vencida sin protestar. Ahora la valida la RPC. App: página `/proformas/[id]` (detalle, edición, comparación de precios, revalidación, conversión).
+- ✅ **Parte III-a · Módulo Pedido** (`supabase/28_pedidos_flujo.sql`, **corrido y verificado**): se invirtió el flujo (lo crea la sucursal que necesita el producto), se agregó `cantidad_solicitada` frente a `cantidad` despachada, y las 4 RPC pasaron a validar usuario activo y sucursal. `fn_cancelar_traspaso` **no validaba ni que el usuario estuviera activo** (las otras 3 sí). Sin migración de datos: las columnas de sucursal no cambiaron de significado.
+- 🔴 **R15 · Riesgo abierto en `updateProforma`**: actualiza la cabecera con `revalidada_en = now()` **antes** de borrar y reinsertar los ítems. Si el insert falla, la proforma queda sin ítems, con el total viejo y aparentando estar vigente y convertible. Pendiente de corregir.
+- 📝 **Documentación puesta al día:** `supabase/README.md` con los scripts 26–28 marcados como corridos, y esta sección + el bloque "SPRINT 6" arriba. **`BACKEND.md` sigue desactualizado desde el Sprint 5.**
+- ⏳ **Queda del Sprint 6:** III-b (stock en tránsito en el reporte de inventario + recibir los 2 pedidos en `enviado`), R8 (RPC) y la **Parte I** completa (scripts 22–25).
 
 ---
 

@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Documento | Rol |
 |---|---|
 | [PLAN.md](PLAN.md) | Estado real por sprint/fase + reglas de ejecución para el agente — **leer primero para saber qué falta** |
+| [SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md](SPRINT6_UNIDADES_MEDIDAS_CODIGOS.md) | **Sprint 6 en curso** (reunión del 26 jul 2026): unidades de medida, medidas, códigos originales, búsqueda sin acentos, rediseño del módulo Pedido y vigencia de proformas. Autosuficiente: decisiones ya cerradas con el cliente (Q1–Q32), riesgos (R8–R17), asignación de números de script SQL (22–29) y checklist de avance. **Si el trabajo toca alguno de esos temas, leerlo antes que nada** |
 | [TRD.md](TRD.md) | Stack definitivo, arquitectura, estructura de carpetas (§3), APIs internas |
 | [BACKEND.md](BACKEND.md) | Esquema Postgres, funciones RPC, políticas RLS, índices (diseño) |
 | [supabase/README.md](supabase/README.md) | Scripts SQL reales, orden de ejecución y decisiones que **amplían/ajustan** BACKEND.md |
