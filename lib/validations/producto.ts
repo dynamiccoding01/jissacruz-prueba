@@ -1,8 +1,14 @@
 import { z } from "zod"
 
+// Código de OTRO fabricante que hace la misma pieza. Q1 (Sprint 6): se quitó
+// la columna `fabricante` — la tabla guarda solo el código.
 export const codigoEquivalenteSchema = z.object({
   codigo_equivalente: z.string().min(1, "El código es obligatorio"),
-  fabricante: z.string().optional(),
+})
+
+// Código del fabricante ORIGINAL (OEM) de la pieza. Un producto tiene N.
+export const codigoOriginalSchema = z.object({
+  codigo_original: z.string().min(1, "El código es obligatorio"),
 })
 
 // convierte "" (input vacio) en undefined antes de intentar coercionar a numero
@@ -54,6 +60,9 @@ export const productoSchema = z.object({
   codigos_equivalentes: z
     .array(codigoEquivalenteSchema)
     .transform(dedupePorClave((c) => c.codigo_equivalente.trim().toUpperCase())),
+  codigos_originales: z
+    .array(codigoOriginalSchema)
+    .transform(dedupePorClave((c) => c.codigo_original.trim().toUpperCase())),
   vehiculos_compatibles: z
     .array(vehiculoCompatibleSchema)
     .transform(

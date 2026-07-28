@@ -32,6 +32,7 @@ const VACIO: ProductoFormInput = {
   stock_minimo: 0,
   imagen_url: null,
   codigos_equivalentes: [],
+  codigos_originales: [],
   vehiculos_compatibles: [],
   precios_mayor: [],
 }
@@ -66,6 +67,7 @@ export function ProductoForm({
   })
 
   const codigosArray = useFieldArray({ control, name: "codigos_equivalentes" })
+  const originalesArray = useFieldArray({ control, name: "codigos_originales" })
   const vehiculosArray = useFieldArray({ control, name: "vehiculos_compatibles" })
   const preciosMayorArray = useFieldArray({ control, name: "precios_mayor" })
   const imagenUrl = watch("imagen_url")
@@ -77,23 +79,26 @@ export function ProductoForm({
       return
     }
     setCargandoDetalle(true)
-    getProductoConDetalle(productoId).then(({ producto, codigos, vehiculos, precios_mayor }) => {
-      if (producto) {
-        reset({
-          codigo: producto.codigo,
-          descripcion: producto.descripcion,
-          linea_marca: producto.linea_marca ?? "",
-          unidad_medida: producto.unidad_medida,
-          precio: producto.precio,
-          stock_minimo: producto.stock_minimo,
-          imagen_url: producto.imagen_url,
-          codigos_equivalentes: codigos,
-          vehiculos_compatibles: vehiculos,
-          precios_mayor,
-        })
+    getProductoConDetalle(productoId).then(
+      ({ producto, codigos, originales, vehiculos, precios_mayor }) => {
+        if (producto) {
+          reset({
+            codigo: producto.codigo,
+            descripcion: producto.descripcion,
+            linea_marca: producto.linea_marca ?? "",
+            unidad_medida: producto.unidad_medida,
+            precio: producto.precio,
+            stock_minimo: producto.stock_minimo,
+            imagen_url: producto.imagen_url,
+            codigos_equivalentes: codigos,
+            codigos_originales: originales,
+            vehiculos_compatibles: vehiculos,
+            precios_mayor,
+          })
+        }
+        setCargandoDetalle(false)
       }
-      setCargandoDetalle(false)
-    })
+    )
   }, [open, productoId, reset])
 
   async function onSubmit(values: ProductoFormInput) {
@@ -137,7 +142,7 @@ export function ProductoForm({
             {readOnly ? "Ver producto" : productoId ? "Editar producto" : "Nuevo producto"}
           </SheetTitle>
           <SheetDescription>
-            Datos generales, códigos equivalentes y compatibilidad con vehículos.
+            Datos generales, códigos originales (OEM) y equivalentes, y compatibilidad con vehículos.
           </SheetDescription>
         </SheetHeader>
 
@@ -208,13 +213,50 @@ export function ProductoForm({
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
+                <Label>Códigos originales (OEM)</Label>
+                {!readOnly && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => originalesArray.append({ codigo_original: "" })}
+                  >
+                    <Plus className="size-4" /> Agregar
+                  </Button>
+                )}
+              </div>
+              {originalesArray.fields.length === 0 && readOnly && (
+                <p className="text-sm text-muted-foreground">Sin códigos originales.</p>
+              )}
+              {originalesArray.fields.map((field, index) => (
+                <div key={field.id} className="flex items-end gap-2">
+                  <Input
+                    placeholder="Código original del fabricante"
+                    {...register(`codigos_originales.${index}.codigo_original`)}
+                  />
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => originalesArray.remove(index)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
                 <Label>Códigos equivalentes</Label>
                 {!readOnly && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => codigosArray.append({ codigo_equivalente: "", fabricante: "" })}
+                    onClick={() => codigosArray.append({ codigo_equivalente: "" })}
                   >
                     <Plus className="size-4" /> Agregar
                   </Button>
@@ -226,12 +268,8 @@ export function ProductoForm({
               {codigosArray.fields.map((field, index) => (
                 <div key={field.id} className="flex items-end gap-2">
                   <Input
-                    placeholder="Código equivalente"
+                    placeholder="Código equivalente (otro fabricante)"
                     {...register(`codigos_equivalentes.${index}.codigo_equivalente`)}
-                  />
-                  <Input
-                    placeholder="Fabricante (opcional)"
-                    {...register(`codigos_equivalentes.${index}.fabricante`)}
                   />
                   {!readOnly && (
                     <Button

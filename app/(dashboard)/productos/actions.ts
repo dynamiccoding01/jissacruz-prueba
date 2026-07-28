@@ -19,13 +19,15 @@ async function guardarProducto(
   if (!parsed.success) {
     return { error: "Revisá los datos del formulario." }
   }
-  const { codigos_equivalentes, vehiculos_compatibles, precios_mayor, ...producto } = parsed.data
+  const { codigos_equivalentes, codigos_originales, vehiculos_compatibles, precios_mayor, ...producto } =
+    parsed.data
 
   const supabase = await createClient()
   const { data, error } = await supabase.rpc("fn_guardar_producto", {
     p_id: id,
     p_producto: producto,
     p_equivalentes: codigos_equivalentes,
+    p_originales: codigos_originales,
     p_vehiculos: vehiculos_compatibles,
     p_precios_mayor: precios_mayor,
   })
@@ -72,7 +74,11 @@ export async function getProductoConDetalle(id: string) {
   const { data: producto } = await supabase.from("productos").select("*").eq("id", id).single()
   const { data: codigos } = await supabase
     .from("producto_codigos_equivalentes")
-    .select("codigo_equivalente, fabricante")
+    .select("codigo_equivalente")
+    .eq("producto_id", id)
+  const { data: originales } = await supabase
+    .from("producto_codigos_originales")
+    .select("codigo_original")
     .eq("producto_id", id)
   const { data: vehiculosCompat } = await supabase
     .from("producto_vehiculos_compatibles")
@@ -87,6 +93,7 @@ export async function getProductoConDetalle(id: string) {
   return {
     producto,
     codigos: codigos ?? [],
+    originales: originales ?? [],
     precios_mayor: (preciosMayor ?? []).map((p) => ({
       cantidad_minima: p.cantidad_minima,
       precio: Number(p.precio),
