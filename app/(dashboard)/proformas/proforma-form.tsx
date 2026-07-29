@@ -40,6 +40,7 @@ import {
 } from "@/lib/validations/proforma"
 import { buscarProductosParaProforma, createProforma, type ProductoBusqueda } from "./actions"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
+import { formatearMedidas } from "@/lib/medidas"
 
 const VACIO: ProformaInput = {
   cliente_id: "",
@@ -240,15 +241,33 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                       type="button"
                       key={r.id}
                       onClick={() => agregarProducto(r)}
-                      className="flex w-full items-center justify-between gap-2 border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-muted"
+                      className="flex w-full items-start justify-between gap-2 border-b border-border px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-muted"
                     >
                       <span className="min-w-0">
-                        <span className="text-base font-semibold">{r.codigo}</span>{" "}
-                        <span className="text-muted-foreground">— {r.descripcion}</span>
+                        <span className="block">
+                          <span className="text-base font-semibold">{r.codigo}</span>{" "}
+                          <span className="text-muted-foreground">— {r.descripcion}</span>
+                        </span>
+                        {r.medidas.length > 0 && (
+                          <span className="block text-xs text-muted-foreground">
+                            Medidas: {formatearMedidas(r.medidas)}
+                          </span>
+                        )}
+                        {r.originales.length > 0 && (
+                          <span className="block text-xs text-muted-foreground">
+                            OEM: {r.originales.slice(0, 4).join(", ")}
+                            {r.originales.length > 4 ? "…" : ""}
+                          </span>
+                        )}
                       </span>
-                      <span className="flex shrink-0 items-center gap-2 text-base font-semibold text-primary">
-                        {bs(r.precio)}
-                        <Plus className="size-5" />
+                      <span className="flex shrink-0 flex-col items-end text-base font-semibold text-primary">
+                        <span className="flex items-center gap-2">
+                          {bs(r.precio)}
+                          <Plus className="size-5" />
+                        </span>
+                        {r.unidad && r.unidad !== "unidad" && (
+                          <span className="text-[11px] font-normal text-muted-foreground">/ {r.unidad}</span>
+                        )}
                       </span>
                     </button>
                   ))}

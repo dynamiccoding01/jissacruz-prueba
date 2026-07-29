@@ -7,6 +7,8 @@ import { logError } from "@/lib/log"
 import { getPerfil } from "@/lib/auth/session"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
+import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
+import type { Medida } from "@/lib/medidas"
 import {
   proformaSchema,
   calcularTotales,
@@ -23,6 +25,10 @@ export type ProductoBusqueda = {
   // C3: escalas de precio por mayor VIGENTES (filtradas por fecha en el
   // servidor), ordenadas por cantidad_minima ascendente.
   escalas: EscalaPrecio[]
+  // Sprint 6: unidad, medidas y códigos originales (OEM) para mostrar.
+  unidad: string
+  medidas: Medida[]
+  originales: string[]
 }
 
 export async function buscarProductosParaProforma(
@@ -39,17 +45,27 @@ export async function buscarProductosParaProforma(
     return []
   }
 
-  const filas = (data ?? []) as { id: string; codigo: string; descripcion: string; precio: number }[]
-  const escalas = await escalasVigentesPorProducto(
-    supabase,
-    filas.map((p) => p.id)
-  )
+  const filas = (data ?? []) as {
+    id: string
+    codigo: string
+    descripcion: string
+    precio: number
+    unidad_medida: string
+  }[]
+  const ids = filas.map((p) => p.id)
+  const [escalas, datos] = await Promise.all([
+    escalasVigentesPorProducto(supabase, ids),
+    datosBusquedaPorProducto(supabase, ids),
+  ])
   return filas.map((p) => ({
     id: p.id,
     codigo: p.codigo,
     descripcion: p.descripcion,
     precio: Number(p.precio),
     escalas: escalas.get(p.id) ?? [],
+    unidad: p.unidad_medida,
+    medidas: datos.get(p.id)?.medidas ?? [],
+    originales: datos.get(p.id)?.originales ?? [],
   }))
 }
 

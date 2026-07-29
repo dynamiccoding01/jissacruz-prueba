@@ -7,6 +7,8 @@ import { getPerfil } from "@/lib/auth/session"
 import { logError } from "@/lib/log"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
+import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
+import type { Medida } from "@/lib/medidas"
 import { ventaSchema, normalizarDescuento, type VentaInput } from "@/lib/validations/venta"
 
 // Desglose de stock por sucursal, compatible con <StockBadge /> (que solo lee
@@ -34,6 +36,10 @@ export type ProductoBusqueda = {
   stockSucursalActual: number
   // Desglose por sucursal para mostrar (todas las sucursales), como en Productos.
   porSucursal: StockSucursal[]
+  // Sprint 6: unidad de venta, medidas y códigos originales (OEM) para mostrar.
+  unidad: string
+  medidas: Medida[]
+  originales: string[]
 }
 
 export async function buscarProductosParaVenta(
@@ -60,11 +66,13 @@ export async function buscarProductosParaVenta(
     precio: number
     stock_actual: number
     stock_minimo: number
+    unidad_medida: string
   }[]
   const ids = filas.map((p) => p.id)
 
-  const [escalas, stockRes] = await Promise.all([
+  const [escalas, datos, stockRes] = await Promise.all([
     escalasVigentesPorProducto(supabase, ids),
+    datosBusquedaPorProducto(supabase, ids),
     ids.length
       ? supabase
           .from("producto_stock_sucursal")
@@ -106,6 +114,9 @@ export async function buscarProductosParaVenta(
       stockMinimo: Number(p.stock_minimo),
       stockSucursalActual,
       porSucursal,
+      unidad: p.unidad_medida,
+      medidas: datos.get(p.id)?.medidas ?? [],
+      originales: datos.get(p.id)?.originales ?? [],
     }
   })
 }

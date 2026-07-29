@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { StockBadge } from "@/components/shared/stock-badge"
 import { cn } from "@/lib/utils"
+import { formatearMedidas } from "@/lib/medidas"
 import {
   Select,
   SelectContent,
@@ -242,10 +243,26 @@ export function Pos() {
                   <span className="min-w-0">
                     <span className="block text-base font-semibold">{r.codigo}</span>
                     <span className="block text-sm text-muted-foreground">{r.descripcion}</span>
+                    {r.medidas.length > 0 && (
+                      <span className="block text-xs text-muted-foreground">
+                        Medidas: {formatearMedidas(r.medidas)}
+                      </span>
+                    )}
+                    {r.originales.length > 0 && (
+                      <span className="block text-xs text-muted-foreground">
+                        OEM: {r.originales.slice(0, 4).join(", ")}
+                        {r.originales.length > 4 ? "…" : ""}
+                      </span>
+                    )}
                   </span>
-                  <span className="flex shrink-0 items-center gap-2 text-base font-semibold text-primary">
-                    {bs(r.precio)}
-                    {!sinStock && <Plus className="size-5" />}
+                  <span className="flex shrink-0 flex-col items-end gap-1 text-base font-semibold text-primary">
+                    <span className="flex items-center gap-2">
+                      {bs(r.precio)}
+                      {!sinStock && <Plus className="size-5" />}
+                    </span>
+                    {r.unidad && r.unidad !== "unidad" && (
+                      <span className="text-[11px] font-normal text-muted-foreground">/ {r.unidad}</span>
+                    )}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
