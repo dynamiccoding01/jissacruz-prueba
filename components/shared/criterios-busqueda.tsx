@@ -3,21 +3,26 @@
 import { cn } from "@/lib/utils"
 
 // Criterios que el usuario puede marcar para acotar la busqueda de productos.
-// Los `id` coinciden exactamente con los que espera la RPC fn_buscar_productos
-// (script supabase/10_busqueda_por_criterio.sql). No renombrar sin actualizar el SQL.
+// Los `id` coinciden EXACTAMENTE con los que evalua la RPC fn_buscar_productos
+// (script supabase/25_busqueda_original_medida.sql). No renombrar sin actualizar
+// el SQL: un id que no matchee devuelve 0 resultados sin error (riesgo R5).
 export type CampoBusqueda =
   | "codigo"
   | "equivalente"
+  | "original"
   | "descripcion"
   | "linea_marca"
   | "vehiculo"
+  | "medida"
 
 export const CAMPOS_BUSQUEDA: { id: CampoBusqueda; label: string }[] = [
   { id: "codigo", label: "Código" },
+  { id: "original", label: "Código original" },
   { id: "equivalente", label: "Equivalente" },
   { id: "descripcion", label: "Descripción" },
   { id: "linea_marca", label: "Línea / Marca" },
   { id: "vehiculo", label: "Vehículo" },
+  { id: "medida", label: "Medidas" },
 ]
 
 // Criterio marcado por defecto (igual que el sistema de referencia del cliente).
