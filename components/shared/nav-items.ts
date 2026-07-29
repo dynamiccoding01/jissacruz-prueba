@@ -10,6 +10,7 @@ import {
   Users,
   BarChart3,
   Building2,
+  Ruler,
   Settings,
   type LucideIcon,
 } from "lucide-react"
@@ -63,6 +64,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Reportes", href: "/reportes", icon: BarChart3, roles: ["admin"] },
       { label: "Sucursales", href: "/sucursales", icon: Building2, roles: ["admin"] },
+      { label: "Unidades", href: "/unidades-medida", icon: Ruler, roles: ["admin"] },
       { label: "Configuración", href: "/configuracion", icon: Settings, roles: ["admin"] },
     ],
   },

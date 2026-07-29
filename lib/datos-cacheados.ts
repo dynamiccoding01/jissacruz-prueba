@@ -23,6 +23,7 @@ export type ConfiguracionEmpresa = {
 
 export const TAG_CONFIG_EMPRESA = "configuracion-empresa"
 export const TAG_SUCURSALES = "sucursales"
+export const TAG_UNIDADES = "unidades-medida"
 
 export const getConfiguracionEmpresa = unstable_cache(
   async (): Promise<ConfiguracionEmpresa | null> => {
@@ -66,4 +67,29 @@ export const getSucursalesActivas = unstable_cache(
   },
   ["sucursales-activas"],
   { tags: [TAG_SUCURSALES], revalidate: 3600 }
+)
+
+export type UnidadMedida = {
+  id: string
+  codigo: string
+  nombre: string
+  abreviatura: string | null
+}
+
+export const getUnidadesActivas = unstable_cache(
+  async (): Promise<UnidadMedida[]> => {
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from("unidades_medida")
+      .select("id, codigo, nombre, abreviatura")
+      .eq("activo", true)
+      .order("nombre")
+    if (error) {
+      logError("datos-cacheados.getUnidadesActivas", error)
+      return []
+    }
+    return data ?? []
+  },
+  ["unidades-activas"],
+  { tags: [TAG_UNIDADES], revalidate: 3600 }
 )

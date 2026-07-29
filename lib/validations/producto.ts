@@ -61,6 +61,9 @@ export const productoSchema = z.object({
   descripcion: z.string().min(1, "La descripción es obligatoria"),
   linea_marca: z.string().optional(),
   unidad_medida: z.string().min(1, "La unidad de medida es obligatoria"),
+  // FK al catálogo de unidades (Sprint 6 · Fase 3). Nullable durante la transición:
+  // convive con el texto `unidad_medida`. "" del <select> vacío se guarda como null.
+  unidad_medida_id: z.string().optional().nullable(),
   precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
   stock_minimo: z.coerce.number().int().min(0, "El stock mínimo no puede ser negativo"),
   imagen_url: z.string().optional().nullable(),

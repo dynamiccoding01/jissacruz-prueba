@@ -22,12 +22,14 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { productoSchema, type ProductoFormInput } from "@/lib/validations/producto"
 import { createProducto, getProductoConDetalle, updateProducto } from "./actions"
+import { listarUnidadesActivas } from "../unidades-medida/actions"
 
 const VACIO: ProductoFormInput = {
   codigo: "",
   descripcion: "",
   linea_marca: "",
   unidad_medida: "unidad",
+  unidad_medida_id: null,
   precio: 0,
   stock_minimo: 0,
   imagen_url: null,
@@ -53,6 +55,7 @@ export function ProductoForm({
   const [loading, setLoading] = useState(false)
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
   const [subiendoImagen, setSubiendoImagen] = useState(false)
+  const [unidades, setUnidades] = useState<Awaited<ReturnType<typeof listarUnidadesActivas>>>([])
 
   const {
     register,
@@ -76,6 +79,11 @@ export function ProductoForm({
 
   useEffect(() => {
     if (!open) return
+    listarUnidadesActivas().then(setUnidades)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     if (!productoId) {
       reset(VACIO)
       return
@@ -89,6 +97,7 @@ export function ProductoForm({
             descripcion: producto.descripcion,
             linea_marca: producto.linea_marca ?? "",
             unidad_medida: producto.unidad_medida,
+            unidad_medida_id: producto.unidad_medida_id ?? null,
             precio: producto.precio,
             stock_minimo: producto.stock_minimo,
             imagen_url: producto.imagen_url,
@@ -182,17 +191,39 @@ export function ProductoForm({
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="unidad_medida">Unidad</Label>
-                  <Input id="unidad_medida" {...register("unidad_medida")} />
+                  {unidades.length > 0 ? (
+                    <select
+                      id="unidad_medida"
+                      className="h-10 w-full rounded-md border border-input bg-background px-2 text-sm disabled:opacity-60"
+                      value={watch("unidad_medida_id") ?? ""}
+                      onChange={(e) => {
+                        const uid = e.target.value
+                        setValue("unidad_medida_id", uid || null)
+                        // mantiene el texto (fallback) en sincronía con la unidad elegida
+                        const u = unidades.find((x) => x.id === uid)
+                        if (u) setValue("unidad_medida", u.nombre)
+                      }}
+                    >
+                      <option value="">Seleccionar…</option>
+                      {unidades.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.nombre} ({u.codigo})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input id="unidad_medida" {...register("unidad_medida")} />
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="precio">Precio (Bs)</Label>
+                  <Label htmlFor="precio">Precio por unidad (Bs)</Label>
                   <Input id="precio" type="number" step="0.01" {...register("precio")} />
                   {errors.precio && (
                     <p className="text-sm text-destructive">{errors.precio.message}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="stock_minimo">Stock mínimo</Label>
+                  <Label htmlFor="stock_minimo">Stock mínimo (en la unidad)</Label>
                   <Input id="stock_minimo" type="number" {...register("stock_minimo")} />
                 </div>
               </div>
