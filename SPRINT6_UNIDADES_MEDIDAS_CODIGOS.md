@@ -1074,11 +1074,11 @@ end as estado_efectivo
 - [x] ✅ **Fase 2 (medidas) — HECHO 27 jul:** script `23` (tabla `producto_medidas` + `fn_guardar_producto` con `p_medidas`) + app (schema `medidas`, helper `lib/medidas.ts`, sección "Medidas" en el formulario). ⚠️ Falta correr el `23` (después del `22`).
 - [x] ✅ **Fase 3 (unidades) — HECHO 27 jul:** script `24` (tabla `unidades_medida` vacía + `productos.unidad_medida_id` + guarda R1) + ABM `/unidades-medida` (admin) + nav "Unidades" + selector de unidad en el formulario de producto (con fallback a texto) + etiquetas R2. ⚠️ Falta correr el `24` (después del `22` y `23`).
 - [x] ✅ **Fase 4 (búsqueda por original/medida) — HECHO 27 jul:** script `25` (criterios `original`/`medida` sobre la versión viva con `unaccent`; R9 arreglo por defecto; R11 `EXISTS`) + 2 checkboxes nuevos ("Código original", "Medidas") en `criterios-busqueda.tsx` con los `id` que espera el SQL (R5). ⚠️ Falta correr el `25` (después de 22/23/24 y del 26).
-- [x] ✅ **Polish (27 jul):** los resultados de búsqueda del **POS y Proformas** muestran unidad, medidas y códigos originales (helper `lib/producto-busqueda-server.ts`). Queda opcional el mismo dato en catálogo/kardex/PDFs (el detalle del producto ya los muestra).
+- [x] ✅ **Polish (27 jul):** los resultados de búsqueda del **POS y Proformas** muestran unidad, medidas y códigos originales (helper `lib/producto-busqueda-server.ts`), y los **PDF de proforma y venta** también (R14/Q5). Queda opcional el mismo dato en el catálogo y el kardex (el detalle del producto ya los muestra).
 - [ ] **Snapshot de la BD antes del script 22** (única operación que mueve datos existentes).
 - [ ] **R9**: agregar `original` y `medida` al **arreglo por defecto** de criterios en el SQL, no solo al `WHERE`.
 - [ ] **R11**: usar `EXISTS (...)` en vez de `LEFT JOIN` + `DISTINCT` para los criterios de tablas hijas.
-- [ ] **R14**: en el PDF, la unidad va dentro de la celda CANTIDAD y originales/medidas como líneas dentro de DETALLE. No agregar columnas.
+- [x] ✅ **R14 (Q5/Q6) — HECHO 27 jul:** en los PDF de **proforma y venta**, la unidad va dentro de la celda CANTIDAD (`12 PZA`) y medidas + códigos originales (tope 5 + "…") como líneas dentro de DETALLE (se ensanchó Detalle a costa de Código/Línea, sin columnas nuevas). Rutas `/api/pdf/proforma/[id]` y `/api/pdf/venta/[id]` traen medidas/originales/unidad por embed.
 
 ### Cierre
 - [x] `supabase/README.md` con los scripts **26, 27 y 28** documentados y marcados como corridos *(hecho 27 jul)*. ⏳ Falta agregar el `22`–`25` y el `29` a medida que se escriban.
