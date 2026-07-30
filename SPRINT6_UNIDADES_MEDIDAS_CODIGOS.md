@@ -592,7 +592,7 @@ Sin impacto en el diseño, pero conviene confirmar con el cliente: **`producto_p
 - ⏳ **UAT con el cliente** y corrección de hallazgos.
 - ⏳ **234 de 239 productos con precio = Bs 0** — depende de que el cliente entregue la lista de precios.
 - ⏳ **Carga de stock inicial por sucursal.**
-- ⏳ **C2 paso 4** del Sprint 5: eliminar el total repetido `productos.stock_actual` y aplicar **RLS por sucursal al vendedor** (hoy un vendedor ve documentos de todas las sucursales).
+- 🟨 **C2 paso 4** del Sprint 5: ✅ **parte B HECHA (27 jul, script `30`):** RLS por sucursal — el vendedor ve solo ventas/proformas/pedidos de su sucursal (decisión del cliente); el admin ve todo; catálogo y stock por sucursal siguen visibles para todos. Cierra el hueco H8. ⚪ **parte A (eliminar `productos.stock_actual`) NO se hace:** la columna la mantiene un trigger, es correcta; quitarla es alto riesgo / bajo valor → **deuda aceptada**.
 - ⏳ **2 traspasos en estado `enviado`** (stock en tránsito, invisible en ambas sucursales) — resolverlos o cancelarlos.
 - ⏳ `00_setup_completo.sql` incompleto para instalaciones desde cero.
 - ⏳ **Divergencia de alcance abierta**: `linea_marca` es texto libre, pero el sistema del cliente maneja **Línea y Marca como campos separados** y ofrece búsqueda difusa (“Parecido”). No entra en este sprint; anotarlo para la próxima conversación.
@@ -1129,6 +1129,6 @@ Siguen abiertos desde antes y conviene no perderlos de vista:
 - **UAT con el cliente** y corrección de hallazgos.
 - **234 de 239 productos con precio = Bs 0** — depende de que el cliente entregue la lista de precios.
 - **Carga de stock inicial por sucursal.**
-- **C2 paso 4** del Sprint 5: eliminar el total repetido `productos.stock_actual` y **RLS por sucursal para el vendedor**.
+- ✅ **C2 paso 4 (parte B) HECHO 27 jul (script `30`):** RLS por sucursal para el vendedor (ve solo lo de su sucursal). Parte A (eliminar `productos.stock_actual`) queda como **deuda aceptada** (no se hace).
 - `00_setup_completo.sql` no sirve para una instalación desde cero (le faltan los scripts 12–14, 16, 20, 21 y ahora 22–28).
 - **Línea y Marca como campos separados** + búsqueda difusa ("Parecido"), que el sistema del cliente tiene y este no.
