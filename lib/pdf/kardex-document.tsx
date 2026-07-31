@@ -1,7 +1,7 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
 import { format } from "date-fns"
 
-import { ETIQUETA_MOVIMIENTO, type TipoMovimiento } from "@/lib/kardex"
+import { ETIQUETA_MOVIMIENTO, esEntrada, type TipoMovimiento } from "@/lib/kardex"
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 9, fontFamily: "Helvetica" },
@@ -40,6 +40,7 @@ export type MovimientoPdf = {
   motivo: string | null
   creado_en: string
   saldo: number
+  sucursal: { codigo: string; nombre: string } | null
 }
 
 export function KardexDocument({
@@ -68,7 +69,8 @@ export function KardexDocument({
 
         <View style={styles.headerRow}>
           <Text style={styles.headerCell}>Fecha</Text>
-          <Text style={styles.headerCell}>Movimiento</Text>
+          <Text style={[styles.headerCell, { flex: 1.4 }]}>Movimiento</Text>
+          <Text style={styles.headerCell}>Sucursal</Text>
           <Text style={styles.headerCell}>Cantidad</Text>
           <Text style={styles.headerCell}>Costo (Bs)</Text>
           <Text style={styles.headerCell}>Saldo</Text>
@@ -78,8 +80,12 @@ export function KardexDocument({
         {movimientos.map((m, i) => (
           <View style={styles.row} key={i} wrap={false}>
             <Text style={styles.cell}>{format(new Date(m.creado_en), "dd/MM/yyyy HH:mm")}</Text>
-            <Text style={styles.cell}>{ETIQUETA_MOVIMIENTO[m.tipo_movimiento]}</Text>
-            <Text style={styles.cell}>{m.cantidad}</Text>
+            <Text style={[styles.cell, { flex: 1.4 }]}>{ETIQUETA_MOVIMIENTO[m.tipo_movimiento]}</Text>
+            <Text style={styles.cell}>{m.sucursal?.nombre ?? "—"}</Text>
+            <Text style={styles.cell}>
+              {esEntrada(m.tipo_movimiento) ? "+" : "-"}
+              {m.cantidad}
+            </Text>
             <Text style={styles.cell}>{Number(m.costo_unitario).toFixed(2)}</Text>
             <Text style={styles.cell}>{m.saldo}</Text>
             <Text style={[styles.cell, { flex: 2 }]}>{m.motivo ?? "—"}</Text>

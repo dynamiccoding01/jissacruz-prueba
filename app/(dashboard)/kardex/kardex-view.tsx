@@ -7,7 +7,7 @@ import { es } from "date-fns/locale"
 import { StockBadge } from "@/components/shared/stock-badge"
 import { TablaDatos } from "@/components/shared/tabla-datos"
 import { ExportButtons } from "@/components/shared/export-buttons"
-import { ETIQUETA_MOVIMIENTO, type TipoMovimiento } from "@/lib/kardex"
+import { ETIQUETA_MOVIMIENTO, esEntrada, type TipoMovimiento } from "@/lib/kardex"
 
 export type MovimientoConSaldo = {
   id: string
@@ -17,6 +17,7 @@ export type MovimientoConSaldo = {
   motivo: string | null
   creado_en: string
   saldo: number
+  sucursal: { codigo: string; nombre: string } | null
 }
 
 export function KardexView({
@@ -41,7 +42,26 @@ export function KardexView({
       header: "Movimiento",
       cell: ({ row }) => ETIQUETA_MOVIMIENTO[row.original.tipo_movimiento],
     },
-    { accessorKey: "cantidad", header: "Cantidad" },
+    {
+      accessorKey: "sucursal",
+      header: "Sucursal",
+      cell: ({ row }) => row.original.sucursal?.nombre ?? "—",
+    },
+    {
+      accessorKey: "cantidad",
+      header: "Cantidad",
+      // La BD guarda siempre positivo (el signo lo da el tipo). Sin el signo, un
+      // traspaso son dos filas con el mismo numero y no se sabe cual entro.
+      cell: ({ row }) => {
+        const entra = esEntrada(row.original.tipo_movimiento)
+        return (
+          <span className={entra ? "text-emerald-700" : "text-destructive"}>
+            {entra ? "+" : "−"}
+            {row.original.cantidad}
+          </span>
+        )
+      },
+    },
     {
       accessorKey: "costo_unitario",
       header: "Costo",
@@ -58,7 +78,8 @@ export function KardexView({
   const excelData = filas.map((m) => ({
     Fecha: format(new Date(m.creado_en), "dd/MM/yyyy HH:mm"),
     Movimiento: ETIQUETA_MOVIMIENTO[m.tipo_movimiento],
-    Cantidad: m.cantidad,
+    Sucursal: m.sucursal?.nombre ?? "",
+    Cantidad: esEntrada(m.tipo_movimiento) ? m.cantidad : -m.cantidad,
     Costo: m.costo_unitario,
     Saldo: m.saldo,
     Motivo: m.motivo ?? "",

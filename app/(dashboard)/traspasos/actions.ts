@@ -3,10 +3,55 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { logError } from "@/lib/log"
+import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
+import type { Medida } from "@/lib/medidas"
 
 export type TraspasoItemInput = {
   producto_id: string
   cantidad: number
+}
+
+// Búsqueda propia del módulo Pedido, con el mismo contrato que la de proforma y
+// compra: respeta los criterios que marca el usuario y suma unidad, medidas y
+// códigos originales. Antes usaba `searchProductos` sin criterios.
+export type ProductoBusquedaPedido = {
+  id: string
+  codigo: string
+  descripcion: string
+  unidad: string
+  medidas: Medida[]
+  originales: string[]
+}
+
+export async function buscarProductosParaPedido(
+  query: string,
+  campos: string[] = []
+): Promise<ProductoBusquedaPedido[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc("fn_buscar_productos", {
+    p_query: query,
+    p_campos: campos,
+  })
+  if (error) {
+    logError("traspasos.buscarProductosParaPedido", error, { query, campos })
+    return []
+  }
+
+  const filas = (data ?? []) as {
+    id: string
+    codigo: string
+    descripcion: string
+    unidad_medida: string
+  }[]
+  const datos = await datosBusquedaPorProducto(supabase, filas.map((p) => p.id))
+  return filas.map((p) => ({
+    id: p.id,
+    codigo: p.codigo,
+    descripcion: p.descripcion,
+    unidad: p.unidad_medida,
+    medidas: datos.get(p.id)?.medidas ?? [],
+    originales: datos.get(p.id)?.originales ?? [],
+  }))
 }
 
 // Parte III: el pedido lo crea el DESTINO (solicitante) y elige el ORIGEN al que

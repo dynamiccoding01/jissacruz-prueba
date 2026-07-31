@@ -6,9 +6,9 @@
 
 ---
 
-## 🟩 ESTADO DE IMPLEMENTACIÓN — actualizado 27 jul 2026
+## 🟩 ESTADO DE IMPLEMENTACIÓN — actualizado 29 jul 2026
 
-> Lo que ya se implementó y lo que falta. **Los scripts `26`, `27` y `28` ya están corridos y verificados contra la BD real** (comprobado el 27 jul consultando `pg_proc` / `information_schema`, no solo confiando en el repo). `tsc --noEmit` y `next lint` limpios. El detalle está tildado en el checklist del final.
+> **El Sprint 6 está terminado en código y en base de datos.** Los **9 scripts** (`22`–`30`) están corridos y verificados contra la BD real — comprobado el 29 jul consultando `pg_proc` / `information_schema` / `pg_policies`, no confiando en el repo. `tsc --noEmit` limpio y `npm run build` compila las 20 rutas. **No queda ninguna pregunta abierta.** Lo que falta es operativo y de prueba, no de implementación (ver "Lo que falta" abajo).
 
 | Bloque | Estado | Notas |
 |---|---|---|
@@ -18,14 +18,22 @@
 | **F1** · búsqueda sin acentos | ✅ **Hecho y verificado en la BD** | `supabase/26_busqueda_unaccent.sql` escrito sobre la versión **VIVA** (00_setup) + README corregido (fila 15/26, Q12). **Corrido y verificado en la BD real el 27 jul:** `valvula` pasó de 1 a ~113 resultados (coincide con `válvula`). |
 | **Parte IV** · Proformas (vigencia 3 días, estados, detalle, edición) | ✅ **Hecho y verificado en la BD (27 jul)** | Script `27` corrido y verificado. App: acciones `obtenerProformaDetalle`/`updateProforma`/`revalidarProforma`, explorer con 3 estados, **página `/proformas/[id]`** (detalle + edición + comparación de precios + "traer precios actuales" + revalidar + convertir). Alta sin campo "Validez" (Q20). `tsc`/`lint`/`build` limpios. |
 | **Parte III** · Pedido (ex Traspasos) | ✅ **Hecho** (III-a verificado en la BD; III-b código listo) | ✅ III-a: `supabase/28_pedidos_flujo.sql` **corrido y verificado** (invierte el flujo; `cantidad_solicitada`; despacho con ajuste de cantidades; permisos H7/H8) + app (acciones flipeadas, formulario invertido, explorer "Pedido" con diálogo de despacho, nav "Pedidos"). ✅ III-b: **stock en tránsito** en el reporte de inventario (bloque aparte, recorrido origen→destino, valorizado a costo FIFO) en **pantalla, PDF y Excel** (hoja "En tránsito"); de paso se corrigió el conteo de proformas para el estado `pendiente`. Sin SQL nuevo. `tsc`/`lint`/`build` limpios. ⏳ Solo queda **recibir los 2 pedidos en `enviado`** (Q19, operativo — desde la app). |
-| **Parte I** · Unidades / medidas / códigos originales | 🟨 **Fases 1–4 hechas (código) · faltan correr scripts 22, 23, 24 y 25** | ✅ **Fase 1:** códigos originales (script `22`, migra los 810, quita `fabricante`). ✅ **Fase 2:** medidas (script `23`). ✅ **Fase 3:** catálogo de unidades + ABM `/unidades-medida` + `unidad_medida_id` + guarda R1 (script `24`). ✅ **Fase 4:** **búsqueda por código original y por medida** (script `25`: criterios `original`/`medida` en `fn_buscar_productos`, sobre la versión viva con `unaccent`; R9 en el arreglo por defecto; R11 con `EXISTS`) + 2 checkboxes nuevos en el componente de criterios. `tsc`/`lint` limpios. ⚠️ FALTA **snapshot + correr `22` → `23` → `24` → `25`** (en ese orden). ✅ **Polish (27 jul):** los resultados de búsqueda del **POS y de Proformas** ahora muestran unidad, medidas (`A: 45,40MM`) y códigos originales (OEM, tope 4 + "…") vía el helper `lib/producto-busqueda-server.ts` (enriquecimiento por ids en el `Promise.all`). Queda opcional mostrarlos también en el catálogo/kardex/PDFs (secundario: el detalle del producto ya los muestra todos). |
+| **Parte I** · Unidades / medidas / códigos originales | ✅ **Hecho y verificado en la BD (29 jul)** — scripts `22`–`25` corridos | ✅ **Fase 1:** códigos originales (script `22`, migra los 810, quita `fabricante`). ✅ **Fase 2:** medidas (script `23`). ✅ **Fase 3:** catálogo de unidades + ABM `/unidades-medida` + `unidad_medida_id` + guarda R1 (script `24`). ✅ **Fase 4:** **búsqueda por código original y por medida** (script `25`: criterios `original`/`medida` en `fn_buscar_productos`, sobre la versión viva con `unaccent`; R9 en el arreglo por defecto; R11 con `EXISTS`) + 2 checkboxes nuevos en el componente de criterios. `tsc`/`lint` limpios. ✅ **Scripts `22`→`23`→`24`→`25` corridos y verificados el 29 jul:** 810 originales migrados, 0 equivalentes, `fabricante` eliminada, `unidad_medida_id` creada, y la `fn_buscar_productos` viva conserva **`unaccent` + `producto_medidas`** (el 25 no revirtió el 26). Una sola versión de `fn_guardar_producto` (7 args) — sin ambigüedad de PostgREST. ✅ **Polish (27 jul):** los resultados de búsqueda del **POS y de Proformas** ahora muestran unidad, medidas (`A: 45,40MM`) y códigos originales (OEM, tope 4 + "…") vía el helper `lib/producto-busqueda-server.ts` (enriquecimiento por ids en el `Promise.all`). Queda opcional mostrarlos también en el catálogo/kardex/PDFs (secundario: el detalle del producto ya los muestra todos). |
 
-**Para quien retome, en este orden:**
+### Extra fuera del Sprint 6: `30_rls_vendedor_sucursal.sql`
 
-1. ~~**III-b** — stock en tránsito en el reporte de inventario.~~ ✅ **HECHO 27 jul** (pantalla + PDF + Excel).
-2. **Q19** — recibir los 2 pedidos que siguen en `enviado`, logueado desde la app. *(Operativo, no es código.)*
-3. ~~**R8 correcto** — la RPC `fn_guardar_producto` (script `29`).~~ ✅ **HECHO 27 jul** (código listo). ⚠️ **Falta correr `supabase/29_fn_guardar_producto.sql` en Supabase** antes de guardar productos.
-4. **Parte I** completa — scripts `22`–`25`, el bloque más grande. Al hacerla, **extender `fn_guardar_producto`** (script 29) para los nuevos hijos (originales, medidas) y para quitar `fabricante`.
+Se aprovechó para cerrar el **paso 4 (B) del Sprint 5 · C2**: el vendedor pasa a ver **solo** las ventas, proformas y pedidos de **su** sucursal (el admin sigue viendo todo). Reescribe únicamente las políticas de `select` de esas 3 tablas + sus ítems. El catálogo, `producto_stock_sucursal` y el kardex **no** se restringen (todos los ven, para poder decidir traspasos). **Corrido el 29 jul**, las 6 políticas existen. *No* se eliminó `productos.stock_actual` (parte A) — queda como deuda aceptada.
+
+---
+
+## ⏳ Lo que falta (nada de esto es implementación)
+
+1. ~~Probar el script 30 con un vendedor real.~~ ✅ **RESUELTO 29 jul.** Se verificó simulando la sesión en SQL (`set local role authenticated` + `request.jwt.claims`, dentro de una transacción con `rollback`): el vendedor de **Casa Matriz** ve 12 ventas / 5 proformas, el de **Almacén Centro** 2 / 0, el **admin** las 14 / 5 — y los 239 productos los ven todos. Los 10 pedidos los ven ambos vendedores porque **solo hay 2 sucursales**: todo traspaso es 1↔2. **El hueco del `sucursal_id` null se comprobó y se cerró:** con la columna en null el vendedor veía 0 ventas, 0 proformas y 0 pedidos sin ningún error. Lo cierra el **script `31_perfil_sucursal_obligatoria.sql`** (trigger con sucursal por defecto + backfill + `not null`), corrido y verificado.
+2. **Paso 3.4 de la Parte I** — hay 2 unidades cargadas (PZA, UND) pero los **239 productos siguen con `unidad_medida_id` en null**, y la columna de texto `unidad_medida` todavía convive con la FK. Falta asignar la unidad a cada producto y recién después eliminar la columna de texto.
+3. **Q19** — recibir los **2 pedidos que siguen en `enviado`**, logueado desde la app (mueve stock real; `fn_recibir_traspaso` valida `fn_es_usuario_activo()`, así que **no** funciona por SQL directo).
+4. **Verificación end-to-end de la Parte I en la UI**: crear un producto con unidad, medidas y códigos originales, buscarlo por cada criterio nuevo y revisar cómo sale en el PDF de proforma y de venta.
+
+**Residuo menor de R16:** las 3 proformas ya convertidas tienen el plazo pisado a 3 días desde la primera corrida del script 27. El fix evita que vuelva a pasar pero no revierte lo hecho; con datos de prueba no vale la pena tocarlo.
 
 ### ⚠️ Hallazgos de la revisión del 27 jul — ✅ TODOS CORREGIDOS (27 jul)
 
@@ -88,7 +96,10 @@ El último script del repo era el `21`. **Para que dos devs trabajando en parale
 | `26_busqueda_unaccent.sql` | Parte II · F1 | Acentos ignorados en `fn_buscar_productos` | ✅ **corrido 27 jul** |
 | `27_proformas_vigencia.sql` | Parte IV | `revalidada_en` + vista con 3 estados + validación en la RPC de conversión | ✅ **corrido 27 jul** |
 | `28_pedidos_flujo.sql` | Parte III | Inversión del flujo + `cantidad_solicitada` + ajuste de cantidades al despachar + permisos | ✅ **corrido 27 jul** |
-| `29_guardar_producto.sql` | R8 · fix correcto | RPC transaccional `fn_guardar_producto` (reemplaza el delete-all + reinsert de `updateProducto`) | ⏳ por escribir |
+| `29_fn_guardar_producto.sql` | R8 · fix correcto | RPC transaccional `fn_guardar_producto` (reemplaza el delete-all + reinsert de `updateProducto`) | ✅ **corrido 28 jul** |
+| `30_rls_vendedor_sucursal.sql` | Sprint 5 · C2 paso 4 (B) | El vendedor ve solo ventas, proformas y pedidos de su sucursal | ✅ **corrido 29 jul** |
+| `31_perfil_sucursal_obligatoria.sql` | cierre del 30 | `perfiles.sucursal_id` obligatoria: cierra el fallo silencioso del 30 | ✅ **corrido 29 jul** |
+| `32_precio_venta_en_compra.sql` | Regla de precios (31 jul) | `orden_compra_items.precio_venta` + `check` de que supere el costo; se aplica a `productos.precio` al recibir | ✅ **corrido 31 jul** |
 
 > 🔴 **El `25` se escribe DESPUÉS del `26`, partiendo de la función que quedó viva tras el `26`** (la que ya tiene `unaccent`). Si se escribe sobre la versión anterior, **revierte el arreglo de acentos sin que nadie lo note**. Verificar siempre con `select prosrc from pg_proc where proname='fn_buscar_productos'` antes de tocarla.
 
@@ -326,7 +337,7 @@ Para la **medida**, comparar contra el texto armado `etiqueta || ' ' || valor ||
 **Paso 5.2** · Documentación (ya hay deuda acumulada, no sumar más):
 - `supabase/README.md`: filas 22–25 en la tabla de migraciones incrementales.
 - `PLAN.md`: sección Sprint 6 + registro de cambios.
-- `BACKEND.md`: **está desactualizado desde el Sprint 5** (no documenta sucursales, stock por sucursal, precios por mayor ni traspasos). Actualizarlo, o marcarlo formalmente como histórico y dejar `supabase/README.md` como única fuente de verdad.
+- ~~`BACKEND.md` desactualizado desde el Sprint 5.~~ ✅ **Resuelto el 29 jul: se reescribió entero leyendo el esquema real de la base** (`information_schema` / `pg_proc` / `pg_constraint` / `pg_policies`), cubriendo hasta el script `30`. `supabase/README.md` sigue siendo la referencia **operativa** (orden de ejecución y qué se corrió).
 - `00_setup_completo.sql`: sigue sin los scripts 12–14, 16, 20 y 21; ahora se le suman 22–25. **Una instalación desde cero ya no funciona con ese archivo solo.**
 
 ---
@@ -555,7 +566,7 @@ Sin impacto en el diseño, pero conviene confirmar con el cliente: **`producto_p
 | **Q5** | ¿Originales y medidas en los PDF de proforma y venta? | ✅ **Cerrada (26 jul)** | **Sí, van al PDF.** Abre el problema de ancho de la tabla → ver **R14** y la nueva **Q6**. |
 | **Q2** | ¿Se permiten medidas sin etiqueta? | ✅ **Cerrada (26 jul)** | **No.** El usuario escribe la letra a mano; `etiqueta` queda obligatoria. Modelo de §2.2 sin cambios. Ver **R13**. |
 | **Q3** | ¿“Código original” tildado por defecto en el buscador? | ✅ **Cerrada (26 jul)** | **Se agregan los dos checkboxes** (“Código original” y “Medidas”), **sin necesidad de que vengan tildados**: el sistema está en desarrollo, sin usuarios en producción. Ver **R10**. |
-| **Q6** | En el PDF, ¿van **todos** los códigos originales de cada ítem (pueden ser 8–10) o un tope (p. ej. 5 + “…”)? Afecta la cantidad de páginas del documento. | ⏳ **ABIERTA — última pendiente** | Tope de 5 y “…”, para que una proforma de 10 ítems no se vaya a 3 páginas. Ver **R14**. |
+| **Q6** | En el PDF, ¿van **todos** los códigos originales de cada ítem (pueden ser 8–10) o un tope (p. ej. 5 + “…”)? Afecta la cantidad de páginas del documento. | ✅ **Cerrada (29 jul)** | **Tope de 5 + “…”**, para que una proforma de 10 ítems no se vaya a 3 páginas. Implementado como `TOPE_OEM = 5` en `lib/pdf/proforma-document.tsx` y `lib/pdf/venta-document.tsx`. Ver **R14**. |
 
 ---
 
@@ -1070,21 +1081,21 @@ end as estado_efectivo
 - [ ] ⏳ **Recibir los 2 pedidos que hoy están en `enviado`** (logueado desde la app, no por SQL). *(Operativo. El script 28 ya está corrido, así que se puede hacer cuando quieras. Verificado 27 jul: `enviado: 2`, `recibido: 4`, `cancelado: 2`.)*
 
 ### Bloque I · Unidades, medidas y códigos originales 🟠
-- [x] ✅ **Fase 1 (códigos originales) — HECHO 27 jul:** script `22` (tabla + migración de los 810 **antes** de borrar `fabricante` + reescribe `fn_guardar_producto`) + app (schema, RPC 6 args, formulario con "Códigos originales (OEM)" y sin "Fabricante"). ⚠️ Falta **snapshot + correr el `22`** en Supabase.
-- [x] ✅ **Fase 2 (medidas) — HECHO 27 jul:** script `23` (tabla `producto_medidas` + `fn_guardar_producto` con `p_medidas`) + app (schema `medidas`, helper `lib/medidas.ts`, sección "Medidas" en el formulario). ⚠️ Falta correr el `23` (después del `22`).
-- [x] ✅ **Fase 3 (unidades) — HECHO 27 jul:** script `24` (tabla `unidades_medida` vacía + `productos.unidad_medida_id` + guarda R1) + ABM `/unidades-medida` (admin) + nav "Unidades" + selector de unidad en el formulario de producto (con fallback a texto) + etiquetas R2. ⚠️ Falta correr el `24` (después del `22` y `23`).
-- [x] ✅ **Fase 4 (búsqueda por original/medida) — HECHO 27 jul:** script `25` (criterios `original`/`medida` sobre la versión viva con `unaccent`; R9 arreglo por defecto; R11 `EXISTS`) + 2 checkboxes nuevos ("Código original", "Medidas") en `criterios-busqueda.tsx` con los `id` que espera el SQL (R5). ⚠️ Falta correr el `25` (después de 22/23/24 y del 26).
+- [x] ✅ **Fase 1 (códigos originales) — HECHO 27 jul:** script `22` (tabla + migración de los 810 **antes** de borrar `fabricante` + reescribe `fn_guardar_producto`) + app (schema, RPC 6 args, formulario con "Códigos originales (OEM)" y sin "Fabricante"). ✅ **Corrido y verificado el 29 jul:** 810 originales migrados, 0 equivalentes, `fabricante` eliminada.
+- [x] ✅ **Fase 2 (medidas) — HECHO 27 jul:** script `23` (tabla `producto_medidas` + `fn_guardar_producto` con `p_medidas`) + app (schema `medidas`, helper `lib/medidas.ts`, sección "Medidas" en el formulario). ✅ **Corrido el 29 jul.**
+- [x] ✅ **Fase 3 (unidades) — HECHO 27 jul:** script `24` (tabla `unidades_medida` vacía + `productos.unidad_medida_id` + guarda R1) + ABM `/unidades-medida` (admin) + nav "Unidades" + selector de unidad en el formulario de producto (con fallback a texto) + etiquetas R2. ✅ **Corrido el 29 jul.** ⏳ Paso 3.4 pendiente: 2 unidades cargadas, pero los 239 productos siguen con `unidad_medida_id` en null.
+- [x] ✅ **Fase 4 (búsqueda por original/medida) — HECHO 27 jul:** script `25` (criterios `original`/`medida` sobre la versión viva con `unaccent`; R9 arreglo por defecto; R11 `EXISTS`) + 2 checkboxes nuevos ("Código original", "Medidas") en `criterios-busqueda.tsx` con los `id` que espera el SQL (R5). ✅ **Corrido y verificado el 29 jul:** la función viva conserva `unaccent` **y** suma `producto_medidas` — el 25 no revirtió el 26.
 - [x] ✅ **Polish (27 jul):** los resultados de búsqueda del **POS y Proformas** muestran unidad, medidas y códigos originales (helper `lib/producto-busqueda-server.ts`), y los **PDF de proforma y venta** también (R14/Q5). Queda opcional el mismo dato en el catálogo y el kardex (el detalle del producto ya los muestra).
-- [ ] **Snapshot de la BD antes del script 22** (única operación que mueve datos existentes).
-- [ ] **R9**: agregar `original` y `medida` al **arreglo por defecto** de criterios en el SQL, no solo al `WHERE`.
-- [ ] **R11**: usar `EXISTS (...)` en vez de `LEFT JOIN` + `DISTINCT` para los criterios de tablas hijas.
+- [x] ✅ **Snapshot + script 22 corrido (29 jul).** Migración verificada: 810 / 0 / sin `fabricante`.
+- [x] ✅ **R9 hecho** — `original` y `medida` están en el arreglo por defecto del script 25.
+- [x] ✅ **R11 hecho** — el script 25 usa `EXISTS`, sin `LEFT JOIN` ni `DISTINCT`.
 - [x] ✅ **R14 (Q5/Q6) — HECHO 27 jul:** en los PDF de **proforma y venta**, la unidad va dentro de la celda CANTIDAD (`12 PZA`) y medidas + códigos originales (tope 5 + "…") como líneas dentro de DETALLE (se ensanchó Detalle a costa de Código/Línea, sin columnas nuevas). Rutas `/api/pdf/proforma/[id]` y `/api/pdf/venta/[id]` traen medidas/originales/unidad por embed.
 
 ### Cierre
-- [x] `supabase/README.md` con los scripts **26, 27 y 28** documentados y marcados como corridos *(hecho 27 jul)*. ⏳ Falta agregar el `22`–`25` y el `29` a medida que se escriban.
-- [x] `PLAN.md`: sección Sprint 6 *(hecho 27 jul)*.
-- [ ] `BACKEND.md` está desactualizado **desde el Sprint 5**: actualizarlo o marcarlo como histórico.
-- [ ] `npm run build` + `npx tsc --noEmit` + `npm run lint` limpios.
+- [x] ✅ `supabase/README.md` con los **9 scripts (22–30)** documentados y marcados como corridos *(29 jul)*.
+- [x] ✅ `PLAN.md`: sección Sprint 6 + registro de cambios del 29 jul. `CLAUDE.md` apunta a este documento.
+- [x] ✅ **`BACKEND.md` reescrito el 29 jul** leyendo el esquema real de la base (`information_schema` / `pg_proc` / `pg_constraint` / `pg_policies`), cubriendo hasta el script `30`.
+- [x] ✅ `npx tsc --noEmit` limpio y `npm run build` compila las **20 rutas** (verificado 29 jul; `lint` solo con los 4 warnings de `alt-text` de los PDF, previos al sprint).
 
 ---
 

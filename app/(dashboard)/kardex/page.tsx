@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { calcularSaldo } from "@/lib/kardex"
-import { KardexView } from "./kardex-view"
+import { KardexView, type MovimientoConSaldo } from "./kardex-view"
 
 export default async function KardexPage({
   searchParams,
@@ -31,12 +31,14 @@ export default async function KardexPage({
 
   const { data: movimientosRaw } = await supabase
     .from("kardex_movimientos")
-    .select("id, tipo_movimiento, cantidad, costo_unitario, motivo, creado_en")
+    .select("id, tipo_movimiento, cantidad, costo_unitario, motivo, creado_en, sucursal:sucursales(codigo, nombre)")
     .eq("producto_id", productoId)
     .order("creado_en", { ascending: true })
     .order("consecutivo", { ascending: true })
 
-  const movimientos = calcularSaldo(movimientosRaw ?? [])
+  // El kardex mezcla TODAS las sucursales: el saldo acumulado es el total del
+  // producto y por eso cada fila muestra a que sucursal pertenece.
+  const movimientos = calcularSaldo((movimientosRaw ?? []) as unknown as MovimientoConSaldo[])
 
   return <KardexView producto={producto} movimientos={movimientos} />
 }

@@ -54,6 +54,9 @@ export function ProductoForm({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
+  // Ultimo costo de compra del producto (null si nunca se compro): el precio de
+  // venta tiene que superarlo.
+  const [ultimoCosto, setUltimoCosto] = useState<number | null>(null)
   const [subiendoImagen, setSubiendoImagen] = useState(false)
   const [unidades, setUnidades] = useState<Awaited<ReturnType<typeof listarUnidadesActivas>>>([])
 
@@ -76,6 +79,7 @@ export function ProductoForm({
   const vehiculosArray = useFieldArray({ control, name: "vehiculos_compatibles" })
   const preciosMayorArray = useFieldArray({ control, name: "precios_mayor" })
   const imagenUrl = watch("imagen_url")
+  const precioActual = Number(watch("precio") ?? 0)
 
   useEffect(() => {
     if (!open) return
@@ -86,11 +90,13 @@ export function ProductoForm({
     if (!open) return
     if (!productoId) {
       reset(VACIO)
+      setUltimoCosto(null)
       return
     }
     setCargandoDetalle(true)
     getProductoConDetalle(productoId).then(
-      ({ producto, codigos, originales, medidas, vehiculos, precios_mayor }) => {
+      ({ producto, ultimoCosto, codigos, originales, medidas, vehiculos, precios_mayor }) => {
+        setUltimoCosto(ultimoCosto)
         if (producto) {
           reset({
             codigo: producto.codigo,
@@ -220,6 +226,22 @@ export function ProductoForm({
                   <Input id="precio" type="number" step="0.01" {...register("precio")} />
                   {errors.precio && (
                     <p className="text-sm text-destructive">{errors.precio.message}</p>
+                  )}
+                  {/* El precio de venta debe superar el ultimo costo de compra.
+                      Se avisa acá para no descubrirlo recién al guardar. */}
+                  {ultimoCosto !== null && (
+                    <p
+                      className={
+                        precioActual > ultimoCosto
+                          ? "text-xs text-muted-foreground"
+                          : "text-xs font-medium text-destructive"
+                      }
+                    >
+                      Último costo de compra: Bs {ultimoCosto.toFixed(2)}
+                      {precioActual > ultimoCosto
+                        ? ""
+                        : " — el precio de venta tiene que ser mayor."}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
