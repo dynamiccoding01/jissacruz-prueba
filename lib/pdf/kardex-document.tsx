@@ -56,6 +56,7 @@ export function KardexDocument({
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.encabezado}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- Image de @react-pdf, no es un <img> del DOM */}
           {logo ? <Image style={styles.logo} src={logo} /> : <View />}
           <View style={styles.tituloBloque}>
             <Text style={styles.title}>Kardex — {producto.codigo}</Text>
