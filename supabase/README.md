@@ -2,7 +2,25 @@
 
 Ejecutar en el **SQL Editor de Supabase**, en un proyecto nuevo.
 
-## Opción rápida: un solo script
+## ⭐ Instalación de PRODUCCIÓN desde cero: `produccion_setup.sql`
+
+**Para clonar la base completa en un proyecto Supabase nuevo, usá
+[`produccion_setup.sql`](produccion_setup.sql) — un solo archivo, una sola corrida.**
+Es la concatenación de TODOS los scripts (01–32) en el **orden de dependencia
+correcto** (no numérico: 29 antes que 22, 26 antes que 25), así reproduce el estado
+real de producción sin que un script pise a otro. Incluye extensión `unaccent`,
+todas las tablas, triggers, funciones/RPC en su versión final, RLS (con la
+restricción por sucursal del vendedor) y las semillas (sucursal por defecto,
+`configuracion_empresa`, buckets de Storage). Después de correrlo, crear el primer
+usuario admin desde Supabase Auth (`user_metadata: { "rol": "admin" }`). Los DATOS
+(productos, precios, etc.) se cargan aparte. **Si cambia algún script del repo,
+regenerar este archivo.**
+
+> El histórico de scripts 00–32 de abajo queda como referencia y para migraciones
+> incrementales sobre bases ya existentes; para una instalación nueva alcanza con
+> `produccion_setup.sql`.
+
+## Opción rápida (histórica): un solo script
 
 `00_setup_completo.sql` concatena 01→05 en el orden correcto — se pega completo en el SQL Editor y se corre una sola vez. Postgres ejecuta el pegado multi-statement como una transacción implícita: si algo falla a mitad de camino, no queda nada a medias. Los pasos manuales (crear usuarios de prueba y correr 06/08) siguen siendo aparte, ver abajo.
 
