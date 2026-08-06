@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { calcularSaldo } from "@/lib/kardex"
 import { getLogoEmpresa } from "@/lib/pdf/logo"
-import { KardexDocument } from "@/lib/pdf/kardex-document"
+import { KardexDocument, type MovimientoPdf } from "@/lib/pdf/kardex-document"
 
 export async function GET(request: NextRequest) {
   const productoId = request.nextUrl.searchParams.get("producto")
@@ -26,12 +26,12 @@ export async function GET(request: NextRequest) {
 
   const { data: movimientosRaw } = await supabase
     .from("kardex_movimientos")
-    .select("tipo_movimiento, cantidad, costo_unitario, motivo, creado_en")
+    .select("tipo_movimiento, cantidad, costo_unitario, motivo, creado_en, sucursal:sucursales(codigo, nombre)")
     .eq("producto_id", productoId)
     .order("creado_en", { ascending: true })
     .order("consecutivo", { ascending: true })
 
-  const movimientos = calcularSaldo(movimientosRaw ?? []).reverse()
+  const movimientos = calcularSaldo((movimientosRaw ?? []) as unknown as MovimientoPdf[]).reverse()
 
   const buffer = await renderToBuffer(
     <KardexDocument producto={producto} movimientos={movimientos} logo={getLogoEmpresa()} />

@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { logError } from "@/lib/log"
 import { productoSchema, type ProductoFormInput } from "@/lib/validations/producto"
+import { ultimoCostoDeProducto } from "@/lib/costos-server"
+
+const bs = (n: number) =>
+  `Bs ${Number(n).toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 // R8/Q4 · Crear y editar producto pasan por la RPC transaccional
 // fn_guardar_producto (script 29): cabecera + reemplazo de hijos (equivalentes,
@@ -29,6 +33,20 @@ async function guardarProducto(
   } = parsed.data
 
   const supabase = await createClient()
+
+  // El precio de VENTA tiene que superar el último costo de compra del producto.
+  // Se valida en el servidor (no solo en el formulario) porque es una regla de
+  // negocio: sin ella se venden productos por debajo de lo que costaron y nada
+  // avisa. Solo aplica al editar: un producto nuevo todavía no tiene compras.
+  if (id) {
+    const ultimoCosto = await ultimoCostoDeProducto(supabase, id)
+    if (ultimoCosto !== null && producto.precio <= ultimoCosto) {
+      return {
+        error: `El precio de venta (${bs(producto.precio)}) debe ser mayor al último costo de compra (${bs(ultimoCosto)}).`,
+      }
+    }
+  }
+
   const { data, error } = await supabase.rpc("fn_guardar_producto", {
     p_id: id,
     p_producto: producto,
@@ -102,8 +120,12 @@ export async function getProductoConDetalle(id: string) {
     .eq("producto_id", id)
     .order("orden")
 
+  // Referencia para el formulario: el precio de venta debe superar este costo.
+  const ultimoCosto = await ultimoCostoDeProducto(supabase, id)
+
   return {
     producto,
+    ultimoCosto,
     codigos: codigos ?? [],
     originales: originales ?? [],
     medidas: (medidas ?? []).map((m) => ({

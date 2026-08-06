@@ -28,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const { data: itemsRaw } = await supabase
     .from("proforma_items")
     .select(
-      "cantidad, precio_unitario, descuento_tipo, descuento_valor, subtotal_linea, productos(codigo, descripcion, linea_marca)"
+      "cantidad, precio_unitario, descuento_tipo, descuento_valor, subtotal_linea, productos(codigo, descripcion, linea_marca, unidad_medida, producto_medidas(etiqueta, valor, unidad, orden), producto_codigos_originales(codigo_original))"
     )
     .eq("proforma_id", params.id)
 
@@ -61,7 +61,14 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       codigo: string
       descripcion: string
       linea_marca: string | null
+      unidad_medida: string | null
+      producto_medidas: { etiqueta: string; valor: number; unidad: string; orden: number }[] | null
+      producto_codigos_originales: { codigo_original: string }[] | null
     } | null
+    const medidas = (producto?.producto_medidas ?? [])
+      .slice()
+      .sort((a, b) => a.orden - b.orden)
+      .map((m) => ({ etiqueta: m.etiqueta, valor: Number(m.valor), unidad: m.unidad }))
     return {
       codigo: producto?.codigo ?? "—",
       descripcion: producto?.descripcion ?? "",
@@ -71,6 +78,9 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       descuento_tipo: it.descuento_tipo,
       descuento_valor: Number(it.descuento_valor),
       subtotal_linea: Number(it.subtotal_linea),
+      unidad: producto?.unidad_medida ?? "unidad",
+      medidas,
+      originales: (producto?.producto_codigos_originales ?? []).map((o) => o.codigo_original),
     }
   })
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useFieldArray, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Plus, Search, Trash2 } from "lucide-react"
+import { FileText, Plus, Search, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -165,10 +165,12 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="max-h-[92vh] w-[95vw] max-w-5xl overflow-hidden p-0 sm:rounded-2xl">
+      <DialogContent className="max-h-[92vh] w-[95vw] max-w-6xl overflow-hidden p-0 sm:rounded-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[92vh] flex-col">
-          <DialogHeader className="border-b border-border px-6 py-4 text-left">
-            <DialogTitle className="text-xl">Nueva proforma</DialogTitle>
+          <DialogHeader className="border-b border-border bg-muted/30 px-6 py-4 text-left">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <FileText className="size-5 text-primary" /> Nueva proforma
+            </DialogTitle>
             <DialogDescription>
               Elegí el cliente, agregá productos y definí descuentos e impuesto.
             </DialogDescription>
@@ -276,14 +278,15 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
             </div>
 
             {/* Ítems + resumen (2 columnas) */}
-            <div className="grid gap-6 lg:grid-cols-[1fr_23rem]">
+            <div className="grid gap-8 lg:grid-cols-[1fr_27rem]">
               <div className="space-y-3">
                 <Label className="text-base">Ítems</Label>
                 {errors.items && <p className="text-sm text-destructive">{errors.items.message}</p>}
                 {items.fields.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-border py-12 text-center text-base text-muted-foreground">
-                    Todavía no agregaste productos.
-                  </p>
+                  <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-12 text-center text-muted-foreground">
+                    <FileText className="size-8 opacity-40" />
+                    <p className="text-base">Todavía no agregaste productos.</p>
+                  </div>
                 ) : (
                   <div className="space-y-2.5">
                     {items.fields.map((field, index) => {
@@ -297,7 +300,10 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
                           )
                         : 0
                       return (
-                        <div key={field.id} className="space-y-2.5 rounded-lg border border-border bg-background p-3">
+                        <div
+                          key={field.id}
+                          className="space-y-2.5 rounded-xl border border-border bg-background p-3.5 shadow-sm transition-colors hover:border-primary/40"
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <p className="text-base font-semibold">{field.codigo}</p>

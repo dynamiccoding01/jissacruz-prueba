@@ -2,6 +2,11 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { format } from "date-fns"
 
 import { importeALiteral } from "./numero-a-literal"
+import { formatearMedidas, type Medida } from "@/lib/medidas"
+
+// Tope de códigos originales por línea en el PDF (Q6): más allá se corta con "…"
+// para que una proforma de varios ítems no se dispare de páginas.
+const TOPE_OEM = 5
 
 const AZUL = "#0E3C6D"
 const GRIS = "#B6B7B4"
@@ -43,13 +48,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cell: { fontSize: 8 },
-  cNum: { width: "5%" },
-  cCant: { width: "10%", textAlign: "right" },
-  cCodigo: { width: "15%" },
-  cLinea: { width: "15%" },
-  cDetalle: { width: "30%" },
-  cPrecio: { width: "12%", textAlign: "right" },
-  cImporte: { width: "13%", textAlign: "right" },
+  // R14: se ensancha Detalle (30%→40%) a costa de Código/Línea para que entren
+  // las líneas de medidas y códigos originales.
+  cNum: { width: "4%" },
+  cCant: { width: "11%", textAlign: "right" },
+  cCodigo: { width: "13%" },
+  cLinea: { width: "12%" },
+  cDetalle: { width: "40%" },
+  cPrecio: { width: "10%", textAlign: "right" },
+  cImporte: { width: "10%", textAlign: "right" },
+  detalleSub: { fontSize: 7, color: "#555", marginTop: 1 },
   totales: { marginTop: 10, marginLeft: "auto", width: "45%" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   totalFuerte: {
@@ -96,6 +104,10 @@ export type ProformaItemPdf = {
   descuento_tipo: "porcentaje" | "monto_fijo" | null
   descuento_valor: number
   subtotal_linea: number
+  // Sprint 6 (Q5/R14): unidad en la celda Cantidad; medidas y OEM en Detalle.
+  unidad: string
+  medidas: Medida[]
+  originales: string[]
 }
 
 // Formato boliviano con separador de miles: 1112.4 -> "1.112,40" (P7).
@@ -149,6 +161,7 @@ export function ProformaDocument({
           </View>
 
           {/* Centro: logo (P1) */}
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- Image de @react-pdf, no es un <img> del DOM */}
           {logo ? <Image style={styles.logo} src={logo} /> : null}
 
           {/* Derecha: título / FECHA / VENDEDOR (P1, P2, P3) */}
@@ -194,17 +207,34 @@ export function ProformaDocument({
           <Text style={[styles.hCell, styles.cImporte]}>Importe</Text>
         </View>
 
-        {items.map((it, i) => (
-          <View style={styles.row} key={i} wrap={false}>
-            <Text style={[styles.cell, styles.cNum]}>{i + 1}</Text>
-            <Text style={[styles.cell, styles.cCant]}>{it.cantidad}</Text>
-            <Text style={[styles.cell, styles.cCodigo]}>{it.codigo}</Text>
-            <Text style={[styles.cell, styles.cLinea]}>{it.linea_marca ?? "—"}</Text>
-            <Text style={[styles.cell, styles.cDetalle]}>{it.descripcion}</Text>
-            <Text style={[styles.cell, styles.cPrecio]}>{bsMiles(it.precio_unitario)}</Text>
-            <Text style={[styles.cell, styles.cImporte]}>{bsMiles(it.subtotal_linea)}</Text>
-          </View>
-        ))}
+        {items.map((it, i) => {
+          const unidadCorta = it.unidad && it.unidad !== "unidad" ? ` ${it.unidad}` : ""
+          const oem =
+            it.originales.slice(0, TOPE_OEM).join("  ") +
+            (it.originales.length > TOPE_OEM ? "  …" : "")
+          return (
+            <View style={styles.row} key={i} wrap={false}>
+              <Text style={[styles.cell, styles.cNum]}>{i + 1}</Text>
+              <Text style={[styles.cell, styles.cCant]}>
+                {it.cantidad}
+                {unidadCorta}
+              </Text>
+              <Text style={[styles.cell, styles.cCodigo]}>{it.codigo}</Text>
+              <Text style={[styles.cell, styles.cLinea]}>{it.linea_marca ?? "—"}</Text>
+              <View style={styles.cDetalle}>
+                <Text style={styles.cell}>{it.descripcion}</Text>
+                {it.medidas.length > 0 && (
+                  <Text style={styles.detalleSub}>Medidas: {formatearMedidas(it.medidas)}</Text>
+                )}
+                {it.originales.length > 0 && (
+                  <Text style={styles.detalleSub}>Cód. original: {oem}</Text>
+                )}
+              </View>
+              <Text style={[styles.cell, styles.cPrecio]}>{bsMiles(it.precio_unitario)}</Text>
+              <Text style={[styles.cell, styles.cImporte]}>{bsMiles(it.subtotal_linea)}</Text>
+            </View>
+          )
+        })}
 
         <View style={styles.totales}>
           <View style={styles.totalRow}>

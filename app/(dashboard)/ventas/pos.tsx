@@ -314,13 +314,20 @@ export function Pos() {
             </span>
           </button>
         </DialogTrigger>
-        <DialogContent className="max-h-[92vh] w-[95vw] max-w-5xl overflow-hidden p-0 sm:rounded-2xl">
+        <DialogContent className="max-h-[92vh] w-[95vw] max-w-6xl overflow-hidden p-0 sm:rounded-2xl">
           <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[92vh] flex-col">
-            <DialogHeader className="border-b border-border px-6 py-4 text-left">
-              <DialogTitle className="text-xl">Carrito de venta</DialogTitle>
+            <DialogHeader className="border-b border-border bg-muted/30 px-6 py-4 text-left">
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <ShoppingCart className="size-5 text-primary" /> Carrito de venta
+                {cantItems > 0 && (
+                  <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm font-medium text-primary">
+                    {cantItems} ítem{cantItems > 1 ? "s" : ""}
+                  </span>
+                )}
+              </DialogTitle>
             </DialogHeader>
 
-            <div className="grid flex-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[1fr_23rem]">
+            <div className="grid flex-1 gap-8 overflow-y-auto p-6 lg:grid-cols-[1fr_27rem]">
               {/* izquierda: cliente + ítems */}
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -337,9 +344,10 @@ export function Pos() {
 
                 <div className="space-y-2.5">
                   {items.fields.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-border py-12 text-center text-base text-muted-foreground">
-                      El carrito está vacío. Buscá productos y agregalos.
-                    </p>
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-12 text-center text-muted-foreground">
+                      <ShoppingCart className="size-8 opacity-40" />
+                      <p className="text-base">El carrito está vacío. Buscá productos y agregalos.</p>
+                    </div>
                   ) : (
                     items.fields.map((field, index) => {
                       const linea = valores.items?.[index]
@@ -352,7 +360,10 @@ export function Pos() {
                           )
                         : 0
                       return (
-                        <div key={field.id} className="space-y-2.5 rounded-lg border border-border bg-background p-3">
+                        <div
+                          key={field.id}
+                          className="space-y-2.5 rounded-xl border border-border bg-background p-3.5 shadow-sm transition-colors hover:border-primary/40"
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <p className="text-base font-semibold">{field.codigo}</p>

@@ -6,6 +6,7 @@ import {
   Truck,
   ShoppingCart,
   FileText,
+  Calculator,
   CreditCard,
   Users,
   BarChart3,
@@ -55,6 +56,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Ventas",
     items: [
       { label: "Clientes", href: "/clientes", icon: Users, roles: ["admin", "vendedor"] },
+      { label: "Cotización", href: "/cotizacion", icon: Calculator, roles: ["admin", "vendedor"] },
       { label: "Proformas", href: "/proformas", icon: FileText, roles: ["admin", "vendedor"] },
       { label: "Ventas (POS)", href: "/ventas", icon: CreditCard, roles: ["admin", "vendedor"] },
     ],

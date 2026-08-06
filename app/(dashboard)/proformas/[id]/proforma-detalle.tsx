@@ -273,7 +273,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
       )}
 
       {editable ? (
-        <form onSubmit={handleSubmit(onGuardar)} className="grid gap-6 lg:grid-cols-[1fr_23rem]">
+        <form onSubmit={handleSubmit(onGuardar)} className="grid gap-8 lg:grid-cols-[1fr_26rem]">
           {/* Columna izquierda: buscar + ítems */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -345,7 +345,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                   const actual = preciosActualRef.current.get(field.producto_id)
                   const cambio = actual != null && Number(linea?.precio_unitario) !== actual
                   return (
-                    <div key={field.id} className="space-y-2.5 rounded-lg border border-border bg-background p-3">
+                    <div key={field.id} className="space-y-2.5 rounded-xl border border-border bg-background p-3.5 shadow-sm transition-colors hover:border-primary/40">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="text-base font-semibold">{field.codigo}</p>
@@ -567,7 +567,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
         </form>
       ) : (
         /* Solo lectura (convertida o vencida) */
-        <div className="grid gap-6 lg:grid-cols-[1fr_23rem]">
+        <div className="grid gap-8 lg:grid-cols-[1fr_26rem]">
           <div className="space-y-2.5">
             {detalle.items.map((it) => (
               <div key={it.producto_id} className="flex items-center justify-between rounded-lg border border-border p-3">
