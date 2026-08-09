@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { League_Spartan } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,6 +26,7 @@ export default function RootLayout({
       <body className="antialiased">
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   );
