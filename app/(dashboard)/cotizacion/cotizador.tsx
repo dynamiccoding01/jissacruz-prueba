@@ -36,14 +36,15 @@ export function Cotizador() {
   // la cantidad (igual que el POS). No se persiste nada.
   const preciosRef = useRef(new Map<string, { base: number; escalas: ProductoCotizacion["escalas"] }>())
   const buscadorRef = useRef<HTMLInputElement>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const total = useMemo(
     () => items.reduce((acc, i) => acc + (Number(i.cantidad) || 0) * (Number(i.precio_unitario) || 0), 0),
     [items]
   )
 
-  async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
-    setBusqueda(texto)
+  // Consulta real al servidor.
+  async function ejecutarBusqueda(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     if (!texto.trim()) {
       setResultados([])
       return
@@ -54,9 +55,21 @@ export function Cotizador() {
     setResultados(data)
   }
 
+  // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
+  // 300ms de debounce, para no pegarle a la base en cada letra.
+  function onBuscar(texto: string) {
+    setBusqueda(texto)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!texto.trim()) {
+      setResultados([])
+      return
+    }
+    debounceRef.current = setTimeout(() => ejecutarBusqueda(texto, campos), 300)
+  }
+
   function onCamposChange(next: CampoBusqueda[]) {
     setCampos(next)
-    if (busqueda.trim()) onBuscar(busqueda, next)
+    if (busqueda.trim()) ejecutarBusqueda(busqueda, next)
   }
 
   function precioParaCantidad(productoId: string, cantidad: number, fallback: number) {
@@ -115,6 +128,7 @@ export function Cotizador() {
   }
 
   function limpiar() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     setItems([])
     setBusqueda("")
     setResultados([])

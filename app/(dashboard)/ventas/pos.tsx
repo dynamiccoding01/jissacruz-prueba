@@ -77,6 +77,7 @@ export function Pos() {
   // Stock disponible en la sucursal del POS por producto agregado, para no
   // dejar vender más de lo que hay (la venta descuenta solo de esa sucursal).
   const stockRef = useRef(new Map<string, number>())
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
   const totales = calcularTotales(
     valores.items ?? [],
@@ -86,6 +87,7 @@ export function Pos() {
   )
 
   function limpiar() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     reset(VACIO)
     setResultados([])
     setBusqueda("")
@@ -94,8 +96,8 @@ export function Pos() {
     buscadorRef.current?.focus()
   }
 
-  async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
-    setBusqueda(texto)
+  // Consulta real al servidor.
+  async function ejecutarBusqueda(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     if (!texto.trim()) {
       setResultados([])
       return
@@ -106,9 +108,21 @@ export function Pos() {
     setResultados(data)
   }
 
+  // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
+  // 300ms de debounce, para no pegarle a la base en cada letra.
+  function onBuscar(texto: string) {
+    setBusqueda(texto)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!texto.trim()) {
+      setResultados([])
+      return
+    }
+    debounceRef.current = setTimeout(() => ejecutarBusqueda(texto, campos), 300)
+  }
+
   function onCamposChange(next: CampoBusqueda[]) {
     setCampos(next)
-    if (busqueda.trim()) onBuscar(busqueda, next)
+    if (busqueda.trim()) ejecutarBusqueda(busqueda, next)
   }
 
   // C3: si la cantidad alcanza una escala por mayor vigente, ajusta el precio.

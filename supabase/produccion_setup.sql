@@ -1,32 +1,20 @@
 -- ============================================================================
 -- SISREP — SETUP COMPLETO DE PRODUCCIÓN (base de datos desde cero)
 -- ----------------------------------------------------------------------------
--- Reproduce EXACTAMENTE el estado actual de la base (scripts 01–32) en un
+-- Reproduce EXACTAMENTE el estado actual de la base (scripts 01–33) en un
 -- proyecto Supabase NUEVO y VACÍO, en una sola corrida.
 --
 -- Es la concatenación de los scripts reales que construyeron producción, en el
 -- ORDEN DE DEPENDENCIA correcto (no numérico): p. ej. 29 va antes que 22, y 26
--- antes que 25. Así se evita que un script pise a otro. Las partes de
--- "migración/backfill" de cada script quedan como no-ops sobre una base vacía.
---
--- YA INCLUYE (no hay que correr nada más de esquema):
---   · extensión unaccent · todas las tablas, secuencias e índices
---   · todos los triggers (numeración, cache de stock, guardas, alta de perfil)
---   · todas las funciones/RPC en su versión FINAL (FIFO, ventas, compras con
---     precio de venta, conversión de proforma con vigencia, traspasos, búsqueda
---     por código original/medida sin acentos, guardado transaccional de producto)
---   · RLS en todas las tablas (incluida la restricción por sucursal del vendedor)
---   · semillas: 1 sucursal por defecto, fila de configuracion_empresa, buckets de Storage
+-- antes que 25. Las partes de "migración/backfill" quedan como no-ops sobre una
+-- base vacía.
 --
 -- CÓMO USARLO:
 --   1. Crear el proyecto Supabase de producción (vacío).
 --   2. Pegar TODO este archivo en el SQL Editor y ejecutarlo una sola vez.
---      (Corre como una transacción: si algo falla, no queda nada a medias.)
 --   3. Crear el primer usuario admin desde Supabase Auth con
---      user_metadata: { "rol": "admin" }  → el trigger le crea el perfil y le
---      asigna la sucursal por defecto automáticamente.
---   4. Los DATOS (productos, precios, clientes, etc.) se cargan aparte — este
---      script arma SOLO la estructura + la lógica del negocio, con la base vacía.
+--      user_metadata: { "rol": "admin" }  (el trigger crea el perfil + sucursal).
+--   4. Los DATOS (productos, precios, etc.) se cargan aparte.
 --
 -- Generado por concatenación de los scripts del repo. Si algún script cambia,
 -- regenerar este archivo.
@@ -4435,5 +4423,34 @@ notify pgrst, 'reload schema';
 --   join ordenes_compra oc on oc.id = i.orden_compra_id
 --   where oc.estado = 'recibida' and i.precio_venta is not null
 --   order by oc.fecha_recepcion desc limit 10;
+-- ============================================================
+
+
+-- ============================================================================
+-- >>> 33_indices_busqueda.sql
+-- ============================================================================
+-- ============================================================
+-- SISREP — 33: Índice faltante para la búsqueda (performance)
+-- Ejecutar en el SQL Editor sobre la base real (idempotente).
+--
+-- producto_codigos_originales tenía índice por `codigo_original` pero NO por
+-- `producto_id`. La búsqueda enriquecida hace `... where producto_id in (...)`
+-- y `fn_buscar_productos` hace `exists (... where o.producto_id = p.id ...)`;
+-- sin este índice esas consultas escanean la tabla entera de códigos OEM.
+-- Las demás tablas hijas (equivalentes, medidas, precios por mayor, vehículos)
+-- ya tienen su índice por producto_id.
+-- ============================================================
+
+create index if not exists idx_codigos_originales_producto
+  on public.producto_codigos_originales (producto_id);
+
+-- ============================================================
+-- Nota para escalar (NO se aplica ahora): con ~240 productos, la búsqueda por
+-- texto (ILIKE '%...%' con unaccent) hace un scan que igual resuelve en pocos ms.
+-- Si el catálogo crece a miles de productos y la búsqueda "en vivo" se sintiera
+-- lenta, la mejora de fondo es un índice GIN de trigramas (pg_trgm) sobre una
+-- función IMMUTABLE de unaccent aplicada a codigo/descripcion/linea_marca. Es un
+-- cambio mayor (extensión pg_trgm + wrapper immutable + reescribir la comparación
+-- de fn_buscar_productos para que use el índice) y conviene medir antes de hacerlo.
 -- ============================================================
 

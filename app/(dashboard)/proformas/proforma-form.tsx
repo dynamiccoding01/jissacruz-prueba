@@ -84,6 +84,7 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
   // C3: precio base + escalas vigentes por producto agregado, para recalcular
   // el precio unitario cuando cambia la cantidad.
   const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
   const totales = calcularTotales(
     valores.items ?? [],
@@ -93,14 +94,15 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
   )
 
   function limpiar() {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     reset(VACIO)
     setResultados([])
     setBusqueda("")
     setClienteSel(null)
   }
 
-  async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
-    setBusqueda(texto)
+  // Consulta real al servidor.
+  async function ejecutarBusqueda(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     if (!texto.trim()) {
       setResultados([])
       return
@@ -111,9 +113,21 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
     setResultados(data)
   }
 
+  // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
+  // 300ms de debounce, para no pegarle a la base en cada letra.
+  function onBuscar(texto: string) {
+    setBusqueda(texto)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!texto.trim()) {
+      setResultados([])
+      return
+    }
+    debounceRef.current = setTimeout(() => ejecutarBusqueda(texto, campos), 300)
+  }
+
   function onCamposChange(next: CampoBusqueda[]) {
     setCampos(next)
-    if (busqueda.trim()) onBuscar(busqueda, next)
+    if (busqueda.trim()) ejecutarBusqueda(busqueda, next)
   }
 
   // C3: si la cantidad alcanza una escala por mayor vigente, ajusta el precio.
