@@ -34,11 +34,14 @@ import {
 } from "@/components/shared/criterios-busqueda"
 import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-cliente"
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
+import { TIPOS_PAGO } from "@/lib/tipos-pago"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import { buscarProductosParaVenta, registrarVenta, type ProductoBusqueda } from "./actions"
 
 const VACIO: VentaInput = {
   cliente_id: "",
+  tipo_pago: "",
+  con_factura: true,
   descuento_tipo: "ninguno",
   descuento_valor: 0,
   impuesto_porcentaje: 0,
@@ -156,6 +159,9 @@ export function Pos() {
     }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     stockRef.current.set(p.id, p.stockSucursalActual)
+    // T6: si el producto es "S/F", se sugiere marcar la venta como sin factura
+    // (el usuario lo puede cambiar en el selector "Factura" del carrito).
+    if (!p.con_factura) setValue("con_factura", false)
     const existente = items.fields.findIndex((f) => f.producto_id === p.id)
     if (existente >= 0) {
       const actual = Number(valores.items?.[existente]?.cantidad) || 0
@@ -255,7 +261,14 @@ export function Pos() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0">
-                    <span className="block text-base font-semibold">{r.codigo}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-base font-semibold">{r.codigo}</span>
+                      {!r.con_factura && (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                          S/F
+                        </span>
+                      )}
+                    </span>
                     <span className="block text-sm text-muted-foreground">{r.descripcion}</span>
                     {r.medidas.length > 0 && (
                       <span className="block text-xs text-muted-foreground">
@@ -461,6 +474,41 @@ export function Pos() {
 
               {/* derecha: descuentos + totales */}
               <div className="space-y-4 lg:sticky lg:top-0 lg:self-start">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1 rounded-md border border-border p-3">
+                    <Label className="text-xs">Tipo de pago</Label>
+                    <Select
+                      value={valores.tipo_pago || ""}
+                      onValueChange={(v) => setValue("tipo_pago", v)}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Seleccionar…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TIPOS_PAGO.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1 rounded-md border border-border p-3">
+                    <Label className="text-xs">Factura</Label>
+                    <Select
+                      value={valores.con_factura === false ? "sin" : "con"}
+                      onValueChange={(v) => setValue("con_factura", v === "con")}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="con">Con factura</SelectItem>
+                        <SelectItem value="sin">Sin factura (S/F)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-3 rounded-md border border-border p-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Descuento global</Label>

@@ -31,7 +31,7 @@ import { NuevoUsuarioForm } from "./nuevo-usuario-form"
 export type UsuarioFila = {
   id: string
   nombre_completo: string
-  rol: "admin" | "vendedor"
+  rol: "admin" | "vendedor" | "cajero"
   activo: boolean
   creado_en: string
   sucursal_id: string | null

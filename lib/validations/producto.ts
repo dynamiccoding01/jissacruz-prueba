@@ -67,6 +67,8 @@ export const productoSchema = z.object({
   precio: z.coerce.number().min(0, "El precio no puede ser negativo"),
   stock_minimo: z.coerce.number().int().min(0, "El stock mínimo no puede ser negativo"),
   imagen_url: z.string().optional().nullable(),
+  // T6: con/sin factura. true = con factura; false = producto "S/F" (sin factura).
+  con_factura: z.boolean().default(true),
   codigos_equivalentes: z
     .array(codigoEquivalenteSchema)
     .transform(dedupePorClave((c) => c.codigo_equivalente.trim().toUpperCase())),

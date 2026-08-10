@@ -12,7 +12,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const { data: venta } = await supabase
     .from("ventas")
     .select(
-      "numero, creado_en, subtotal, descuento_tipo, descuento_valor, impuesto_porcentaje, total, clientes(nombre, ci_nit, telefono, direccion), proformas!ventas_proforma_origen_id_fkey(numero), sucursal:sucursales(codigo, nombre), vendedor:perfiles!ventas_vendido_por_fkey(nombre_completo)"
+      "numero, creado_en, tipo_pago, subtotal, descuento_tipo, descuento_valor, impuesto_porcentaje, total, clientes(nombre, ci_nit, telefono, direccion), proformas!ventas_proforma_origen_id_fkey(numero), sucursal:sucursales(codigo, nombre), vendedor:perfiles!ventas_vendido_por_fkey(nombre_completo)"
     )
     .eq("id", params.id)
     .single()
@@ -41,6 +41,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
     numero: venta.numero,
     creado_en: venta.creado_en,
     proforma_origen_numero: proformaOrigen?.numero ?? null,
+    tipo_pago: (venta as Record<string, unknown>).tipo_pago as string | null,
     subtotal: Number(venta.subtotal),
     descuento_tipo: venta.descuento_tipo,
     descuento_valor: Number(venta.descuento_valor),

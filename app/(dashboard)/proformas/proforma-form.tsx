@@ -41,6 +41,7 @@ import {
 import { buscarProductosParaProforma, createProforma, type ProductoBusqueda } from "./actions"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import { formatearMedidas } from "@/lib/medidas"
+import { TIPOS_PAGO } from "@/lib/tipos-pago"
 
 const VACIO: ProformaInput = {
   cliente_id: "",
@@ -209,7 +210,21 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="tipo_pago">Tipo de pago</Label>
-                  <Input id="tipo_pago" className="h-11" placeholder="Contado / Crédito" {...register("tipo_pago")} />
+                  <Select
+                    value={valores.tipo_pago || ""}
+                    onValueChange={(v) => setValue("tipo_pago", v)}
+                  >
+                    <SelectTrigger id="tipo_pago" className="h-11">
+                      <SelectValue placeholder="Seleccionar…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIPOS_PAGO.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 {/* Q20: la "Validez" ya no se pide (vigencia fija de 3 días). */}
                 <div className="space-y-2">

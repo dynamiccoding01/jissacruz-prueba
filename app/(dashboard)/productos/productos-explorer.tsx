@@ -38,6 +38,7 @@ export type ProductoFila = {
   stock_actual: number
   stock_minimo: number
   imagen_url: string | null
+  con_factura?: boolean
   producto_stock_sucursal?: Array<{
     stock_actual: number
     sucursales: { codigo: string; nombre: string } | null
@@ -110,7 +111,20 @@ export function ProductosExplorer({
           <div className="h-10 w-10 rounded bg-muted" />
         ),
     },
-    { accessorKey: "codigo", header: "Código" },
+    {
+      accessorKey: "codigo",
+      header: "Código",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <span>{row.original.codigo}</span>
+          {row.original.con_factura === false && (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+              S/F
+            </span>
+          )}
+        </div>
+      ),
+    },
     { accessorKey: "descripcion", header: "Descripción" },
     { accessorKey: "linea_marca", header: "Línea / marca" },
     {

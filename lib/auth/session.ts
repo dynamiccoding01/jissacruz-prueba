@@ -8,7 +8,7 @@ export type SucursalMinima = { id: string; codigo: string; nombre: string }
 export type Perfil = {
   id: string
   nombre_completo: string
-  rol: "admin" | "vendedor"
+  rol: "admin" | "vendedor" | "cajero"
   activo: boolean
   sucursal_id: string | null
   sucursal: SucursalMinima | null
@@ -36,7 +36,7 @@ export const getPerfil = cache(async (): Promise<Perfil | null> => {
   return {
     id: p.id as string,
     nombre_completo: p.nombre_completo as string,
-    rol: p.rol as "admin" | "vendedor",
+    rol: p.rol as "admin" | "vendedor" | "cajero",
     activo: p.activo as boolean,
     sucursal_id: (p.sucursal_id as string | null) ?? null,
     sucursal: (p.sucursales as SucursalMinima | null) ?? null,

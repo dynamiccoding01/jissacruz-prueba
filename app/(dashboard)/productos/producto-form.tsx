@@ -33,6 +33,7 @@ const VACIO: ProductoFormInput = {
   precio: 0,
   stock_minimo: 0,
   imagen_url: null,
+  con_factura: true,
   codigos_equivalentes: [],
   codigos_originales: [],
   medidas: [],
@@ -107,6 +108,7 @@ export function ProductoForm({
             precio: producto.precio,
             stock_minimo: producto.stock_minimo,
             imagen_url: producto.imagen_url,
+            con_factura: producto.con_factura ?? true,
             codigos_equivalentes: codigos,
             codigos_originales: originales,
             medidas,
@@ -249,6 +251,19 @@ export function ProductoForm({
                   <Input id="stock_minimo" type="number" {...register("stock_minimo")} />
                 </div>
               </div>
+
+              <label htmlFor="con_factura" className="flex items-center gap-2 text-sm">
+                <input
+                  id="con_factura"
+                  type="checkbox"
+                  className="size-4 rounded border-input accent-primary"
+                  {...register("con_factura")}
+                />
+                <span>
+                  Se vende <strong>con factura</strong> — destildá para marcarlo{" "}
+                  <strong>S/F</strong> (sin factura)
+                </span>
+              </label>
 
               <div className="space-y-2">
                 <Label htmlFor="imagen">Imagen</Label>

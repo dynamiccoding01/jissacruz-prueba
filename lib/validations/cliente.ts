@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const clienteSchema = z.object({
-  nombre: z.string().min(1, "El nombre es obligatorio"),
+  nombre: z.string().min(1, "La razón social es obligatoria"),
   ci_nit: z.string().optional(),
   complemento: z.string().optional(),
   nombre_factura: z.string().optional(),

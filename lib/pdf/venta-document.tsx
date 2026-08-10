@@ -77,6 +77,7 @@ export type VentaPdf = {
   numero: string
   creado_en: string
   proforma_origen_numero: string | null
+  tipo_pago: string | null
   subtotal: number
   descuento_tipo: "porcentaje" | "monto_fijo" | null
   descuento_valor: number
@@ -180,6 +181,7 @@ export function VentaDocument({
           {venta.cliente?.ci_nit ? <Text>CI/NIT: {venta.cliente.ci_nit}</Text> : null}
           {venta.cliente?.telefono ? <Text>Contacto: {venta.cliente.telefono}</Text> : null}
           {venta.cliente?.direccion ? <Text>Dirección: {venta.cliente.direccion}</Text> : null}
+          {venta.tipo_pago ? <Text>Tipo de pago: {venta.tipo_pago}</Text> : null}
         </View>
 
         <View style={styles.headerRow}>

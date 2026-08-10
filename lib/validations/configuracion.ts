@@ -17,7 +17,7 @@ export const nuevoUsuarioSchema = z.object({
   nombre_completo: z.string().min(1, "El nombre es obligatorio"),
   email: z.string().min(1, "El correo es obligatorio").email("Correo inválido"),
   password: z.string().min(6, "Mínimo 6 caracteres"),
-  rol: z.enum(["admin", "vendedor"]),
+  rol: z.enum(["admin", "vendedor", "cajero"]),
   sucursal_id: z.string().uuid("Elegí una sucursal"),
 })
 

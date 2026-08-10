@@ -171,7 +171,14 @@ export function Cotizador() {
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0">
-                  <span className="block text-base font-semibold">{r.codigo}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-base font-semibold">{r.codigo}</span>
+                    {!r.con_factura && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                        S/F
+                      </span>
+                    )}
+                  </span>
                   <span className="block text-sm text-muted-foreground">{r.descripcion}</span>
                   {r.medidas.length > 0 && (
                     <span className="block text-xs text-muted-foreground">

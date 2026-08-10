@@ -9,7 +9,7 @@ export default async function ProductosPage() {
   const { data } = await supabase
     .from("productos")
     .select(`
-      id, codigo, descripcion, linea_marca, precio, stock_actual, stock_minimo, imagen_url,
+      id, codigo, descripcion, linea_marca, precio, stock_actual, stock_minimo, imagen_url, con_factura,
       producto_stock_sucursal (
         stock_actual,
         sucursales (codigo, nombre)

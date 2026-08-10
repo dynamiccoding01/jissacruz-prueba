@@ -121,6 +121,7 @@ export function NuevoUsuarioForm({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="vendedor">Vendedor</SelectItem>
+                  <SelectItem value="cajero">Cajero</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>

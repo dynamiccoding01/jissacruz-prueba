@@ -40,6 +40,9 @@ export type ProductoBusqueda = {
   unidad: string
   medidas: Medida[]
   originales: string[]
+  // T6: si el producto se maneja sin factura (para el badge S/F y sugerir el
+  // "Sin factura" al cobrar).
+  con_factura: boolean
 }
 
 export async function buscarProductosParaVenta(
@@ -67,6 +70,7 @@ export async function buscarProductosParaVenta(
     stock_actual: number
     stock_minimo: number
     unidad_medida: string
+    con_factura: boolean
   }[]
   const ids = filas.map((p) => p.id)
 
@@ -117,11 +121,18 @@ export async function buscarProductosParaVenta(
       unidad: p.unidad_medida,
       medidas: datos.get(p.id)?.medidas ?? [],
       originales: datos.get(p.id)?.originales ?? [],
+      con_factura: p.con_factura ?? true,
     }
   })
 }
 
 export async function registrarVenta(values: VentaInput) {
+  // T12: solo cajero y admin pueden cerrar/cobrar ventas.
+  const perfil = await getPerfil()
+  if (!perfil || (perfil.rol !== "admin" && perfil.rol !== "cajero")) {
+    return { error: "Solo un cajero o un administrador puede registrar ventas." }
+  }
+
   const parsed = ventaSchema.safeParse(values)
   if (!parsed.success) {
     return { error: "Revisá los datos de la venta." }
@@ -133,6 +144,8 @@ export async function registrarVenta(values: VentaInput) {
   const payload = {
     cliente_id: v.cliente_id || null,
     proforma_origen_id: null,
+    tipo_pago: v.tipo_pago || null,
+    con_factura: v.con_factura,
     descuento_tipo: normalizarDescuento(v.descuento_tipo),
     descuento_valor: v.descuento_valor,
     impuesto_porcentaje: v.impuesto_porcentaje,

@@ -16,7 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-export type Rol = "admin" | "vendedor"
+export type Rol = "admin" | "vendedor" | "cajero"
 
 export type NavItem = {
   label: string
@@ -40,8 +40,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Inventario",
     items: [
-      { label: "Productos", href: "/productos", icon: Package, roles: ["admin", "vendedor"] },
-      { label: "Inventario / Kardex", href: "/inventario", icon: Boxes, roles: ["admin", "vendedor"] },
+      { label: "Productos", href: "/productos", icon: Package, roles: ["admin", "vendedor", "cajero"] },
+      { label: "Inventario / Kardex", href: "/inventario", icon: Boxes, roles: ["admin", "vendedor", "cajero"] },
       { label: "Pedidos", href: "/traspasos", icon: ArrowLeftRight, roles: ["admin", "vendedor"] },
     ],
   },
@@ -55,10 +55,10 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Ventas",
     items: [
-      { label: "Clientes", href: "/clientes", icon: Users, roles: ["admin", "vendedor"] },
-      { label: "Cotización", href: "/cotizacion", icon: Calculator, roles: ["admin", "vendedor"] },
+      { label: "Clientes", href: "/clientes", icon: Users, roles: ["admin", "vendedor", "cajero"] },
+      { label: "Cotización", href: "/cotizacion", icon: Calculator, roles: ["admin", "vendedor", "cajero"] },
       { label: "Proformas", href: "/proformas", icon: FileText, roles: ["admin", "vendedor"] },
-      { label: "Ventas (POS)", href: "/ventas", icon: CreditCard, roles: ["admin", "vendedor"] },
+      { label: "Ventas (POS)", href: "/ventas", icon: CreditCard, roles: ["admin", "cajero"] },
     ],
   },
   {

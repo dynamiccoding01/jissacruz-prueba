@@ -19,6 +19,7 @@ export type ProductoCotizacion = {
   unidad: string
   medidas: Medida[]
   originales: string[]
+  con_factura: boolean
 }
 
 export async function buscarProductosParaCotizacion(
@@ -41,6 +42,7 @@ export async function buscarProductosParaCotizacion(
     descripcion: string
     precio: number
     unidad_medida: string
+    con_factura: boolean
   }[]
   const ids = filas.map((p) => p.id)
   const [escalas, datos] = await Promise.all([
@@ -56,5 +58,6 @@ export async function buscarProductosParaCotizacion(
     unidad: p.unidad_medida,
     medidas: datos.get(p.id)?.medidas ?? [],
     originales: datos.get(p.id)?.originales ?? [],
+    con_factura: p.con_factura ?? true,
   }))
 }

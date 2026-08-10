@@ -41,7 +41,7 @@ async function reporteVentas(
 
   const { data } = await supabase
     .from("ventas")
-    .select("total, creado_en")
+    .select("total, creado_en, con_factura")
     .gte("creado_en", desde.toISOString())
     .lte("creado_en", hasta.toISOString())
     .order("creado_en")
@@ -74,6 +74,15 @@ async function reporteVentas(
   const ordenados = Array.from(buckets.values()).sort((a, b) => a.orden - b.orden)
   const totalGeneral = ventas.reduce((acc, v) => acc + Number(v.total), 0)
   const cantidadVentas = ventas.length
+  // T7: separa el total en ventas CON factura y SIN factura (S/F).
+  const totalConFactura = ventas.reduce(
+    (acc, v) => acc + ((v as { con_factura?: boolean }).con_factura === false ? 0 : Number(v.total)),
+    0
+  )
+  const totalSinFactura = ventas.reduce(
+    (acc, v) => acc + ((v as { con_factura?: boolean }).con_factura === false ? Number(v.total) : 0),
+    0
+  )
 
   return {
     tipo: "ventas",
@@ -91,7 +100,9 @@ async function reporteVentas(
     })),
     resumen: [
       { label: "Ventas", value: String(cantidadVentas) },
-      { label: "Total facturado", value: bs(totalGeneral) },
+      { label: "Total", value: bs(totalGeneral) },
+      { label: "Con factura", value: bs(totalConFactura) },
+      { label: "Sin factura (S/F)", value: bs(totalSinFactura) },
       {
         label: "Ticket promedio",
         value: bs(cantidadVentas ? totalGeneral / cantidadVentas : 0),

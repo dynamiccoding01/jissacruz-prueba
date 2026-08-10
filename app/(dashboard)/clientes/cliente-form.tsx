@@ -103,7 +103,7 @@ export function ClienteForm({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nombre">Nombre</Label>
+            <Label htmlFor="nombre">Razón social</Label>
             <Input id="nombre" {...register("nombre")} />
             {errors.nombre && <p className="text-sm text-destructive">{errors.nombre.message}</p>}
           </div>
@@ -119,7 +119,7 @@ export function ClienteForm({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="nombre_factura">Nombre de factura</Label>
+              <Label htmlFor="nombre_factura">Contacto</Label>
               <Input id="nombre_factura" {...register("nombre_factura")} />
             </div>
             <div className="space-y-2">

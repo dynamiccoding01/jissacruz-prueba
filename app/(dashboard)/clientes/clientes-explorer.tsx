@@ -72,7 +72,7 @@ export function ClientesExplorer({
   }
 
   const columns: ColumnDef<ClienteFila>[] = [
-    { accessorKey: "nombre", header: "Nombre" },
+    { accessorKey: "nombre", header: "Razón social" },
     { accessorKey: "ci_nit", header: "CI / NIT" },
     { accessorKey: "telefono", header: "Teléfono" },
     { accessorKey: "direccion", header: "Dirección" },
@@ -133,7 +133,7 @@ export function ClientesExplorer({
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nombre, CI/NIT o teléfono..."
+            placeholder="Buscar por razón social, CI/NIT o teléfono..."
             className="pl-8"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
