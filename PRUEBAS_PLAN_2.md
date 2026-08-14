@@ -44,5 +44,18 @@
 - [ ] Hacer **una venta completa** con 2 productos → se genera la factura PDF y el **stock baja** (verificar en Inventario/Kardex).
 - [ ] Crear **una proforma** y convertirla a venta → funciona igual que antes.
 
-## ⏳ Tareas pendientes (todavía NO hay nada que probar)
-**T2, T4, T9, T11** — sin implementar; esperan los ejemplos/confirmación del cliente.
+### T2 — Alt+Enter en la Descripción
+- [ ] Productos → editar/crear → clic en el campo **Descripción** → apretar **Alt+Enter** → se inserta un **salto de línea** (renglón nuevo).
+
+### T4 — Carrito de Ventas estilo factura
+- [ ] Ventas (POS) → agregar productos → abrir el carrito (botón flotante) → el modal se ve **como una factura**: encabezado **JISSACRUZ / Comprobante de venta**, recuadro de cliente + tipo de pago + factura, y una **tabla** con N° / Cant. / Código-Detalle / P. Unit. / Descuento / Importe, con los totales abajo.
+- [ ] Editar cantidad y precio en la tabla, aplicar un descuento y confirmar la venta → funciona igual que antes.
+
+### T9 — Fecha de validez en el PDF de proforma
+- [ ] Proformas → descargar el PDF de una proforma → al pie dice **"Válida hasta el DD/MM/AAAA (N día(s) desde la emisión)"** (fecha concreta, no solo "N días").
+- [ ] En la lista de Proformas, el badge **Vigente/Vencida** ya existía (verificarlo).
+
+### T11 — Precio de venta destacado en el POS
+- [ ] Ventas (POS) → buscar un producto → en su tarjeta el precio aparece rotulado **"Precio de venta"** y **más grande/destacado**.
+
+## ✅ Estado: las 12 tareas del PLAN_2 están implementadas.

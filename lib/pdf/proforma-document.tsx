@@ -1,5 +1,5 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
-import { format } from "date-fns"
+import { addDays, format } from "date-fns"
 
 import { importeALiteral } from "./numero-a-literal"
 import { formatearMedidas, type Medida } from "@/lib/medidas"
@@ -141,6 +141,12 @@ export function ProformaDocument({
     ? proforma.numero.split("-").pop()
     : proforma.numero
 
+  // T9: fecha concreta de vencimiento = emisión + plazo de validez.
+  const fechaVence = format(
+    addDays(new Date(proforma.creado_en), proforma.plazo_validez_dias),
+    "dd/MM/yyyy"
+  )
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -264,7 +270,7 @@ export function ProformaDocument({
 
         <Text style={styles.pie}>
           Proforma sin valor fiscal. Precios en bolivianos (Bs).{"\n"}
-          La cotización solo tiene validez por el plazo de {proforma.plazo_validez_dias} día(s).
+          Válida hasta el {fechaVence} ({proforma.plazo_validez_dias} día(s) desde la emisión).
           {proforma.tiempo_entrega_dias != null
             ? ` Tiempo de entrega: ${proforma.tiempo_entrega_dias} día(s).`
             : ""}

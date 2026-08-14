@@ -282,8 +282,12 @@ export function Pos() {
                       </span>
                     )}
                   </span>
-                  <span className="flex shrink-0 flex-col items-end gap-1 text-base font-semibold text-primary">
-                    <span className="flex items-center gap-2">
+                  <span className="flex shrink-0 flex-col items-end gap-0.5 text-primary">
+                    {/* T11: precio de venta rotulado y destacado */}
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      Precio de venta
+                    </span>
+                    <span className="flex items-center gap-2 text-lg font-bold">
                       {bs(r.precio)}
                       {!sinStock && <Plus className="size-5" />}
                     </span>
@@ -320,7 +324,7 @@ export function Pos() {
         </div>
       </div>
 
-      {/* Carrito: botón flotante + modal */}
+      {/* Carrito: botón flotante + modal estilo factura */}
       <Dialog open={carritoOpen} onOpenChange={setCarritoOpen}>
         <DialogTrigger asChild>
           <button
@@ -341,24 +345,33 @@ export function Pos() {
             </span>
           </button>
         </DialogTrigger>
-        <DialogContent className="max-h-[92vh] w-[95vw] max-w-6xl overflow-hidden p-0 sm:rounded-2xl">
-          <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[92vh] flex-col">
-            <DialogHeader className="border-b border-border bg-muted/30 px-6 py-4 text-left">
-              <DialogTitle className="flex items-center gap-2 text-xl">
-                <ShoppingCart className="size-5 text-primary" /> Carrito de venta
-                {cantItems > 0 && (
-                  <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-sm font-medium text-primary">
-                    {cantItems} ítem{cantItems > 1 ? "s" : ""}
-                  </span>
-                )}
-              </DialogTitle>
+        <DialogContent className="max-h-[94vh] w-[96vw] max-w-5xl overflow-hidden p-0 sm:rounded-2xl">
+          <form onSubmit={handleSubmit(onSubmit)} className="flex max-h-[94vh] flex-col">
+            {/* Encabezado estilo factura */}
+            <DialogHeader className="space-y-0 border-b-2 border-primary bg-muted/30 px-6 py-4 text-left">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <DialogTitle className="text-2xl font-bold tracking-tight text-primary">
+                    JISSACRUZ
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground">Comprobante de venta · vista previa</p>
+                </div>
+                <div className="text-right text-sm">
+                  <p className="font-medium">{new Date().toLocaleDateString("es-BO")}</p>
+                  <p className="text-muted-foreground">
+                    {cantItems} ítem{cantItems === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
             </DialogHeader>
 
-            <div className="grid flex-1 gap-8 overflow-y-auto p-6 lg:grid-cols-[1fr_27rem]">
-              {/* izquierda: cliente + ítems */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-base">Cliente (opcional)</Label>
+            <div className="flex-1 space-y-4 overflow-y-auto p-6">
+              {/* Cliente / pago (recuadro estilo factura) */}
+              <div className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-3">
+                <div className="space-y-1">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Cliente (opcional)
+                  </Label>
                   <BuscadorCliente
                     opcional
                     value={clienteSel}
@@ -368,15 +381,59 @@ export function Pos() {
                     }}
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Tipo de pago
+                  </Label>
+                  <Select value={valores.tipo_pago || ""} onValueChange={(v) => setValue("tipo_pago", v)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Seleccionar…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TIPOS_PAGO.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Factura</Label>
+                  <Select
+                    value={valores.con_factura === false ? "sin" : "con"}
+                    onValueChange={(v) => setValue("con_factura", v === "con")}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="con">Con factura</SelectItem>
+                      <SelectItem value="sin">Sin factura (S/F)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-                <div className="space-y-2.5">
-                  {items.fields.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-12 text-center text-muted-foreground">
-                      <ShoppingCart className="size-8 opacity-40" />
-                      <p className="text-base">El carrito está vacío. Buscá productos y agregalos.</p>
+              {/* Tabla de ítems estilo factura */}
+              {items.fields.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-12 text-center text-muted-foreground">
+                  <ShoppingCart className="size-8 opacity-40" />
+                  <p className="text-base">El comprobante está vacío. Buscá productos y agregalos.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <div className="min-w-[44rem] overflow-hidden rounded-lg border border-border">
+                    <div className="grid grid-cols-[2rem_5.5rem_1fr_7rem_8.5rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
+                      <span className="text-center">N°</span>
+                      <span className="text-center">Cant.</span>
+                      <span>Código / Detalle</span>
+                      <span className="text-right">P. Unit.</span>
+                      <span className="text-center">Descuento</span>
+                      <span className="text-right">Importe</span>
+                      <span />
                     </div>
-                  ) : (
-                    items.fields.map((field, index) => {
+                    {items.fields.map((field, index) => {
                       const linea = valores.items?.[index]
                       const subtotalLinea = linea
                         ? calcularSubtotalLinea(
@@ -389,127 +446,78 @@ export function Pos() {
                       return (
                         <div
                           key={field.id}
-                          className="space-y-2.5 rounded-xl border border-border bg-background p-3.5 shadow-sm transition-colors hover:border-primary/40"
+                          className="grid grid-cols-[2rem_5.5rem_1fr_7rem_8.5rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-base font-semibold">{field.codigo}</p>
-                              <p className="text-sm text-muted-foreground">{field.descripcion}</p>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
-                              onClick={() => items.remove(index)}
+                          <span className="text-center text-sm text-muted-foreground">{index + 1}</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={stockRef.current.get(field.producto_id)}
+                            className="h-9 text-center text-sm font-medium"
+                            {...register(`items.${index}.cantidad`, {
+                              onChange: (e) => onCantidadChange(index, field.producto_id, e.target.value),
+                            })}
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold">{field.codigo}</p>
+                            <p className="truncate text-xs text-muted-foreground">{field.descripcion}</p>
+                          </div>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            className="h-9 text-right text-sm"
+                            {...register(`items.${index}.precio_unitario`)}
+                          />
+                          <div className="flex gap-1">
+                            <Select
+                              value={linea?.descuento_tipo ?? "ninguno"}
+                              onValueChange={(v) =>
+                                setValue(
+                                  `items.${index}.descuento_tipo`,
+                                  v as VentaInput["items"][number]["descuento_tipo"]
+                                )
+                              }
                             >
-                              <Trash2 className="size-5" />
-                            </Button>
+                              <SelectTrigger className="h-9 w-[3.25rem] px-2">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ninguno">—</SelectItem>
+                                <SelectItem value="monto_fijo">Bs</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              className="h-9 text-right text-sm"
+                              disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
+                              {...register(`items.${index}.descuento_valor`)}
+                            />
                           </div>
-                          <div className="grid grid-cols-[4.5rem_7rem_1fr_auto] items-end gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-xs">Cant.</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={stockRef.current.get(field.producto_id)}
-                                className="h-11 text-base font-medium"
-                                {...register(`items.${index}.cantidad`, {
-                                  onChange: (e) =>
-                                    onCantidadChange(index, field.producto_id, e.target.value),
-                                })}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Precio</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min={0}
-                                className="h-11 text-base"
-                                {...register(`items.${index}.precio_unitario`)}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Desc.</Label>
-                              <div className="flex gap-1">
-                                <Select
-                                  value={linea?.descuento_tipo ?? "ninguno"}
-                                  onValueChange={(v) =>
-                                    setValue(
-                                      `items.${index}.descuento_tipo`,
-                                      v as VentaInput["items"][number]["descuento_tipo"]
-                                    )
-                                  }
-                                >
-                                  <SelectTrigger className="h-11 w-[3.75rem]">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="ninguno">—</SelectItem>
-                                    <SelectItem value="monto_fijo">Bs</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min={0}
-                                  className="h-11 text-base"
-                                  disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
-                                  {...register(`items.${index}.descuento_valor`)}
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-1 text-right">
-                              <Label className="text-xs">Subt.</Label>
-                              <p className="whitespace-nowrap pb-2 text-lg font-bold text-primary">{bs(subtotalLinea)}</p>
-                            </div>
-                          </div>
+                          <span className="whitespace-nowrap text-right text-sm font-bold text-primary">
+                            {bs(subtotalLinea)}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => items.remove(index)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
                         </div>
                       )
-                    })
-                  )}
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* derecha: descuentos + totales */}
-              <div className="space-y-4 lg:sticky lg:top-0 lg:self-start">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1 rounded-md border border-border p-3">
-                    <Label className="text-xs">Tipo de pago</Label>
-                    <Select
-                      value={valores.tipo_pago || ""}
-                      onValueChange={(v) => setValue("tipo_pago", v)}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Seleccionar…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {TIPOS_PAGO.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {t}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1 rounded-md border border-border p-3">
-                    <Label className="text-xs">Factura</Label>
-                    <Select
-                      value={valores.con_factura === false ? "sin" : "con"}
-                      onValueChange={(v) => setValue("con_factura", v === "con")}
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="con">Con factura</SelectItem>
-                        <SelectItem value="sin">Sin factura (S/F)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3 rounded-md border border-border p-3">
+              {/* Totales estilo factura (a la derecha) */}
+              <div className="flex flex-col items-end gap-3">
+                <div className="grid w-full max-w-sm grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Descuento global</Label>
                     <div className="flex gap-1">
@@ -517,7 +525,7 @@ export function Pos() {
                         value={valores.descuento_tipo ?? "ninguno"}
                         onValueChange={(v) => setValue("descuento_tipo", v as VentaInput["descuento_tipo"])}
                       >
-                        <SelectTrigger className="h-11 w-[4.5rem]">
+                        <SelectTrigger className="h-10 w-[4.25rem]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -529,7 +537,7 @@ export function Pos() {
                         type="number"
                         step="0.01"
                         min={0}
-                        className="h-11 text-base"
+                        className="h-10 text-base"
                         disabled={!valores.descuento_tipo || valores.descuento_tipo === "ninguno"}
                         {...register("descuento_valor")}
                       />
@@ -545,13 +553,13 @@ export function Pos() {
                       step="0.01"
                       min={0}
                       max={100}
-                      className="h-11 text-base"
+                      className="h-10 text-base"
                       {...register("impuesto_porcentaje")}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2 rounded-lg border border-border p-4">
+                <div className="w-full max-w-sm space-y-2 rounded-lg border border-border p-4">
                   <div className="flex justify-between text-base">
                     <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">{bs(totales.subtotal)}</span>

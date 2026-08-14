@@ -190,7 +190,25 @@ export function ProductoForm({
 
               <div className="space-y-2">
                 <Label htmlFor="descripcion">Descripción</Label>
-                <Textarea id="descripcion" rows={2} {...register("descripcion")} />
+                <Textarea
+                  id="descripcion"
+                  rows={2}
+                  {...register("descripcion")}
+                  onKeyDown={(e) => {
+                    // T2: Alt+Enter inserta un salto de línea en la descripción.
+                    if (e.altKey && e.key === "Enter") {
+                      e.preventDefault()
+                      const ta = e.currentTarget
+                      const start = ta.selectionStart
+                      const end = ta.selectionEnd
+                      const nuevo = ta.value.slice(0, start) + "\n" + ta.value.slice(end)
+                      setValue("descripcion", nuevo, { shouldDirty: true, shouldValidate: true })
+                      requestAnimationFrame(() => {
+                        ta.selectionStart = ta.selectionEnd = start + 1
+                      })
+                    }
+                  }}
+                />
                 {errors.descripcion && (
                   <p className="text-sm text-destructive">{errors.descripcion.message}</p>
                 )}

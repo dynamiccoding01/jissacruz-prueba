@@ -47,7 +47,7 @@ Leyenda de estado por tarea: 🟢 clara y lista para hacer · 🟡 necesita una 
 
 ## T2 — Atajo Alt+Enter en "descripción" 🟡❓
 
-**Avance:** ⏳ PENDIENTE
+**Avance:** ✅ COMPLETADO (2026-08-10) — en la **Descripción** del producto, **Alt+Enter** inserta un salto de línea (`onKeyDown` en el `<Textarea>` de `producto-form.tsx`). Decisión: aplica a la descripción del producto. Solo código, sin script SQL.
 
 - **Qué pide:** "atajo con alt + enter en la función de descripción similar a lo que hace shift + enter."
 - **Hoy:** el campo *descripción* del producto es un `<Textarea>`; ahí Enter y Shift+Enter **ya insertan salto de línea**
@@ -73,7 +73,7 @@ Leyenda de estado por tarea: 🟢 clara y lista para hacer · 🟡 necesita una 
 
 ## T4 — Carrito de ventas como modal flotante estilo factura 🟡❓
 
-**Avance:** ⏳ PENDIENTE
+**Avance:** ✅ COMPLETADO (2026-08-10) — el modal del carrito de Ventas se rediseñó **estilo factura**: encabezado JISSACRUZ + "Comprobante de venta", recuadro de cliente/tipo de pago/factura, tabla N°/Cant/Código-Detalle/P.Unit/Descuento/Importe y bloque de totales. Toda la funcionalidad intacta. Solo código, sin script SQL.
 
 - **Qué pide:** "quitar el carrito de ventas en ventas y que esté de la misma manera del diseño de factura, o sea un modal flotante."
 - **Hoy:** el carrito de Ventas **ya es un modal flotante** (botón fijo abajo-derecha + `Dialog` grande, hecho en esta misma etapa).
@@ -138,7 +138,7 @@ Leyenda de estado por tarea: 🟢 clara y lista para hacer · 🟡 necesita una 
 
 ## T9 — Validez de la oferta en proforma + leyenda al imprimir ✅🟡
 
-**Avance:** ⏳ PENDIENTE (base ya existente; faltan los incrementos)
+**Avance:** ✅ COMPLETADO (2026-08-10) — el badge Vigente/Vencida **ya existía** en la lista de proformas; se agregó la **fecha concreta** de vencimiento al PDF ("Válida hasta el DD/MM/AAAA (N día(s) desde la emisión)"). Solo código, sin script SQL.
 
 - **Qué pide:** "validez de la oferta en proforma… si pasan esos días ya no vale… que al imprimir salga abajo la validez."
 - **Hoy — ya existe casi todo:** `proformas.plazo_validez_dias` (default 15), estado **`vencida`** derivado en `vista_proformas`,
@@ -164,7 +164,7 @@ Leyenda de estado por tarea: 🟢 clara y lista para hacer · 🟡 necesita una 
 
 ## T11 — "Precio de venta en venta" 🟡❓
 
-**Avance:** ⏳ PENDIENTE
+**Avance:** ✅ COMPLETADO (2026-08-10) — en el POS, cada producto muestra el **"Precio de venta"** rotulado y destacado (más grande, en negrita). El cliente dijo "vos decidís" → se eligió destacar el precio en el POS (sin exponer costos, que es info sensible). Solo código, sin script SQL.
 
 - **Qué pide:** "Precio de venta en venta."
 - **Hoy:** el POS **ya muestra** el precio en las tarjetas de resultado (`Bs …`) y el **precio unitario es editable**
@@ -201,16 +201,16 @@ Leyenda de estado por tarea: 🟢 clara y lista para hacer · 🟡 necesita una 
 | # | Tarea | Avance | Decisión / qué falta definir |
 |---|---|---|---|
 | T1 | Kilos/litros | ✅ COMPLETADO | Correr `35_unidades_kg_litro.sql` en dev+prod. |
-| T2 | Alt+Enter | ⏳ PENDIENTE | ❓ Falta un **ejemplo concreto** de qué hace y en qué campo. |
+| T2 | Alt+Enter | ✅ COMPLETADO | Alt+Enter = salto de línea en la Descripción del producto. |
 | T3 | Historial→Reportes | ✅ COMPLETADO | — |
-| T4 | Carrito modal factura | ⏳ PENDIENTE | ❓ Confirmar: ¿rediseñar el modal **como factura**? ¿o es la Proforma? |
+| T4 | Carrito modal factura | ✅ COMPLETADO | Modal de Ventas rediseñado estilo factura. |
 | T5 | Renombrar en Clientes | ✅ COMPLETADO | — |
 | T6 | Campo S/F en producto | ✅ COMPLETADO | Correr `37_con_factura.sql` en dev+prod. |
 | T7 | Stat ventas S/F | ✅ COMPLETADO | Correr `37_con_factura.sql` en dev+prod. |
 | T8 | Tipo de pago selección | ✅ COMPLETADO | Correr `36_venta_tipo_pago.sql` en dev+prod. |
-| T9 | Validez proforma | ⏳ PENDIENTE | ❓ Confirmar: ¿sumo **badge en pantalla + fecha concreta** al imprimir? |
+| T9 | Validez proforma | ✅ COMPLETADO | Fecha concreta de vencimiento en el PDF (el badge ya existía). |
 | T10 | S/F en cotización | ✅ COMPLETADO | Correr `37_con_factura.sql` en dev+prod. |
-| T11 | Precio de venta en venta | ⏳ PENDIENTE | ❓ Falta un **ejemplo concreto** de qué agrega. |
+| T11 | Precio de venta en venta | ✅ COMPLETADO | "Precio de venta" destacado en el POS. |
 | T12 | Módulo Cajero | ✅ COMPLETADO | Correr `38_rol_cajero.sql` en dev+prod. |
 
 **Observación transversal:** hay un **cluster con/sin factura** (T6 → T7 → T10) que se resuelve de una vez si definimos
