@@ -42,6 +42,7 @@ import { buscarProductosParaProforma, createProforma, type ProductoBusqueda } fr
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import { formatearMedidas } from "@/lib/medidas"
 import { TIPOS_PAGO } from "@/lib/tipos-pago"
+import { avisarBusqueda } from "@/lib/avisar-busqueda"
 
 const VACIO: ProformaInput = {
   cliente_id: "",
@@ -112,6 +113,7 @@ export function ProformaForm({ trigger }: { trigger: React.ReactNode }) {
     const data = await buscarProductosParaProforma(texto, camposBusqueda)
     setBuscando(false)
     setResultados(data)
+    avisarBusqueda(data.length)
   }
 
   // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con

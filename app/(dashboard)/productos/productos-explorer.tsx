@@ -28,6 +28,7 @@ import {
 import type { Rol } from "@/components/shared/nav-items"
 import { deleteProducto, searchProductos } from "./actions"
 import { ProductoForm } from "./producto-form"
+import { avisarBusqueda } from "@/lib/avisar-busqueda"
 
 export type ProductoFila = {
   id: string
@@ -66,6 +67,7 @@ export function ProductosExplorer({
     startTransition(async () => {
       const resultado = await searchProductos(q, camposRef.current)
       setProductos(resultado as ProductoFila[])
+      if (q.trim()) avisarBusqueda((resultado as ProductoFila[]).length)
     })
   }, [])
 

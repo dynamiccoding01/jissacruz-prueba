@@ -35,6 +35,7 @@ import {
 import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-cliente"
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
 import { TIPOS_PAGO } from "@/lib/tipos-pago"
+import { avisarBusqueda } from "@/lib/avisar-busqueda"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import {
   buscarProductosParaVenta,
@@ -125,6 +126,7 @@ export function Pos() {
     const data = await buscarProductosParaVenta(texto, camposBusqueda)
     setBuscando(false)
     setResultados(data)
+    avisarBusqueda(data.length)
   }
 
   // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con

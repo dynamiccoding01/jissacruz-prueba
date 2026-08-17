@@ -13,6 +13,7 @@ import {
   type CampoBusqueda,
 } from "@/components/shared/criterios-busqueda"
 import { precioSegunCantidad } from "@/lib/precios-mayor"
+import { avisarBusqueda } from "@/lib/avisar-busqueda"
 import { buscarProductosParaCotizacion, type ProductoCotizacion } from "./actions"
 
 const bs = (n: number) => `Bs ${Number(n).toFixed(2)}`
@@ -53,6 +54,7 @@ export function Cotizador() {
     const data = await buscarProductosParaCotizacion(texto, camposBusqueda)
     setBuscando(false)
     setResultados(data)
+    avisarBusqueda(data.length)
   }
 
   // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
