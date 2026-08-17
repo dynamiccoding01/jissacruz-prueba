@@ -104,9 +104,7 @@ export function Cotizador() {
         },
       ]
     })
-    setBusqueda("")
-    setResultados([])
-    buscadorRef.current?.focus()
+    // T3: los resultados quedan a la vista para agregar varios seguidos.
   }
 
   function cambiarCantidad(index: number, raw: string) {
@@ -139,7 +137,7 @@ export function Cotizador() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_30rem]">
+    <div className="space-y-4">
       {/* Buscador + resultados (se ocultan al imprimir) */}
       <div className="space-y-3 print:hidden">
         <Label className="text-base">Buscar producto para cotizar</Label>
@@ -163,135 +161,151 @@ export function Cotizador() {
           />
         </div>
         {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
-        <div className="grid gap-3 sm:grid-cols-2">
-          {resultados.map((r) => (
-            <button
-              type="button"
-              key={r.id}
-              onClick={() => agregarProducto(r)}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0">
-                  <span className="flex items-center gap-2">
+
+        {resultados.length > 0 && (
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {resultados.map((r) => (
+              <div key={r.id} className="flex items-center gap-3 p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-base font-semibold">{r.codigo}</span>
                     {!r.con_factura && (
                       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                         S/F
                       </span>
                     )}
-                  </span>
-                  <span className="block text-sm text-muted-foreground">{r.descripcion}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{r.descripcion}</p>
                   {r.medidas.length > 0 && (
-                    <span className="block text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Medidas: {formatearMedidas(r.medidas)}
-                    </span>
+                    </p>
                   )}
                   {r.originales.length > 0 && (
-                    <span className="block text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       OEM: {r.originales.slice(0, 4).join(", ")}
                       {r.originales.length > 4 ? "…" : ""}
-                    </span>
+                    </p>
                   )}
-                </span>
-                <span className="flex shrink-0 flex-col items-end text-base font-semibold text-primary">
-                  <span className="flex items-center gap-2">
-                    {bs(r.precio)}
-                    <Plus className="size-5" />
-                  </span>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Precio</p>
+                  <p className="text-lg font-bold text-primary">{bs(r.precio)}</p>
                   {r.unidad && r.unidad !== "unidad" && (
-                    <span className="text-[11px] font-normal text-muted-foreground">/ {r.unidad}</span>
+                    <p className="text-[11px] text-muted-foreground">/ {r.unidad}</p>
                   )}
-                </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => agregarProducto(r)}
+                  className="shrink-0"
+                  title="Agregar a la cotización"
+                >
+                  <Plus className="size-4" /> Agregar
+                </Button>
               </div>
-            </button>
-          ))}
-          {!buscando && busqueda.trim() && resultados.length === 0 && (
-            <p className="col-span-full text-sm text-muted-foreground">
-              Sin resultados para &quot;{busqueda}&quot;.
-            </p>
-          )}
-          {!busqueda.trim() && (
-            <p className="col-span-full py-8 text-center text-sm text-muted-foreground">
-              Buscá productos para armar la cotización. No se descuenta stock ni se guarda nada.
-            </p>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+        {!buscando && busqueda.trim() && resultados.length === 0 && (
+          <p className="text-sm text-muted-foreground">Sin resultados para &quot;{busqueda}&quot;.</p>
+        )}
+        {!busqueda.trim() && (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Buscá productos para armar la cotización. No se descuenta stock ni se guarda nada.
+          </p>
+        )}
       </div>
 
-      {/* Carrito de cotización */}
-      <div className="space-y-4 rounded-xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-4 lg:self-start">
+      {/* Cotización (pedido + total) */}
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Cotización</h2>
           <div className="flex gap-2 print:hidden">
-            <Button type="button" variant="outline" size="sm" onClick={() => window.print()} disabled={items.length === 0}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => window.print()}
+              disabled={items.length === 0}
+            >
               <Printer className="size-4" /> Imprimir
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={limpiar} disabled={items.length === 0}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={limpiar}
+              disabled={items.length === 0}
+            >
               Limpiar
             </Button>
           </div>
         </div>
 
-        <div className="max-h-[30rem] space-y-2.5 overflow-y-auto pr-1 print:max-h-none print:overflow-visible">
-          {items.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border py-12 text-center text-base text-muted-foreground">
-              Todavía no agregaste productos.
-            </p>
-          ) : (
-            items.map((it, index) => {
-              const subtotal = (Number(it.cantidad) || 0) * (Number(it.precio_unitario) || 0)
-              return (
-                <div key={it.producto_id} className="space-y-2 rounded-lg border border-border bg-background p-3">
-                  <div className="flex items-start justify-between gap-2">
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border py-10 text-center text-base text-muted-foreground">
+            Todavía no agregaste productos. Buscá arriba y apretá &quot;Agregar&quot;.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <div className="min-w-[40rem] overflow-hidden rounded-lg border border-border">
+              <div className="grid grid-cols-[2rem_6rem_1fr_8rem_8rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
+                <span className="text-center">N°</span>
+                <span className="text-center">Cant.</span>
+                <span>Código / Detalle</span>
+                <span className="text-right">Precio</span>
+                <span className="text-right">Subtotal</span>
+                <span />
+              </div>
+              {items.map((it, index) => {
+                const subtotal = (Number(it.cantidad) || 0) * (Number(it.precio_unitario) || 0)
+                return (
+                  <div
+                    key={it.producto_id}
+                    className="grid grid-cols-[2rem_6rem_1fr_8rem_8rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
+                  >
+                    <span className="text-center text-sm text-muted-foreground">{index + 1}</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      className="h-9 text-center text-sm font-medium"
+                      value={it.cantidad}
+                      onChange={(e) => cambiarCantidad(index, e.target.value)}
+                    />
                     <div className="min-w-0">
-                      <p className="text-base font-semibold">{it.codigo}</p>
-                      <p className="text-sm text-muted-foreground">{it.descripcion}</p>
+                      <p className="truncate text-sm font-semibold">{it.codigo}</p>
+                      <p className="truncate text-xs text-muted-foreground">{it.descripcion}</p>
                     </div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      className="h-9 text-right text-sm"
+                      value={it.precio_unitario}
+                      onChange={(e) => cambiarPrecio(index, e.target.value)}
+                    />
+                    <span className="whitespace-nowrap text-right text-sm font-bold text-primary">
+                      {bs(subtotal)}
+                    </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-9 shrink-0 text-muted-foreground hover:text-destructive print:hidden"
+                      className="size-8 shrink-0 text-muted-foreground hover:text-destructive print:hidden"
                       onClick={() => quitar(index)}
                     >
-                      <Trash2 className="size-5" />
+                      <Trash2 className="size-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-[4.5rem_1fr_auto] items-end gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Cant.</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        className="h-11 text-base font-medium"
-                        value={it.cantidad}
-                        onChange={(e) => cambiarCantidad(index, e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Precio {it.unidad && it.unidad !== "unidad" ? `/ ${it.unidad}` : ""}</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        className="h-11 text-base"
-                        value={it.precio_unitario}
-                        onChange={(e) => cambiarPrecio(index, e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-1 text-right">
-                      <Label className="text-xs">Subtotal</Label>
-                      <p className="whitespace-nowrap pb-2 text-lg font-bold text-primary">{bs(subtotal)}</p>
-                    </div>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
-        <div className="flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground">
+        <div className="flex items-center justify-between rounded-lg bg-primary px-4 py-3 text-primary-foreground sm:max-w-sm sm:ml-auto">
           <span className="text-lg font-semibold uppercase tracking-wide">Total</span>
           <span className="text-3xl font-bold tabular-nums">{bs(total)}</span>
         </div>
