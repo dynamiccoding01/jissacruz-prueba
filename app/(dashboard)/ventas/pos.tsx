@@ -36,7 +36,12 @@ import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-c
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
 import { TIPOS_PAGO } from "@/lib/tipos-pago"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
-import { buscarProductosParaVenta, registrarVenta, type ProductoBusqueda } from "./actions"
+import {
+  buscarProductosParaVenta,
+  obtenerClienteSinNombre,
+  registrarVenta,
+  type ProductoBusqueda,
+} from "./actions"
 
 const VACIO: VentaInput = {
   cliente_id: "",
@@ -97,6 +102,17 @@ export function Pos() {
     setClienteSel(null)
     stockRef.current.clear()
     buscadorRef.current?.focus()
+  }
+
+  // T1 (PLAN_3): botón "Sin nombre" — usa el cliente genérico SIN NOMBRE (NIT 0000).
+  async function usarClienteSinNombre() {
+    const c = await obtenerClienteSinNombre()
+    if (!c) {
+      toast.error("No se pudo usar el cliente Sin nombre.")
+      return
+    }
+    setClienteSel(c)
+    setValue("cliente_id", c.id)
   }
 
   // Consulta real al servidor.
@@ -380,6 +396,17 @@ export function Pos() {
                       setValue("cliente_id", c?.id ?? "")
                     }}
                   />
+                  {!clienteSel && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-1 w-full"
+                      onClick={usarClienteSinNombre}
+                    >
+                      Sin nombre
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">

@@ -10,6 +10,7 @@ import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import type { Medida } from "@/lib/medidas"
 import { ventaSchema, normalizarDescuento, type VentaInput } from "@/lib/validations/venta"
+import { type ClienteBusqueda } from "@/app/(dashboard)/clientes/actions"
 
 // Desglose de stock por sucursal, compatible con <StockBadge /> (que solo lee
 // stock_actual + sucursales.codigo/nombre). Se agrega el id para poder ubicar
@@ -171,4 +172,35 @@ export async function registrarVenta(values: VentaInput) {
   revalidatePath("/kardex")
   revalidatePath("/productos")
   return { id: ventaId as string, numero: venta?.numero as string | undefined }
+}
+
+// T1 (PLAN_3): cliente genérico "SIN NOMBRE" (NIT 0000) para ventas rápidas sin
+// cliente. Get-or-create: reusa el existente; si todavía no hay, lo crea una
+// sola vez. La venta se registra con ese cliente al apretar el botón "Sin nombre".
+const CLIENTE_SIN_NOMBRE_NIT = "0000"
+const CAMPOS_CLIENTE =
+  "id, nombre, ci_nit, complemento, nombre_factura, telefono, direccion"
+
+export async function obtenerClienteSinNombre(): Promise<ClienteBusqueda | null> {
+  const supabase = await createClient()
+
+  const { data: existentes } = await supabase
+    .from("clientes")
+    .select(CAMPOS_CLIENTE)
+    .eq("ci_nit", CLIENTE_SIN_NOMBRE_NIT)
+    .limit(1)
+  if (existentes && existentes.length > 0) {
+    return existentes[0] as ClienteBusqueda
+  }
+
+  const { data: creado, error } = await supabase
+    .from("clientes")
+    .insert({ nombre: "SIN NOMBRE", ci_nit: CLIENTE_SIN_NOMBRE_NIT })
+    .select(CAMPOS_CLIENTE)
+    .single()
+  if (error) {
+    logError("ventas.obtenerClienteSinNombre", error)
+    return null
+  }
+  return creado as ClienteBusqueda
 }
