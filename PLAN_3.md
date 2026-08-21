@@ -43,5 +43,18 @@
 
 ---
 
+## T4 — Paginación de productos con tamaño seleccionable ✅ COMPLETADO (2026-08-16)
+
+**Qué pide:** paginación de productos (5/10/20…) con el tamaño **seleccionable**, en Productos y en la búsqueda de producto de Proforma, Cotización y Ventas (POS).
+
+**Cómo quedó:**
+- Componente compartido `components/shared/paginacion.tsx`: barra con selector "Productos por página" (5/10/20/50) + "desde–hasta de total" + flechas.
+- **Productos** (y demás tablas): `TablaDatos` ya paginaba (react-table); se le sumó el **selector de tamaño** (5/10/20/50).
+- **POS, Proforma, Cotización:** los resultados de búsqueda ahora se paginan en el cliente con `<Paginacion>` (default 10). Al buscar de nuevo o cambiar el tamaño, vuelve a la página 1.
+
+**Prueba:** buscá productos en cualquiera de esas 3 pantallas (o abrí Productos) → abajo aparece "Productos por página" con 5/10/20/50 y las flechas; cambialo y navegá.
+
+---
+
 ## Próximas tareas
-(el cliente las va pasando de a una: T4, …)
+(el cliente las va pasando de a una: T5, …)

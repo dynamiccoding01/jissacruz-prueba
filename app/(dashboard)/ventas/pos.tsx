@@ -29,6 +29,7 @@ import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-c
 import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
 import { TIPOS_PAGO } from "@/lib/tipos-pago"
 import { avisarBusqueda } from "@/lib/avisar-busqueda"
+import { Paginacion } from "@/components/shared/paginacion"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import {
   buscarProductosParaVenta,
@@ -56,6 +57,8 @@ export function Pos() {
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
   const [clienteSel, setClienteSel] = useState<ClienteSel | null>(null)
+  const [pagina, setPagina] = useState(0)
+  const [tamano, setTamano] = useState(10)
   const buscadorRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -86,6 +89,7 @@ export function Pos() {
     valores.descuento_valor ?? 0,
     valores.impuesto_porcentaje ?? 0
   )
+  const resultadosPagina = resultados.slice(pagina * tamano, (pagina + 1) * tamano)
 
   function limpiar() {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -119,6 +123,7 @@ export function Pos() {
     setBuscando(false)
     setResultados(data)
     avisarBusqueda(data.length)
+    setPagina(0)
   }
 
   // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
@@ -307,8 +312,9 @@ export function Pos() {
 
         {/* 3. Resultados como filas (con botón Agregar) */}
         {resultados.length > 0 && (
-          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {resultados.map((r) => {
+          <>
+            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {resultadosPagina.map((r) => {
               const sinStock = r.stockSucursalActual <= 0
               return (
                 <div
@@ -362,7 +368,18 @@ export function Pos() {
                 </div>
               )
             })}
-          </div>
+            </div>
+            <Paginacion
+              total={resultados.length}
+              pagina={pagina}
+              tamano={tamano}
+              onPaginaChange={setPagina}
+              onTamanoChange={(t) => {
+                setTamano(t)
+                setPagina(0)
+              }}
+            />
+          </>
         )}
         {!buscando && busqueda.trim() && resultados.length === 0 && (
           <p className="text-sm text-muted-foreground">Sin resultados para &quot;{busqueda}&quot;.</p>

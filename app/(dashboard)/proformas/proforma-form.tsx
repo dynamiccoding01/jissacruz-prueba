@@ -35,6 +35,7 @@ import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import { formatearMedidas } from "@/lib/medidas"
 import { TIPOS_PAGO } from "@/lib/tipos-pago"
 import { avisarBusqueda } from "@/lib/avisar-busqueda"
+import { Paginacion } from "@/components/shared/paginacion"
 
 const VACIO: ProformaInput = {
   cliente_id: "",
@@ -58,6 +59,8 @@ export function ProformaForm() {
   const [resultados, setResultados] = useState<ProductoBusqueda[]>([])
   const [buscando, setBuscando] = useState(false)
   const [clienteSel, setClienteSel] = useState<ClienteSel | null>(null)
+  const [pagina, setPagina] = useState(0)
+  const [tamano, setTamano] = useState(10)
   const buscadorRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -85,6 +88,7 @@ export function ProformaForm() {
     valores.descuento_valor ?? 0,
     valores.impuesto_porcentaje ?? 0
   )
+  const resultadosPagina = resultados.slice(pagina * tamano, (pagina + 1) * tamano)
 
   // Consulta real al servidor.
   async function ejecutarBusqueda(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
@@ -97,6 +101,7 @@ export function ProformaForm() {
     setBuscando(false)
     setResultados(data)
     avisarBusqueda(data.length)
+    setPagina(0)
   }
 
   // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
@@ -227,8 +232,9 @@ export function ProformaForm() {
         {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
 
         {resultados.length > 0 && (
-          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {resultados.map((r) => (
+          <>
+            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {resultadosPagina.map((r) => (
               <div key={r.id} className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <span className="text-base font-semibold">{r.codigo}</span>
@@ -263,7 +269,18 @@ export function ProformaForm() {
                 </Button>
               </div>
             ))}
-          </div>
+            </div>
+            <Paginacion
+              total={resultados.length}
+              pagina={pagina}
+              tamano={tamano}
+              onPaginaChange={setPagina}
+              onTamanoChange={(t) => {
+                setTamano(t)
+                setPagina(0)
+              }}
+            />
+          </>
         )}
         {!buscando && busqueda.trim() && resultados.length === 0 && (
           <p className="text-sm text-muted-foreground">Sin resultados para &quot;{busqueda}&quot;.</p>

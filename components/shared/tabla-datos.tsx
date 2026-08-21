@@ -22,6 +22,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export function TablaDatos<TData, TValue>({
   columns,
@@ -110,10 +117,25 @@ export function TablaDatos<TData, TValue>({
 
       {!loading && totalFilas > 0 && (
         <div className="flex items-center justify-between px-1">
-          <p className="text-xs text-muted-foreground">
-            Mostrando {pageIndex * pageSize + 1}–
-            {Math.min((pageIndex + 1) * pageSize, totalFilas)} de {totalFilas}
-          </p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Por página</span>
+            <Select value={String(pageSize)} onValueChange={(v) => table.setPageSize(Number(v))}>
+              <SelectTrigger className="h-8 w-[4.5rem]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[5, 10, 20, 50].map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="tabular-nums">
+              Mostrando {pageIndex * pageSize + 1}–
+              {Math.min((pageIndex + 1) * pageSize, totalFilas)} de {totalFilas}
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"

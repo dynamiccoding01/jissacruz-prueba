@@ -14,6 +14,7 @@ import {
 } from "@/components/shared/criterios-busqueda"
 import { precioSegunCantidad } from "@/lib/precios-mayor"
 import { avisarBusqueda } from "@/lib/avisar-busqueda"
+import { Paginacion } from "@/components/shared/paginacion"
 import { buscarProductosParaCotizacion, type ProductoCotizacion } from "./actions"
 
 const bs = (n: number) => `Bs ${Number(n).toFixed(2)}`
@@ -32,6 +33,8 @@ export function Cotizador() {
   const [campos, setCampos] = useState<CampoBusqueda[]>(CAMPOS_DEFECTO)
   const [resultados, setResultados] = useState<ProductoCotizacion[]>([])
   const [buscando, setBuscando] = useState(false)
+  const [pagina, setPagina] = useState(0)
+  const [tamano, setTamano] = useState(10)
   const [items, setItems] = useState<ItemCotizacion[]>([])
   // precio base + escalas por producto agregado, para ajustar el precio al cambiar
   // la cantidad (igual que el POS). No se persiste nada.
@@ -43,6 +46,7 @@ export function Cotizador() {
     () => items.reduce((acc, i) => acc + (Number(i.cantidad) || 0) * (Number(i.precio_unitario) || 0), 0),
     [items]
   )
+  const resultadosPagina = resultados.slice(pagina * tamano, (pagina + 1) * tamano)
 
   // Consulta real al servidor.
   async function ejecutarBusqueda(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
@@ -55,6 +59,7 @@ export function Cotizador() {
     setBuscando(false)
     setResultados(data)
     avisarBusqueda(data.length)
+    setPagina(0)
   }
 
   // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
@@ -163,8 +168,9 @@ export function Cotizador() {
         {buscando && <p className="text-sm text-muted-foreground">Buscando...</p>}
 
         {resultados.length > 0 && (
-          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {resultados.map((r) => (
+          <>
+            <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              {resultadosPagina.map((r) => (
               <div key={r.id} className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -206,7 +212,18 @@ export function Cotizador() {
                 </Button>
               </div>
             ))}
-          </div>
+            </div>
+            <Paginacion
+              total={resultados.length}
+              pagina={pagina}
+              tamano={tamano}
+              onPaginaChange={setPagina}
+              onTamanoChange={(t) => {
+                setTamano(t)
+                setPagina(0)
+              }}
+            />
+          </>
         )}
         {!buscando && busqueda.trim() && resultados.length === 0 && (
           <p className="text-sm text-muted-foreground">Sin resultados para &quot;{busqueda}&quot;.</p>
