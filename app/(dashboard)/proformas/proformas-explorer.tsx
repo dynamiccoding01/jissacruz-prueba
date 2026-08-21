@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { TablaDatos } from "@/components/shared/tabla-datos"
-import { ProformaForm } from "./proforma-form"
 
 export type ProformaFila = {
   id: string
@@ -214,13 +213,11 @@ export function ProformasExplorer({
           </div>
         </div>
 
-        <ProformaForm
-          trigger={
-            <Button>
-              <Plus className="size-4" /> Nueva proforma
-            </Button>
-          }
-        />
+        <Button asChild>
+          <Link href="/proformas/nueva">
+            <Plus className="size-4" /> Nueva proforma
+          </Link>
+        </Button>
       </div>
 
       <TablaDatos columns={columns} data={filtradas} mensajeVacio="Todavía no hay proformas." />

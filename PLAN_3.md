@@ -32,5 +32,16 @@
 
 ---
 
+## T3 — Todo en una sola pantalla (sin carrito flotante) ✅ COMPLETADO (2026-08-16)
+
+**Qué pide:** sacar el carrito flotante del POS y que la venta se arme en **una sola pantalla** (cliente + pago + buscador + resultados en filas con "Agregar" + pedido + totales), como el sistema de referencia de las fotos. Replicar el formato a Cotización y Proforma.
+
+**Avance:**
+- ✅ **POS (Ventas)** (`d5ad49a`): reescrito como página única, sin modal/carrito flotante. Resultados en filas con "Agregar"; quedan a la vista para sumar varios. Toda la lógica intacta (stock, S/F, tipo de pago, Sin nombre, descuentos, PDF).
+- ✅ **Cotización** (`6023d9c`): mismo formato de una pantalla. Mantiene Imprimir/Limpiar.
+- ✅ **Proforma:** convertida de **modal a página** (`/proformas/nueva`). El botón "Nueva proforma" de la lista ahora navega a esa página. Mismo formato (cliente/pago, buscador con resultados en filas, ítems + totales, "Crear proforma"). El "Sin nombre" no va acá (es solo para ventas, T1).
+
+---
+
 ## Próximas tareas
-(el cliente las va pasando de a una: T3, …)
+(el cliente las va pasando de a una: T4, …)
