@@ -56,5 +56,15 @@
 
 ---
 
+## T5 — Cotización solo con productos sin factura (S/F) ✅ COMPLETADO (2026-08-16)
+
+**Qué pide:** en Cotización deben aparecer **únicamente** productos sin factura (S/F).
+
+**Cómo quedó:** `buscarProductosParaCotizacion` (cotizacion/actions.ts) filtra los resultados a `con_factura = false`; solo esos productos aparecen al buscar en Cotización. Se agregó una aclaración en pantalla ("Solo se muestran productos sin factura (S/F)").
+
+**Prueba:** en Cotización buscá algo → solo salen los productos marcados **S/F** (los "con factura" no aparecen). Cambiá el S/F de un producto en Productos y verificá que entra/sale de la cotización.
+
+---
+
 ## Próximas tareas
-(el cliente las va pasando de a una: T5, …)
+(el cliente las va pasando de a una: T6, …)

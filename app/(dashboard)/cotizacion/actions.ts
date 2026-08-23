@@ -36,14 +36,15 @@ export async function buscarProductosParaCotizacion(
     return []
   }
 
-  const filas = (data ?? []) as {
+  // T5 (PLAN_3): la Cotización muestra ÚNICAMENTE productos SIN factura (S/F).
+  const filas = ((data ?? []) as {
     id: string
     codigo: string
     descripcion: string
     precio: number
     unidad_medida: string
     con_factura: boolean
-  }[]
+  }[]).filter((p) => p.con_factura === false)
   const ids = filas.map((p) => p.id)
   const [escalas, datos] = await Promise.all([
     escalasVigentesPorProducto(supabase, ids),

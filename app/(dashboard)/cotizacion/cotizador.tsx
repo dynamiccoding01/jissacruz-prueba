@@ -230,7 +230,8 @@ export function Cotizador() {
         )}
         {!busqueda.trim() && (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Buscá productos para armar la cotización. No se descuenta stock ni se guarda nada.
+            Buscá productos para armar la cotización. <strong>Solo se muestran productos sin
+            factura (S/F).</strong> No se descuenta stock ni se guarda nada.
           </p>
         )}
       </div>
