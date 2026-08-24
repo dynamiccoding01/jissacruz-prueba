@@ -82,6 +82,40 @@ export async function updateProducto(id: string, values: ProductoFormInput) {
   return guardarProducto(id, values)
 }
 
+// T6 (PLAN_3) · "Registrar un producto que ya existe para vender sin factura":
+// clona un producto como uno NUEVO sin factura (S/F). Copia toda la ficha y sus
+// hijos (equivalentes, originales, medidas, vehículos, precios por mayor) EXCEPTO
+// precio y stock: el precio se define en su primera compra y el stock nace en 0
+// porque el producto nuevo todavía no tiene kardex. El código lleva el sufijo SF.
+// Es un INSERT normal por la misma RPC transaccional (p_id = null).
+export async function clonarProductoSinFactura(id: string) {
+  const { producto, codigos, originales, medidas, precios_mayor, vehiculos } =
+    await getProductoConDetalle(id)
+
+  if (!producto) {
+    return { error: "No se encontró el producto a clonar." }
+  }
+
+  const input: ProductoFormInput = {
+    codigo: `${producto.codigo}SF`,
+    descripcion: producto.descripcion,
+    linea_marca: producto.linea_marca ?? "",
+    unidad_medida: producto.unidad_medida,
+    unidad_medida_id: producto.unidad_medida_id ?? null,
+    precio: 0, // no se clona el precio
+    stock_minimo: producto.stock_minimo,
+    imagen_url: producto.imagen_url,
+    con_factura: false, // producto sin factura (S/F)
+    codigos_equivalentes: codigos,
+    codigos_originales: originales,
+    medidas,
+    vehiculos_compatibles: vehiculos,
+    precios_mayor,
+  }
+
+  return guardarProducto(null, input)
+}
+
 export async function deleteProducto(id: string) {
   const supabase = await createClient()
   const { error } = await supabase.from("productos").update({ activo: false }).eq("id", id)

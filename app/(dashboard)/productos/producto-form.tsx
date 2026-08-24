@@ -21,7 +21,12 @@ import {
 } from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import { productoSchema, type ProductoFormInput } from "@/lib/validations/producto"
-import { createProducto, getProductoConDetalle, updateProducto } from "./actions"
+import {
+  clonarProductoSinFactura,
+  createProducto,
+  getProductoConDetalle,
+  updateProducto,
+} from "./actions"
 import { listarUnidadesActivas } from "../unidades-medida/actions"
 
 const VACIO: ProductoFormInput = {
@@ -54,6 +59,7 @@ export function ProductoForm({
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [clonando, setClonando] = useState(false)
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
   // Ultimo costo de compra del producto (null si nunca se compro): el precio de
   // venta tiene que superarlo.
@@ -68,6 +74,7 @@ export function ProductoForm({
     reset,
     watch,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<ProductoFormInput>({
     resolver: zodResolver(productoSchema),
@@ -81,6 +88,7 @@ export function ProductoForm({
   const preciosMayorArray = useFieldArray({ control, name: "precios_mayor" })
   const imagenUrl = watch("imagen_url")
   const precioActual = Number(watch("precio") ?? 0)
+  const conFactura = watch("con_factura")
 
   useEffect(() => {
     if (!open) return
@@ -137,6 +145,36 @@ export function ProductoForm({
     onSaved?.()
   }
 
+  // T6 (PLAN_3) · alta de producto S/F: al tildar "sin factura" se marca
+  // con_factura = false y se autocompleta el código con el sufijo SF (al destildar
+  // se quita). El código sigue siendo editable a mano.
+  function onToggleSinFactura(e: React.ChangeEvent<HTMLInputElement>) {
+    const sinFactura = e.target.checked
+    setValue("con_factura", !sinFactura)
+    const actual = getValues("codigo") ?? ""
+    if (sinFactura) {
+      if (!/SF$/i.test(actual)) setValue("codigo", `${actual}SF`)
+    } else {
+      setValue("codigo", actual.replace(/SF$/i, ""))
+    }
+  }
+
+  // T6 (PLAN_3) · desde un producto existente, crear su versión sin factura (S/F)
+  // como un producto NUEVO clonado (código + SF, sin precio ni stock).
+  async function onClonarSinFactura() {
+    if (!productoId) return
+    setClonando(true)
+    const result = await clonarProductoSinFactura(productoId)
+    setClonando(false)
+    if (result.error) {
+      toast.error(result.error)
+      return
+    }
+    toast.success("Producto sin factura (S/F) creado.")
+    setOpen(false)
+    onSaved?.()
+  }
+
   async function onImagenSeleccionada(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -174,10 +212,79 @@ export function ProductoForm({
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-6">
             <fieldset disabled={readOnly} className="m-0 space-y-6 border-0 p-0">
             <div className="space-y-4">
+              {/* T6 (PLAN_3) · producto sin factura (S/F), arriba del código.
+                  Alta: check que marca S/F y agrega el sufijo SF al código.
+                  Edición: botón que clona el producto como uno nuevo S/F. */}
+              {readOnly ? (
+                conFactura === false && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
+                    Producto sin factura (S/F)
+                  </div>
+                )
+              ) : productoId ? (
+                <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+                  <span className="text-sm text-muted-foreground">
+                    ¿También lo vendés sin factura? Creá una copia S/F de este producto.
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={onClonarSinFactura}
+                    disabled={clonando}
+                  >
+                    {clonando ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" /> Creando...
+                      </>
+                    ) : (
+                      "Crear este producto sin factura"
+                    )}
+                  </Button>
+                </div>
+              ) : (
+                <label htmlFor="sin_factura" className="flex items-center gap-2 text-sm">
+                  <input
+                    id="sin_factura"
+                    type="checkbox"
+                    className="size-4 rounded border-input accent-primary"
+                    checked={conFactura === false}
+                    onChange={onToggleSinFactura}
+                  />
+                  <span>
+                    Registrar este producto para <strong>vender sin factura</strong> (S/F) — se
+                    agrega <strong>SF</strong> al código
+                  </span>
+                </label>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="codigo">Código</Label>
-                  <Input id="codigo" {...register("codigo")} />
+                  {conFactura === false ? (
+                    // T6 (PLAN_3) · producto S/F: el sufijo SF es obligatorio y NO
+                    // editable. El input maneja solo la parte base del código; "SF"
+                    // va fijo a la derecha y siempre se guarda al final.
+                    <div className="flex items-stretch">
+                      <Input
+                        id="codigo"
+                        className="rounded-r-none border-r-0"
+                        placeholder="Código"
+                        value={(watch("codigo") ?? "").replace(/SF$/i, "")}
+                        onChange={(e) =>
+                          setValue("codigo", `${e.target.value.replace(/SF$/i, "")}SF`, {
+                            shouldValidate: true,
+                          })
+                        }
+                      />
+                      <span className="inline-flex items-center rounded-r-md border border-l-0 border-input bg-muted px-3 text-sm font-semibold text-muted-foreground">
+                        SF
+                      </span>
+                    </div>
+                  ) : (
+                    <Input id="codigo" {...register("codigo")} />
+                  )}
                   {errors.codigo && (
                     <p className="text-sm text-destructive">{errors.codigo.message}</p>
                   )}
@@ -269,19 +376,6 @@ export function ProductoForm({
                   <Input id="stock_minimo" type="number" {...register("stock_minimo")} />
                 </div>
               </div>
-
-              <label htmlFor="con_factura" className="flex items-center gap-2 text-sm">
-                <input
-                  id="con_factura"
-                  type="checkbox"
-                  className="size-4 rounded border-input accent-primary"
-                  {...register("con_factura")}
-                />
-                <span>
-                  Se vende <strong>con factura</strong> — destildá para marcarlo{" "}
-                  <strong>S/F</strong> (sin factura)
-                </span>
-              </label>
 
               <div className="space-y-2">
                 <Label htmlFor="imagen">Imagen</Label>

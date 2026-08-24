@@ -66,5 +66,22 @@
 
 ---
 
+## T6 — Crear producto sin factura (S/F) ✅ COMPLETADO (2026-08-23)
+
+**Qué pide:** reemplazar el checkbox "Se vende con factura…" por **dos formas de dar de alta un producto sin factura (S/F)**, con el sufijo **SF** en el código:
+1. **Producto nuevo S/F:** en el alta, **arriba del input de código**, un check para marcar que el producto se vende sin factura; ese check **autocompleta el código con SF**.
+2. **Producto existente → S/F:** en la edición de un producto, un botón **"Crear este producto sin factura"** que **clona** toda la ficha (menos **stock** y **precio**) como un producto nuevo, con **SF** al final del código. Es un `insert` a `productos`.
+
+**Cómo quedó:**
+- Se **quitó** el viejo check `con_factura` de la mitad del formulario ([producto-form.tsx](<app/(dashboard)/productos/producto-form.tsx>)) y se puso un bloque **arriba del código**: en **alta** es el check "Registrar este producto para vender sin factura (S/F)" (tilda ⇒ `con_factura = false` y agrega `SF` al código; destilda ⇒ lo quita); en **edición** es el botón **"Crear este producto sin factura"**; en modo **ver** muestra un cartel "Producto sin factura (S/F)".
+- Nueva server action `clonarProductoSinFactura(id)` en [productos/actions.ts](<app/(dashboard)/productos/actions.ts>): lee el producto + hijos (equivalentes, originales, medidas, vehículos, precios por mayor), arma la copia con `codigo = codigo + "SF"`, `con_factura = false`, **`precio = 0`** (no se clona) y la inserta por la misma RPC transaccional `fn_guardar_producto` (`p_id = null`). El **stock** no se clona: el producto nuevo nace en 0 porque todavía no tiene kardex. Si el código ya existe (`23505`) avisa "Ya existe un producto con ese código".
+- **Sin script SQL** (usa `productos.con_factura` de PLAN_2 T6 y la RPC existente). Verificado con `tsc --noEmit` y `next lint` OK.
+
+**Prueba:**
+- **Alta:** Productos → Nuevo → tildá el check de arriba → el código se completa con `…SF` y queda S/F → Guardar → aparece con badge **S/F** en la lista.
+- **Clonar:** Productos → editar un producto con factura → **"Crear este producto sin factura"** → se crea uno nuevo con el mismo detalle, código `…SF`, sin precio ni stock, badge **S/F**.
+
+---
+
 ## Próximas tareas
-(el cliente las va pasando de a una: T6, …)
+(el cliente las va pasando de a una: T7, …)
