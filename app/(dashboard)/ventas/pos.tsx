@@ -446,13 +446,12 @@ export function Pos() {
                       <p className="truncate text-sm font-semibold">{field.codigo}</p>
                       <p className="truncate text-xs text-muted-foreground">{field.descripcion}</p>
                     </div>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      className="h-9 text-right text-sm"
-                      {...register(`items.${index}.precio_unitario`)}
-                    />
+                    {/* T2 (PLAN_4): el precio NO se edita a mano en el POS. Se
+                        muestra de solo lectura; el valor sigue en el form (se fija
+                        al agregar y se ajusta solo por mayoreo según la cantidad). */}
+                    <span className="whitespace-nowrap px-1 text-right text-sm font-medium tabular-nums">
+                      {bs(Number(linea?.precio_unitario) || 0)}
+                    </span>
                     <div className="flex gap-1">
                       <Select
                         value={linea?.descuento_tipo ?? "ninguno"}
