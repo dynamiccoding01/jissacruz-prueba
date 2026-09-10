@@ -56,7 +56,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Ventas",
     items: [
       { label: "Clientes", href: "/clientes", icon: Users, roles: ["admin", "vendedor", "cajero"] },
-      { label: "Cotización", href: "/cotizacion", icon: Calculator, roles: ["admin", "vendedor", "cajero"] },
+      { label: "Cotización S/F", href: "/cotizacion", icon: Calculator, roles: ["admin", "vendedor", "cajero"] },
       { label: "Proformas", href: "/proformas", icon: FileText, roles: ["admin", "vendedor"] },
       { label: "Ventas (POS)", href: "/ventas", icon: CreditCard, roles: ["admin", "cajero"] },
     ],
