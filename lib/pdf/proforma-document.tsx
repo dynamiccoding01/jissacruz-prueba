@@ -121,12 +121,19 @@ export function ProformaDocument({
   proforma,
   items,
   logo,
+  variante = "proforma",
 }: {
   empresa: Empresa
   proforma: ProformaPdf
   items: ProformaItemPdf[]
   logo?: string | null
+  // La cotización S/F (PLAN_4) reusa este mismo documento cambiando solo el
+  // título y una línea del pie; el resto (cliente, glosa, tabla, total en
+  // literal, validez y tiempo de entrega) es idéntico.
+  variante?: "proforma" | "cotizacion"
 }) {
+  const esCotizacion = variante === "cotizacion"
+  const rotulo = esCotizacion ? "COTIZACIÓN" : "PROFORMA"
   const descMonto =
     proforma.descuento_tipo === "porcentaje"
       ? (proforma.subtotal * Number(proforma.descuento_valor)) / 100
@@ -172,7 +179,7 @@ export function ProformaDocument({
 
           {/* Derecha: título / FECHA / VENDEDOR (P1, P2, P3) */}
           <View style={styles.tituloBloque}>
-            <Text style={styles.titulo}>PROFORMA No. {numeroCorto}</Text>
+            <Text style={styles.titulo}>{rotulo} No. {numeroCorto}</Text>
             <Text style={styles.metaRight}>
               Fecha: {format(new Date(proforma.creado_en), "dd/MM/yyyy")}
             </Text>
@@ -269,7 +276,7 @@ export function ProformaDocument({
         <Text style={styles.literal}>Son: {importeALiteral(proforma.total)}</Text>
 
         <Text style={styles.pie}>
-          Proforma sin valor fiscal. Precios en bolivianos (Bs).{"\n"}
+          {rotulo.charAt(0) + rotulo.slice(1).toLowerCase()} sin valor fiscal. Precios en bolivianos (Bs).{"\n"}
           Válida hasta el {fechaVence} ({proforma.plazo_validez_dias} día(s) desde la emisión).
           {proforma.tiempo_entrega_dias != null
             ? ` Tiempo de entrega: ${proforma.tiempo_entrega_dias} día(s).`

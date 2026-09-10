@@ -65,7 +65,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T5 — Guardar cada cotización + persistencia (base del módulo) ⬜ PENDIENTE
+## T5 — Guardar cada cotización + persistencia (base del módulo) ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ falta correr `39_cotizaciones.sql` en dev+prod
 
 > Se hace **antes** de T6/T7/T3/T4 porque es la base: sin guardar no hay historial.
 
@@ -88,7 +88,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T6 — Que Cotización abra mostrando el historial (default: hoy) ⬜ PENDIENTE
+## T6 — Que Cotización abra mostrando el historial (default: hoy) ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
 
 **Qué pide:** al apretar **"Cotización S/F"** en el sidebar, que lo primero sea el **historial** — las cotizaciones **del día por defecto**, paginadas, con un selector de fechas **desde/hasta**, y el botón **"Nueva cotización"** arriba.
 
@@ -104,7 +104,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T7 — Glosa en la cotización ⬜ PENDIENTE
+## T7 — Glosa en la cotización ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
 
 **Qué pide:** un campo **Glosa** al hacer la cotización (ej.: "ya le di adelanto", etc.).
 
@@ -116,7 +116,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T3 — Mostrar la Unidad de los productos en Cotización ⬜ PENDIENTE
+## T3 — Mostrar la Unidad de los productos en Cotización ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
 
 **Qué pide:** que Cotización esté bien estructurada como las demás (facturación/ventas) y muestre la **Unidad de medida** de los productos — hoy en Cotización no aparece.
 
@@ -130,7 +130,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T4 — Precio por mayorista y Marca (Línea) en Cotización ⬜ PENDIENTE
+## T4 — Precio por mayorista y Marca (Línea) en Cotización ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
 
 **Qué pide:** que en Cotización esté también el **precio por mayorista** y la **marca**.
 
