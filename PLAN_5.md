@@ -77,7 +77,7 @@
 
 ---
 
-## T5 — Nuevo módulo CAJA: confirmar ventas ⬜ PENDIENTE (mini-etapa)
+## T5 — Nuevo módulo CAJA: confirmar ventas ✅ CÓDIGO LISTO (2026-09-11) — ⚠️ falta correr `40_ventas_pendientes.sql` en dev+prod
 
 **Qué pide:** separar el flujo de ventas en dos pasos. El **vendedor crea** un pedido en el POS (sin cobrar, sin mover stock) y el **cajero confirma/cobra** en un módulo nuevo **CAJA**, que lista los pedidos pendientes de otros usuarios.
 
