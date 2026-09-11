@@ -80,6 +80,9 @@ export function ProformaForm() {
   // C3: precio base + escalas vigentes por producto agregado, para recalcular
   // el precio unitario cuando cambia la cantidad.
   const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
+  // T1 (PLAN_5): stock por sucursal de cada producto agregado, para AVISAR (sin
+  // bloquear) si la cantidad de la proforma lo supera.
+  const stockRef = useRef(new Map<string, number>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
   const totales = calcularTotales(
@@ -128,12 +131,29 @@ export function ProformaForm() {
     setValue(`items.${index}.precio_unitario`, precioSegunCantidad(info.base, info.escalas, cantidad))
   }
 
+  // T1 (PLAN_5): ajusta el precio por mayoreo y AVISA (sin bloquear) si la
+  // cantidad supera el stock de la sucursal.
+  function onCantidadChange(index: number, productoId: string, raw: string) {
+    const cantidad = Number(raw)
+    ajustarPrecioPorCantidad(index, productoId, cantidad)
+    const stock = stockRef.current.get(productoId)
+    if (stock != null && Number.isFinite(cantidad) && cantidad > stock) {
+      toast.warning(`Hay ${stock} en stock en tu sucursal; estás proformando ${cantidad}.`)
+    }
+  }
+
   function agregarProducto(p: ProductoBusqueda) {
+    // T4 (PLAN_5): no se puede proformar un producto sin precio (precio 0).
+    if (p.precio <= 0) {
+      toast.error("Ese producto no tiene precio; asignale un precio antes de agregarlo.")
+      return
+    }
     if (items.fields.some((f) => f.producto_id === p.id)) {
       toast.error("Ese producto ya está en la proforma.")
       return
     }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
+    stockRef.current.set(p.id, p.stock)
     items.append({
       producto_id: p.id,
       codigo: p.codigo,
@@ -234,10 +254,19 @@ export function ProformaForm() {
         {resultados.length > 0 && (
           <>
             <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-              {resultadosPagina.map((r) => (
-              <div key={r.id} className="flex items-center gap-3 p-3">
+              {resultadosPagina.map((r) => {
+              const sinPrecio = r.precio <= 0
+              return (
+              <div key={r.id} className={`flex items-center gap-3 p-3 ${sinPrecio ? "opacity-60" : ""}`}>
                 <div className="min-w-0 flex-1">
-                  <span className="text-base font-semibold">{r.codigo}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-semibold">{r.codigo}</span>
+                    {sinPrecio && (
+                      <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                        sin precio
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">{r.descripcion}</p>
                   {r.medidas.length > 0 && (
                     <p className="text-xs text-muted-foreground">
@@ -261,14 +290,16 @@ export function ProformaForm() {
                 <Button
                   type="button"
                   size="sm"
+                  disabled={sinPrecio}
                   onClick={() => agregarProducto(r)}
                   className="shrink-0"
-                  title="Agregar a la proforma"
+                  title={sinPrecio ? "Sin precio: asignale un precio primero" : "Agregar a la proforma"}
                 >
                   <Plus className="size-4" /> Agregar
                 </Button>
               </div>
-            ))}
+              )
+            })}
             </div>
             <Paginacion
               total={resultados.length}
@@ -340,8 +371,7 @@ export function ProformaForm() {
                       min={1}
                       className="h-9 text-center text-sm font-medium"
                       {...register(`items.${index}.cantidad`, {
-                        onChange: (e) =>
-                          ajustarPrecioPorCantidad(index, field.producto_id, Number(e.target.value)),
+                        onChange: (e) => onCantidadChange(index, field.producto_id, e.target.value),
                       })}
                     />
                     <div className="min-w-0">

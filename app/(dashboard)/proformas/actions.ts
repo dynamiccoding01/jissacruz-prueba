@@ -8,6 +8,7 @@ import { getPerfil } from "@/lib/auth/session"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
+import { stockSucursalPorProducto } from "@/lib/stock-sucursal-server"
 import type { Medida } from "@/lib/medidas"
 import {
   proformaSchema,
@@ -29,6 +30,9 @@ export type ProductoBusqueda = {
   unidad: string
   medidas: Medida[]
   originales: string[]
+  // T1 (PLAN_5): stock en la sucursal del usuario, para avisar si la cantidad
+  // de la proforma lo supera (aviso, no bloqueo).
+  stock: number
 }
 
 export async function buscarProductosParaProforma(
@@ -36,6 +40,8 @@ export async function buscarProductosParaProforma(
   campos: string[] = []
 ): Promise<ProductoBusqueda[]> {
   const supabase = await createClient()
+  const perfil = await getPerfil()
+  const sucursalId = perfil?.sucursal_id ?? null
   const { data, error } = await supabase.rpc("fn_buscar_productos", {
     p_query: query,
     p_campos: campos,
@@ -53,9 +59,10 @@ export async function buscarProductosParaProforma(
     unidad_medida: string
   }[]
   const ids = filas.map((p) => p.id)
-  const [escalas, datos] = await Promise.all([
+  const [escalas, datos, stock] = await Promise.all([
     escalasVigentesPorProducto(supabase, ids),
     datosBusquedaPorProducto(supabase, ids),
+    stockSucursalPorProducto(supabase, ids, sucursalId),
   ])
   return filas.map((p) => ({
     id: p.id,
@@ -66,6 +73,7 @@ export async function buscarProductosParaProforma(
     unidad: p.unidad_medida,
     medidas: datos.get(p.id)?.medidas ?? [],
     originales: datos.get(p.id)?.originales ?? [],
+    stock: stock.get(p.id) ?? 0,
   }))
 }
 

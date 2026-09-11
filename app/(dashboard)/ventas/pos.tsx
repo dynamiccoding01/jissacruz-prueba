@@ -163,6 +163,11 @@ export function Pos() {
   }
 
   function agregarProducto(p: ProductoBusqueda) {
+    // Sin precio (PLAN_5): no se puede vender un producto a precio 0.
+    if (p.precio <= 0) {
+      toast.error("Ese producto no tiene precio; asignale un precio antes de agregarlo.")
+      return
+    }
     // No se puede vender lo que no hay en la sucursal desde la que opera el POS.
     if (p.stockSucursalActual <= 0) {
       toast.error(
@@ -316,10 +321,12 @@ export function Pos() {
             <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
               {resultadosPagina.map((r) => {
               const sinStock = r.stockSucursalActual <= 0
+              const sinPrecio = r.precio <= 0
+              const bloqueado = sinStock || sinPrecio
               return (
                 <div
                   key={r.id}
-                  className={cn("flex items-center gap-3 p-3", sinStock && "opacity-60")}
+                  className={cn("flex items-center gap-3 p-3", bloqueado && "opacity-60")}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -327,6 +334,11 @@ export function Pos() {
                       {!r.con_factura && (
                         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
                           S/F
+                        </span>
+                      )}
+                      {sinPrecio && (
+                        <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                          sin precio
                         </span>
                       )}
                       <StockBadge
@@ -358,10 +370,16 @@ export function Pos() {
                   <Button
                     type="button"
                     size="sm"
-                    disabled={sinStock}
+                    disabled={bloqueado}
                     onClick={() => agregarProducto(r)}
                     className="shrink-0"
-                    title={sinStock ? "Sin stock en tu sucursal" : "Agregar al pedido"}
+                    title={
+                      sinPrecio
+                        ? "Sin precio: asignale un precio primero"
+                        : sinStock
+                          ? "Sin stock en tu sucursal"
+                          : "Agregar al pedido"
+                    }
                   >
                     <Plus className="size-4" /> Agregar
                   </Button>

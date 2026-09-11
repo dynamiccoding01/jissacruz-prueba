@@ -8,6 +8,7 @@ import { getPerfil } from "@/lib/auth/session"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
+import { stockSucursalPorProducto } from "@/lib/stock-sucursal-server"
 import type { Medida } from "@/lib/medidas"
 import {
   cotizacionSchema,
@@ -29,6 +30,8 @@ export type ProductoCotizacion = {
   unidad: string
   // T4 (PLAN_4): marca/línea del producto, para mostrarla en la cotización.
   linea_marca: string | null
+  // T2 (PLAN_5): stock en la sucursal del usuario, para el tope duro de cantidad.
+  stock: number
   medidas: Medida[]
   originales: string[]
   con_factura: boolean
@@ -39,6 +42,8 @@ export async function buscarProductosParaCotizacion(
   campos: string[] = []
 ): Promise<ProductoCotizacion[]> {
   const supabase = await createClient()
+  const perfil = await getPerfil()
+  const sucursalId = perfil?.sucursal_id ?? null
   const { data, error } = await supabase.rpc("fn_buscar_productos", {
     p_query: query,
     p_campos: campos,
@@ -59,9 +64,10 @@ export async function buscarProductosParaCotizacion(
     con_factura: boolean
   }[]).filter((p) => p.con_factura === false)
   const ids = filas.map((p) => p.id)
-  const [escalas, datos] = await Promise.all([
+  const [escalas, datos, stock] = await Promise.all([
     escalasVigentesPorProducto(supabase, ids),
     datosBusquedaPorProducto(supabase, ids),
+    stockSucursalPorProducto(supabase, ids, sucursalId),
   ])
   return filas.map((p) => ({
     id: p.id,
@@ -71,6 +77,7 @@ export async function buscarProductosParaCotizacion(
     escalas: escalas.get(p.id) ?? [],
     unidad: p.unidad_medida,
     linea_marca: p.linea_marca ?? null,
+    stock: stock.get(p.id) ?? 0,
     medidas: datos.get(p.id)?.medidas ?? [],
     originales: datos.get(p.id)?.originales ?? [],
     con_factura: p.con_factura ?? true,

@@ -79,6 +79,9 @@ export function Cotizador() {
   // Precio base + escalas vigentes por producto agregado, para recalcular el
   // precio unitario cuando cambia la cantidad (mayoreo, igual que el POS).
   const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
+  // T2 (PLAN_5): stock por sucursal de cada producto agregado, para el tope
+  // DURO de cantidad (no se puede cotizar más de lo que hay).
+  const stockRef = useRef(new Map<string, number>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
   const totales = calcularTotales(
@@ -124,12 +127,35 @@ export function Cotizador() {
     setValue(`items.${index}.precio_unitario`, precioSegunCantidad(info.base, info.escalas, cantidad))
   }
 
+  // T2 (PLAN_5): tope DURO — limita la cantidad al stock de la sucursal.
+  function onCantidadChange(index: number, productoId: string, raw: string) {
+    const max = stockRef.current.get(productoId) ?? Infinity
+    let cantidad = Number(raw)
+    if (Number.isFinite(cantidad) && cantidad > max) {
+      cantidad = max
+      setValue(`items.${index}.cantidad`, max)
+      toast.error(`Solo hay ${max} en stock en tu sucursal.`)
+    }
+    ajustarPrecioPorCantidad(index, productoId, cantidad)
+  }
+
   function agregarProducto(p: ProductoCotizacion) {
+    // T3 (PLAN_5): no se puede cotizar un producto sin precio (precio 0).
+    if (p.precio <= 0) {
+      toast.error("Ese producto no tiene precio; asignale un precio antes de agregarlo.")
+      return
+    }
+    // T2 (PLAN_5): tope duro — no se puede cotizar sin stock en la sucursal.
+    if (p.stock <= 0) {
+      toast.error("Ese producto no tiene stock en tu sucursal.")
+      return
+    }
     if (items.fields.some((f) => f.producto_id === p.id)) {
       toast.error("Ese producto ya está en la cotización.")
       return
     }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
+    stockRef.current.set(p.id, p.stock)
     items.append({
       producto_id: p.id,
       codigo: p.codigo,
@@ -242,8 +268,12 @@ export function Cotizador() {
         {resultados.length > 0 && (
           <>
             <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-              {resultadosPagina.map((r) => (
-                <div key={r.id} className="flex items-center gap-3 p-3">
+              {resultadosPagina.map((r) => {
+                const sinPrecio = r.precio <= 0
+                const sinStock = r.stock <= 0
+                const bloqueado = sinPrecio || sinStock
+                return (
+                <div key={r.id} className={`flex items-center gap-3 p-3 ${bloqueado ? "opacity-60" : ""}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-base font-semibold">{r.codigo}</span>
@@ -252,8 +282,19 @@ export function Cotizador() {
                           S/F
                         </span>
                       )}
+                      {sinPrecio && (
+                        <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                          sin precio
+                        </span>
+                      )}
+                      {!sinPrecio && sinStock && (
+                        <span className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] font-bold text-gray-700">
+                          sin stock
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">{r.descripcion}</p>
+                    <p className="text-xs text-muted-foreground">Stock en tu sucursal: {r.stock}</p>
                     {r.linea_marca && (
                       <p className="text-xs text-muted-foreground">Línea: {r.linea_marca}</p>
                     )}
@@ -288,14 +329,22 @@ export function Cotizador() {
                   <Button
                     type="button"
                     size="sm"
+                    disabled={bloqueado}
                     onClick={() => agregarProducto(r)}
                     className="shrink-0"
-                    title="Agregar a la cotización"
+                    title={
+                      sinPrecio
+                        ? "Sin precio: asignale un precio primero"
+                        : sinStock
+                          ? "Sin stock en tu sucursal"
+                          : "Agregar a la cotización"
+                    }
                   >
                     <Plus className="size-4" /> Agregar
                   </Button>
                 </div>
-              ))}
+                )
+              })}
             </div>
             <Paginacion
               total={resultados.length}
@@ -371,10 +420,10 @@ export function Cotizador() {
                     <Input
                       type="number"
                       min={1}
+                      max={stockRef.current.get(field.producto_id)}
                       className="h-9 text-center text-sm font-medium"
                       {...register(`items.${index}.cantidad`, {
-                        onChange: (e) =>
-                          ajustarPrecioPorCantidad(index, field.producto_id, Number(e.target.value)),
+                        onChange: (e) => onCantidadChange(index, field.producto_id, e.target.value),
                       })}
                     />
                     <div className="min-w-0">
