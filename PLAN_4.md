@@ -28,7 +28,7 @@ Las 7 tareas transforman **Cotización** de un cotizador efímero (imprime, no g
 
 ### Scripts SQL de esta tanda
 
-La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay que correrlo en **dev + prod** y reflejarlo en `supabase/produccion_setup.sql`. T1–T4 y T6–T7 no agregan esquema (salvo lo que ya trae T5).
+La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** (`39_cotizaciones.sql`) — **✅ corrido en dev y en prod (2026-09-10)** y reflejado en `supabase/produccion_setup.sql`. T1–T4 y T6–T7 no agregan esquema (salvo lo que ya trae T5).
 
 ---
 
@@ -65,7 +65,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T5 — Guardar cada cotización + persistencia (base del módulo) ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ falta correr `39_cotizaciones.sql` en dev+prod
+## T5 — Guardar cada cotización + persistencia (base del módulo) ✅ COMPLETADO (2026-09-10) — script `39` corrido en dev y prod
 
 > Se hace **antes** de T6/T7/T3/T4 porque es la base: sin guardar no hay historial.
 
@@ -82,13 +82,13 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 - **App:** Server Action `guardarCotizacion(...)` en `cotizacion/actions.ts` (inserta cabecera + ítems), validación zod en `lib/validations/cotizacion.ts`.
 - El botón pasa de solo **"Imprimir"** a **"Guardar"** (y "Guardar e imprimir"), que persiste y abre el PDF.
 
-**SQL pendiente:** ⚠️ correr `39_cotizaciones.sql` en **dev + prod** y reflejar en `produccion_setup.sql`.
+**SQL:** ✅ `39_cotizaciones.sql` corrido en **dev y prod** (2026-09-10) y reflejado en `produccion_setup.sql`.
 
 **Prueba:** armar una cotización → **Guardar** → queda con número `COT-000X` y aparece luego en el historial (T6).
 
 ---
 
-## T6 — Que Cotización abra mostrando el historial (default: hoy) ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
+## T6 — Que Cotización abra mostrando el historial (default: hoy) ✅ COMPLETADO (2026-09-10)
 
 **Qué pide:** al apretar **"Cotización S/F"** en el sidebar, que lo primero sea el **historial** — las cotizaciones **del día por defecto**, paginadas, con un selector de fechas **desde/hasta**, y el botón **"Nueva cotización"** arriba.
 
@@ -104,7 +104,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T7 — Glosa en la cotización ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
+## T7 — Glosa en la cotización ✅ COMPLETADO (2026-09-10)
 
 **Qué pide:** un campo **Glosa** al hacer la cotización (ej.: "ya le di adelanto", etc.).
 
@@ -116,7 +116,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T3 — Mostrar la Unidad de los productos en Cotización ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
+## T3 — Mostrar la Unidad de los productos en Cotización ✅ COMPLETADO (2026-09-10)
 
 **Qué pide:** que Cotización esté bien estructurada como las demás (facturación/ventas) y muestre la **Unidad de medida** de los productos — hoy en Cotización no aparece.
 
@@ -130,7 +130,7 @@ La base está en el script **38**. Lo nuevo de T5 arranca en el **`39`** y hay q
 
 ---
 
-## T4 — Precio por mayorista y Marca (Línea) en Cotización ✅ CÓDIGO LISTO (2026-09-10) — ⚠️ depende del script `39`
+## T4 — Precio por mayorista y Marca (Línea) en Cotización ✅ COMPLETADO (2026-09-10)
 
 **Qué pide:** que en Cotización esté también el **precio por mayorista** y la **marca**.
 
