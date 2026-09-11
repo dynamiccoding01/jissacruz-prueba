@@ -8,6 +8,7 @@ import {
   FileText,
   Calculator,
   CreditCard,
+  Wallet,
   Users,
   BarChart3,
   Building2,
@@ -58,7 +59,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Clientes", href: "/clientes", icon: Users, roles: ["admin", "vendedor", "cajero"] },
       { label: "Cotización S/F", href: "/cotizacion", icon: Calculator, roles: ["admin", "vendedor", "cajero"] },
       { label: "Proformas", href: "/proformas", icon: FileText, roles: ["admin", "vendedor"] },
-      { label: "Ventas (POS)", href: "/ventas", icon: CreditCard, roles: ["admin", "cajero"] },
+      // PLAN_5 · T5: el POS crea pedidos (vendedor + admin); la Caja los cobra (cajero + admin).
+      { label: "Ventas (POS)", href: "/ventas", icon: CreditCard, roles: ["admin", "vendedor"] },
+      { label: "Caja", href: "/caja", icon: Wallet, roles: ["admin", "cajero"] },
     ],
   },
   {

@@ -26,22 +26,26 @@ import {
   type CampoBusqueda,
 } from "@/components/shared/criterios-busqueda"
 import { BuscadorCliente, type ClienteSel } from "@/components/shared/buscador-cliente"
-import { ventaSchema, calcularSubtotalLinea, calcularTotales, type VentaInput } from "@/lib/validations/venta"
-import { TIPOS_PAGO } from "@/lib/tipos-pago"
+import {
+  ventaPendienteSchema,
+  calcularSubtotalLinea,
+  calcularTotales,
+  type VentaPendienteInput,
+} from "@/lib/validations/venta-pendiente"
 import { avisarBusqueda } from "@/lib/avisar-busqueda"
 import { Paginacion } from "@/components/shared/paginacion"
 import { precioSegunCantidad, type EscalaPrecio } from "@/lib/precios-mayor"
 import {
   buscarProductosParaVenta,
   obtenerClienteSinNombre,
-  registrarVenta,
+  crearVentaPendiente,
   type ProductoBusqueda,
 } from "./actions"
 
-const VACIO: VentaInput = {
+// PLAN_5 · T5: el POS ya NO cobra. Arma un PEDIDO DE VENTA (sin mover stock) y lo
+// envía a CAJA, donde el cajero lo confirma/cobra (elige tipo de pago y factura).
+const VACIO: VentaPendienteInput = {
   cliente_id: "",
-  tipo_pago: "",
-  con_factura: true,
   descuento_tipo: "ninguno",
   descuento_valor: 0,
   impuesto_porcentaje: 0,
@@ -69,17 +73,17 @@ export function Pos() {
     watch,
     setValue,
     reset,
-  } = useForm<VentaInput>({
-    resolver: zodResolver(ventaSchema),
+  } = useForm<VentaPendienteInput>({
+    resolver: zodResolver(ventaPendienteSchema),
     defaultValues: VACIO,
   })
 
   const items = useFieldArray({ control, name: "items" })
-  // C3: precio base + escalas vigentes por producto agregado, para recalcular
-  // el precio unitario cuando cambia la cantidad.
+  // Precio base + escalas vigentes por producto agregado, para recalcular el
+  // precio unitario cuando cambia la cantidad.
   const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
   // Stock disponible en la sucursal del POS por producto agregado, para no
-  // dejar vender más de lo que hay (la venta descuenta solo de esa sucursal).
+  // pedir más de lo que hay (la venta descuenta solo de esa sucursal al confirmar).
   const stockRef = useRef(new Map<string, number>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
@@ -101,7 +105,7 @@ export function Pos() {
     buscadorRef.current?.focus()
   }
 
-  // T1 (PLAN_3): botón "Sin nombre" — usa el cliente genérico SIN NOMBRE (NIT 0000).
+  // Botón "Sin nombre" — usa el cliente genérico SIN NOMBRE (NIT 0000).
   async function usarClienteSinNombre() {
     const c = await obtenerClienteSinNombre()
     if (!c) {
@@ -112,7 +116,6 @@ export function Pos() {
     setValue("cliente_id", c.id)
   }
 
-  // Consulta real al servidor.
   async function ejecutarBusqueda(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     if (!texto.trim()) {
       setResultados([])
@@ -126,8 +129,6 @@ export function Pos() {
     setPagina(0)
   }
 
-  // En cada tecla: actualiza el texto YA (input fluido) y agenda la consulta con
-  // 300ms de debounce, para no pegarle a la base en cada letra.
   function onBuscar(texto: string) {
     setBusqueda(texto)
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -143,7 +144,7 @@ export function Pos() {
     if (busqueda.trim()) ejecutarBusqueda(busqueda, next)
   }
 
-  // C3: si la cantidad alcanza una escala por mayor vigente, ajusta el precio.
+  // Si la cantidad alcanza una escala por mayor vigente, ajusta el precio.
   function ajustarPrecioPorCantidad(index: number, productoId: string, cantidad: number) {
     const info = preciosRef.current.get(productoId)
     if (!info || info.escalas.length === 0) return
@@ -168,7 +169,7 @@ export function Pos() {
       toast.error("Ese producto no tiene precio; asignale un precio antes de agregarlo.")
       return
     }
-    // No se puede vender lo que no hay en la sucursal desde la que opera el POS.
+    // No se puede pedir lo que no hay en la sucursal desde la que opera el POS.
     if (p.stockSucursalActual <= 0) {
       toast.error(
         p.stockTotal > 0
@@ -179,8 +180,6 @@ export function Pos() {
     }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     stockRef.current.set(p.id, p.stockSucursalActual)
-    // T6: si el producto es "S/F", se sugiere marcar la venta como sin factura.
-    if (!p.con_factura) setValue("con_factura", false)
     const existente = items.fields.findIndex((f) => f.producto_id === p.id)
     if (existente >= 0) {
       const actual = Number(valores.items?.[existente]?.cantidad) || 0
@@ -202,30 +201,18 @@ export function Pos() {
         descuento_valor: 0,
       })
     }
-    // T3: los resultados quedan a la vista para poder agregar varios seguidos.
+    // Los resultados quedan a la vista para poder agregar varios seguidos.
   }
 
-  async function onSubmit(values: VentaInput) {
+  async function onSubmit(values: VentaPendienteInput) {
     setLoading(true)
-    // la pestaña se abre ya, dentro del gesto del click, porque si se abre
-    // despues del await el bloqueador de popups del navegador la corta;
-    // si la venta falla se cierra sin que el usuario la vea
-    const ventanaPdf = window.open("about:blank", "_blank")
-    const result = await registrarVenta(values)
+    const result = await crearVentaPendiente(values)
     setLoading(false)
     if (result.error) {
-      ventanaPdf?.close()
       toast.error(result.error)
       return
     }
-    if (result.id) {
-      const urlPdf = `/api/pdf/venta/${result.id}`
-      if (ventanaPdf) ventanaPdf.location.href = urlPdf
-      else window.open(urlPdf, "_blank")
-    } else {
-      ventanaPdf?.close()
-    }
-    toast.success(`Venta ${result.numero} registrada.`)
+    toast.success(`Pedido ${result.numero} enviado a caja.`)
     limpiar()
     router.refresh()
   }
@@ -234,10 +221,10 @@ export function Pos() {
 
   return (
     <div className="space-y-4">
-      {/* 1. Cliente + pago (cabecera) */}
-      <div className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-3">
-        <div className="space-y-1">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cliente (opcional)</Label>
+      {/* 1. Cliente (el pago y la factura los define la caja al cobrar) */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cliente (opcional)</Label>
+        <div className="mt-1 flex flex-col gap-2 sm:max-w-sm">
           <BuscadorCliente
             opcional
             value={clienteSel}
@@ -247,47 +234,14 @@ export function Pos() {
             }}
           />
           {!clienteSel && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-1 w-full"
-              onClick={usarClienteSinNombre}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={usarClienteSinNombre}>
               Sin nombre
             </Button>
           )}
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Tipo de pago</Label>
-          <Select value={valores.tipo_pago || ""} onValueChange={(v) => setValue("tipo_pago", v)}>
-            <SelectTrigger className="h-10">
-              <SelectValue placeholder="Seleccionar…" />
-            </SelectTrigger>
-            <SelectContent>
-              {TIPOS_PAGO.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs uppercase tracking-wide text-muted-foreground">Factura</Label>
-          <Select
-            value={valores.con_factura === false ? "sin" : "con"}
-            onValueChange={(v) => setValue("con_factura", v === "con")}
-          >
-            <SelectTrigger className="h-10">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="con">Con factura</SelectItem>
-              <SelectItem value="sin">Sin factura (S/F)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          El tipo de pago y con/sin factura los define la <strong>caja</strong> al cobrar.
+        </p>
       </div>
 
       {/* 2. Buscador */}
@@ -304,7 +258,6 @@ export function Pos() {
             value={busqueda}
             onChange={(e) => onBuscar(e.target.value)}
             onKeyDown={(e) => {
-              // Enter agrega el primer resultado (si hay).
               if (e.key === "Enter") {
                 e.preventDefault()
                 if (buscando || resultados.length === 0) return
@@ -404,7 +357,7 @@ export function Pos() {
         )}
       </div>
 
-      {/* 4. Pedido + totales + confirmar */}
+      {/* 4. Pedido + totales + enviar a caja */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="flex items-center gap-2">
           <ShoppingCart className="size-5 text-primary" />
@@ -464,9 +417,7 @@ export function Pos() {
                       <p className="truncate text-sm font-semibold">{field.codigo}</p>
                       <p className="truncate text-xs text-muted-foreground">{field.descripcion}</p>
                     </div>
-                    {/* T2 (PLAN_4): el precio NO se edita a mano en el POS. Se
-                        muestra de solo lectura; el valor sigue en el form (se fija
-                        al agregar y se ajusta solo por mayoreo según la cantidad). */}
+                    {/* T2 (PLAN_4): el precio NO se edita a mano en el POS. Solo lectura. */}
                     <span className="whitespace-nowrap px-1 text-right text-sm font-medium tabular-nums">
                       {bs(Number(linea?.precio_unitario) || 0)}
                     </span>
@@ -476,7 +427,7 @@ export function Pos() {
                         onValueChange={(v) =>
                           setValue(
                             `items.${index}.descuento_tipo`,
-                            v as VentaInput["items"][number]["descuento_tipo"]
+                            v as VentaPendienteInput["items"][number]["descuento_tipo"]
                           )
                         }
                       >
@@ -524,7 +475,7 @@ export function Pos() {
               <div className="flex gap-1">
                 <Select
                   value={valores.descuento_tipo ?? "ninguno"}
-                  onValueChange={(v) => setValue("descuento_tipo", v as VentaInput["descuento_tipo"])}
+                  onValueChange={(v) => setValue("descuento_tipo", v as VentaPendienteInput["descuento_tipo"])}
                 >
                   <SelectTrigger className="h-10 w-[4.25rem]">
                     <SelectValue />
@@ -599,7 +550,7 @@ export function Pos() {
             className="h-14 flex-1 text-lg font-semibold"
             disabled={loading || items.fields.length === 0}
           >
-            {loading ? "Registrando..." : "Confirmar venta"}
+            {loading ? "Enviando..." : "Enviar a caja"}
           </Button>
         </div>
       </form>

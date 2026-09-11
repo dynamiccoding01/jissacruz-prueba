@@ -9,7 +9,11 @@ import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import type { Medida } from "@/lib/medidas"
-import { ventaSchema, normalizarDescuento, type VentaInput } from "@/lib/validations/venta"
+import {
+  ventaPendienteSchema,
+  normalizarDescuento,
+  type VentaPendienteInput,
+} from "@/lib/validations/venta-pendiente"
 import { type ClienteBusqueda } from "@/app/(dashboard)/clientes/actions"
 
 // Desglose de stock por sucursal, compatible con <StockBadge /> (que solo lee
@@ -127,16 +131,17 @@ export async function buscarProductosParaVenta(
   })
 }
 
-export async function registrarVenta(values: VentaInput) {
-  // T12: solo cajero y admin pueden cerrar/cobrar ventas.
+// PLAN_5 · T5: el POS ya no cobra. Crea un PEDIDO DE VENTA pendiente (sin tocar
+// stock) que el cajero confirma después en CAJA. Lo pueden crear vendedor y admin.
+export async function crearVentaPendiente(values: VentaPendienteInput) {
   const perfil = await getPerfil()
-  if (!perfil || (perfil.rol !== "admin" && perfil.rol !== "cajero")) {
-    return { error: "Solo un cajero o un administrador puede registrar ventas." }
+  if (!perfil || (perfil.rol !== "admin" && perfil.rol !== "vendedor")) {
+    return { error: "Solo un vendedor o un administrador puede crear pedidos de venta." }
   }
 
-  const parsed = ventaSchema.safeParse(values)
+  const parsed = ventaPendienteSchema.safeParse(values)
   if (!parsed.success) {
-    return { error: "Revisá los datos de la venta." }
+    return { error: "Revisá los datos del pedido." }
   }
   const v = parsed.data
 
@@ -144,9 +149,6 @@ export async function registrarVenta(values: VentaInput) {
 
   const payload = {
     cliente_id: v.cliente_id || null,
-    proforma_origen_id: null,
-    tipo_pago: v.tipo_pago || null,
-    con_factura: v.con_factura,
     descuento_tipo: normalizarDescuento(v.descuento_tipo),
     descuento_valor: v.descuento_valor,
     impuesto_porcentaje: v.impuesto_porcentaje,
@@ -159,19 +161,23 @@ export async function registrarVenta(values: VentaInput) {
     })),
   }
 
-  const { data: ventaId, error } = await supabase.rpc("fn_registrar_venta", { p_venta: payload })
+  const { data: pendienteId, error } = await supabase.rpc("fn_crear_venta_pendiente", {
+    p_pedido: payload,
+  })
   if (error) {
-    logError("ventas.registrarVenta", error, { cliente_id: v.cliente_id, items: v.items.length })
-    return { error: error.message || "No se pudo registrar la venta." }
+    logError("ventas.crearVentaPendiente", error, { cliente_id: v.cliente_id, items: v.items.length })
+    return { error: error.message || "No se pudo crear el pedido de venta." }
   }
 
-  const { data: venta } = await supabase.from("ventas").select("numero").eq("id", ventaId).single()
+  const { data: pendiente } = await supabase
+    .from("ventas_pendientes")
+    .select("numero")
+    .eq("id", pendienteId)
+    .single()
 
   revalidatePath("/ventas")
-  revalidatePath("/inventario")
-  revalidatePath("/kardex")
-  revalidatePath("/productos")
-  return { id: ventaId as string, numero: venta?.numero as string | undefined }
+  revalidatePath("/caja")
+  return { id: pendienteId as string, numero: pendiente?.numero as string | undefined }
 }
 
 // T1 (PLAN_3): cliente genérico "SIN NOMBRE" (NIT 0000) para ventas rápidas sin
