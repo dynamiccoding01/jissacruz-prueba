@@ -3,14 +3,10 @@ import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import {
   AlertTriangle,
-  Banknote,
   FileText,
   Package,
-  Percent,
   Plus,
-  Receipt,
   ShoppingCart,
-  TrendingUp,
   Wallet,
 } from "lucide-react"
 
@@ -23,6 +19,7 @@ import { requireAdmin } from "@/lib/auth/session"
 import { diaBolivia, inicioDiaBolivia } from "@/lib/fechas-bolivia"
 import { logError } from "@/lib/log"
 import { VentasChart, type PuntoVentasDia } from "./ventas-chart"
+import { RentabilidadPanel, type RentabilidadTipo } from "./rentabilidad-panel"
 
 // T3 (PLAN_6): período del cuadro de Rentabilidad (?periodo=hoy|mes|anio).
 type PeriodoRentabilidad = "hoy" | "mes" | "anio"
@@ -31,18 +28,6 @@ const PERIODOS: { valor: PeriodoRentabilidad; etiqueta: string }[] = [
   { valor: "mes", etiqueta: "Este mes" },
   { valor: "anio", etiqueta: "Este año" },
 ]
-
-// Lo que devuelve fn_resumen_rentabilidad (script 42).
-type ResumenRentabilidad = {
-  desde: string
-  cantidad_ventas: number
-  ingresos: number
-  costo_ventas: number
-  utilidad_bruta: number
-  lineas_sin_costo: number
-}
-
-const bs = (n: number) => `Bs ${Number(n).toFixed(2)}`
 
 function etiquetaPeriodo(periodo: PeriodoRentabilidad, desde: string) {
   // Mediodía UTC del día de inicio en Bolivia: misma fecha en cualquier huso.
@@ -90,14 +75,14 @@ export default async function DashboardPage({
       .select("id, estado, fecha_orden, proveedores(nombre)")
       .order("fecha_orden", { ascending: false })
       .limit(5),
-    supabase.rpc("fn_resumen_rentabilidad", { p_periodo: periodo }).single(),
+    // T4 (PLAN_6): dos filas, con factura y sin factura, que nunca se suman.
+    supabase.rpc("fn_rentabilidad_por_factura", { p_periodo: periodo }),
   ])
 
   if (rentabilidadError) logError("dashboard.rentabilidad", rentabilidadError, { periodo })
-  const rentabilidad = rentabilidadError ? null : (rentabilidadData as ResumenRentabilidad | null)
-  const ingresos = Number(rentabilidad?.ingresos ?? 0)
-  const utilidad = Number(rentabilidad?.utilidad_bruta ?? 0)
-  const margen = ingresos > 0 ? (utilidad / ingresos) * 100 : 0
+  const rentabilidad = rentabilidadError ? [] : ((rentabilidadData ?? []) as RentabilidadTipo[])
+  const conFactura = rentabilidad.find((r) => r.con_factura)
+  const sinFactura = rentabilidad.find((r) => !r.con_factura)
 
   const productosCriticos = (productos ?? [])
     .filter((p) => p.stock_actual <= p.stock_minimo)
@@ -167,15 +152,15 @@ export default async function DashboardPage({
         />
       </div>
 
-      {/* T3 (PLAN_6): rentabilidad del período (ingresos vs costo de lo vendido) */}
+      {/* T3/T4 (PLAN_6): rentabilidad del período, con factura y sin factura por
+          separado (nunca se suman entre sí) */}
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <h2 className="text-sm font-semibold">Rentabilidad</h2>
-            {rentabilidad && (
+            {conFactura && (
               <p className="text-xs capitalize text-muted-foreground">
-                {etiquetaPeriodo(periodo, rentabilidad.desde)} · {rentabilidad.cantidad_ventas} venta
-                {rentabilidad.cantidad_ventas === 1 ? "" : "s"}
+                {etiquetaPeriodo(periodo, conFactura.desde)}
               </p>
             )}
           </div>
@@ -196,48 +181,15 @@ export default async function DashboardPage({
           </div>
         </div>
 
-        {rentabilidad ? (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <KpiCard
-                label="Ingresos por ventas"
-                value={bs(ingresos)}
-                icon={Banknote}
-                hint="ventas netas, sin impuesto"
-              />
-              <KpiCard
-                label="Costo de ventas"
-                value={bs(rentabilidad.costo_ventas)}
-                icon={Receipt}
-                hint="costo de compra (FIFO) de lo vendido"
-              />
-              <KpiCard
-                label="Utilidad bruta"
-                value={bs(utilidad)}
-                icon={TrendingUp}
-                tono={utilidad < 0 ? "alerta" : "neutral"}
-                hint="ingresos − costo de ventas"
-              />
-              <KpiCard
-                label="Margen bruto"
-                value={`${margen.toFixed(1)} %`}
-                icon={Percent}
-                tono={utilidad < 0 ? "alerta" : "neutral"}
-                hint="utilidad sobre ingresos"
-              />
-            </div>
-            {rentabilidad.lineas_sin_costo > 0 && (
-              <p className="flex items-center gap-1.5 text-xs text-amber-700">
-                <AlertTriangle className="size-3.5 shrink-0" />
-                {rentabilidad.lineas_sin_costo} línea(s) vendida(s) sin costo registrado (stock
-                cargado sin costo): la utilidad de este período puede estar sobreestimada.
-              </p>
-            )}
-          </>
+        {conFactura && sinFactura ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <RentabilidadPanel datos={conFactura} />
+            <RentabilidadPanel datos={sinFactura} />
+          </div>
         ) : (
           <p className="rounded-lg border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
-            No se pudo calcular la rentabilidad. Verificá que el script 42_rentabilidad.sql esté
-            corrido en la base.
+            No se pudo calcular la rentabilidad. Verificá que el script
+            43_rentabilidad_por_factura.sql esté corrido en la base.
           </p>
         )}
       </section>

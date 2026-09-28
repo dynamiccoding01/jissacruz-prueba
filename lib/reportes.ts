@@ -10,7 +10,9 @@ import {
 import { es } from "date-fns/locale"
 
 import { createClient } from "@/lib/supabase/server"
-import type { Periodo, ReporteResultado, ReporteTipo } from "@/lib/reportes-tipos"
+import { diaBolivia } from "@/lib/fechas-bolivia"
+import { logError } from "@/lib/log"
+import type { Columna, Fila, Periodo, ReporteResultado, ReporteTipo } from "@/lib/reportes-tipos"
 
 export type { Columna, Fila, Periodo, ReporteResultado, ReporteTipo } from "@/lib/reportes-tipos"
 export { REPORTE_LABEL } from "@/lib/reportes-tipos"
@@ -301,6 +303,9 @@ async function reporteInventario(): Promise<ReporteResultado> {
     transito.length > 0
       ? {
           titulo: "Stock en tránsito (despachado, aún no recibido)",
+          hojaExcel: "En tránsito",
+          mensajeVacio: "Sin stock en tránsito.",
+          columnaAncha: 1,
           columnas: [
             { key: "pedido", label: "Pedido" },
             { key: "producto", label: "Producto" },
@@ -350,6 +355,149 @@ async function reporteInventario(): Promise<ReporteResultado> {
   }
 }
 
+// ---------- Rentabilidad: con factura y sin factura por separado (PLAN_6 · T4) ----------
+// Suma en SQL (fn_reporte_rentabilidad, script 43, solo admin) con cortes en hora
+// de Bolivia. Las dos tablas NUNCA se suman entre sí: no hay total combinado.
+type FilaRentabilidadSql = {
+  periodo: string // yyyy-MM-dd: inicio del período (fecha de Bolivia)
+  con_factura: boolean
+  cantidad_ventas: number
+  ingresos: number
+  costo_ventas: number
+  lineas_sin_costo: number
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+const fechaCorta = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+const margenTxt = (utilidad: number, ingresos: number) =>
+  ingresos > 0 ? `${((utilidad / ingresos) * 100).toFixed(1)} %` : "—"
+
+function etiquetaPeriodoRentabilidad(iso: string, periodo: Periodo) {
+  // Mediodía UTC: misma fecha calendario en cualquier huso del servidor.
+  const d = new Date(`${iso}T12:00:00Z`)
+  if (periodo === "mensual") return format(d, "MMM yyyy", { locale: es })
+  if (periodo === "semanal") return `Sem. ${format(d, "dd/MM", { locale: es })}`
+  return format(d, "dd/MM/yyyy", { locale: es })
+}
+
+async function reporteRentabilidad(
+  desdeStr?: string,
+  hastaStr?: string,
+  periodo: Periodo = "diario"
+): Promise<ReporteResultado> {
+  const supabase = await createClient()
+  const hoy = diaBolivia(new Date())
+  const hasta = hastaStr || hoy
+  const desde = desdeStr || `${hoy.slice(0, 8)}01`
+
+  const columnas: Columna[] = [
+    { key: "periodo", label: "Período" },
+    { key: "ventas", label: "N.º ventas", align: "right" },
+    { key: "ingresos", label: "Ingresos", align: "right" },
+    { key: "costo", label: "Costo de ventas", align: "right" },
+    { key: "utilidad", label: "Utilidad bruta", align: "right" },
+    { key: "margen", label: "Margen", align: "right" },
+  ]
+  const base = {
+    tipo: "rentabilidad" as const,
+    titulo: "Rentabilidad con factura y sin factura",
+    columnas,
+    tituloTabla: "Con factura",
+    hojaExcel: "Con factura",
+  }
+  const subtitulo = `${fechaCorta(desde)} — ${fechaCorta(hasta)} · agrupado ${periodo} · antes de impuestos`
+
+  const { data, error } = await supabase.rpc("fn_reporte_rentabilidad", {
+    p_desde: desde,
+    p_hasta: hasta,
+    p_agrupacion: periodo,
+  })
+  if (error) {
+    logError("reportes.rentabilidad", error, { desde, hasta, periodo })
+    return {
+      ...base,
+      subtitulo: "No se pudo calcular. Verificá que el script 43_rentabilidad_por_factura.sql esté corrido.",
+      filas: [],
+      resumen: [],
+    }
+  }
+
+  const filasSql = (data ?? []) as FilaRentabilidadSql[]
+
+  function tabla(conFactura: boolean) {
+    const rows = filasSql.filter((r) => r.con_factura === conFactura)
+    const tot = { ventas: 0, ingresos: 0, costo: 0, sinCosto: 0 }
+    const filas: Fila[] = rows.map((r) => {
+      const ingresos = Number(r.ingresos)
+      const costo = Number(r.costo_ventas)
+      tot.ventas += Number(r.cantidad_ventas)
+      tot.ingresos += ingresos
+      tot.costo += costo
+      tot.sinCosto += Number(r.lineas_sin_costo)
+      return {
+        periodo: etiquetaPeriodoRentabilidad(r.periodo, periodo),
+        ventas: Number(r.cantidad_ventas),
+        ingresos: bs(ingresos),
+        costo: bs(costo),
+        utilidad: bs(ingresos - costo),
+        margen: margenTxt(ingresos - costo, ingresos),
+      }
+    })
+    if (rows.length > 0) {
+      filas.push({
+        periodo: "TOTAL",
+        ventas: tot.ventas,
+        ingresos: bs(tot.ingresos),
+        costo: bs(tot.costo),
+        utilidad: bs(tot.ingresos - tot.costo),
+        margen: margenTxt(tot.ingresos - tot.costo, tot.ingresos),
+      })
+    }
+    return { filas, tot, utilidad: tot.ingresos - tot.costo }
+  }
+
+  const cf = tabla(true)
+  const sf = tabla(false)
+
+  // Gráfico: utilidad bruta por período, una serie por tipo de factura.
+  const periodos = Array.from(new Set(filasSql.map((r) => r.periodo))).sort()
+  const utilidadDe = (p: string, conFactura: boolean) => {
+    const r = filasSql.find((x) => x.periodo === p && x.con_factura === conFactura)
+    return r ? round2(Number(r.ingresos) - Number(r.costo_ventas)) : 0
+  }
+
+  const sinCosto = cf.tot.sinCosto + sf.tot.sinCosto
+
+  return {
+    ...base,
+    subtitulo:
+      sinCosto > 0
+        ? `${subtitulo} · Atención: ${sinCosto} línea(s) vendida(s) sin costo registrado (utilidad sobreestimada)`
+        : subtitulo,
+    filas: cf.filas,
+    resumen: [
+      { label: "Con factura · utilidad bruta", value: bs(cf.utilidad) },
+      { label: "Con factura · margen", value: margenTxt(cf.utilidad, cf.tot.ingresos) },
+      { label: "Sin factura · utilidad bruta", value: bs(sf.utilidad) },
+      { label: "Sin factura · margen", value: margenTxt(sf.utilidad, sf.tot.ingresos) },
+    ],
+    grafico: periodos.map((p) => ({
+      etiqueta: etiquetaPeriodoRentabilidad(p, periodo),
+      total: utilidadDe(p, true),
+      total2: utilidadDe(p, false),
+    })),
+    graficoSeries: { total: "Con factura", total2: "Sin factura (S/F)" },
+    bloqueExtra: {
+      titulo: "Sin factura (S/F)",
+      columnas,
+      filas: sf.filas,
+      hojaExcel: "Sin factura (SF)",
+      mensajeVacio: "No hubo ventas sin factura en el período.",
+      columnaAncha: 0,
+    },
+  }
+}
+
 // Punto de entrada único usado por page, actions y ruta PDF.
 export async function generarReporte(
   tipo: ReporteTipo,
@@ -362,6 +510,8 @@ export async function generarReporte(
       return reporteMasVendidos(params.desde, params.hasta)
     case "inventario":
       return reporteInventario()
+    case "rentabilidad":
+      return reporteRentabilidad(params.desde, params.hasta, params.periodo ?? "diario")
     case "ventas":
     default:
       return reporteVentas(params.desde, params.hasta, params.periodo ?? "diario")

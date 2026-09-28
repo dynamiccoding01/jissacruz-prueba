@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react"
 import dynamic from "next/dynamic"
 import type { ColumnDef } from "@tanstack/react-table"
-import { BarChart3, FileText, Package, TrendingUp } from "lucide-react"
+import { BarChart3, FileText, Package, PiggyBank, TrendingUp } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -40,6 +40,8 @@ const TIPOS: { tipo: ReporteTipo; icon: LucideIcon }[] = [
   { tipo: "proformas", icon: FileText },
   { tipo: "mas_vendidos", icon: BarChart3 },
   { tipo: "inventario", icon: Package },
+  // T4 (PLAN_6): utilidad con factura y sin factura, en tablas separadas.
+  { tipo: "rentabilidad", icon: PiggyBank },
 ]
 
 function isoHoy() {
@@ -59,7 +61,7 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
   const [cargando, startTransition] = useTransition()
 
   const usaFechas = tipo !== "inventario"
-  const usaPeriodo = tipo === "ventas"
+  const usaPeriodo = tipo === "ventas" || tipo === "rentabilidad"
 
   function refrescar(next: {
     tipo?: ReporteTipo
@@ -98,13 +100,14 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
     [reporte]
   )
 
-  // El bloque extra (p. ej. stock en tránsito) va en una hoja aparte del Excel.
+  // El bloque extra (p. ej. stock en tránsito, o "sin factura" en Rentabilidad)
+  // va en una hoja aparte del Excel.
   const excelHojasExtra = useMemo(() => {
     if (!reporte.bloqueExtra) return undefined
     const b = reporte.bloqueExtra
     return [
       {
-        nombre: "En tránsito",
+        nombre: b.hojaExcel ?? "Extra",
         data: b.filas.map((fila) =>
           Object.fromEntries(b.columnas.map((c) => [c.label, fila[c.key] ?? ""]))
         ),
@@ -222,6 +225,7 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
             excelData={excelData}
             excelFilename={`reporte-${tipo}`}
             excelHojasExtra={excelHojasExtra}
+            excelHojaPrincipal={reporte.hojaExcel}
           />
         </CardContent>
       </Card>
@@ -245,28 +249,37 @@ export function ReportesExplorer({ inicial }: { inicial: ReporteResultado }) {
       {reporte.grafico && reporte.grafico.length > 0 && (
         <Card>
           <CardContent className="p-4">
-            <ReporteChart data={reporte.grafico} esMoneda={reporte.tipo === "ventas"} />
+            <ReporteChart
+              data={reporte.grafico}
+              series={reporte.graficoSeries}
+              esMoneda={reporte.tipo === "ventas" || reporte.tipo === "rentabilidad"}
+            />
           </CardContent>
         </Card>
       )}
 
-      <TablaDatos
-        columns={columns}
-        data={reporte.filas}
-        loading={cargando}
-        mensajeVacio="No hay datos para el período seleccionado."
-      />
+      <div className="space-y-2">
+        {reporte.tituloTabla && <h3 className="text-base font-semibold">{reporte.tituloTabla}</h3>}
+        <TablaDatos
+          columns={columns}
+          data={reporte.filas}
+          loading={cargando}
+          mensajeVacio="No hay datos para el período seleccionado."
+        />
+      </div>
 
-      {reporte.bloqueExtra && reporte.bloqueExtra.filas.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-base font-semibold">{reporte.bloqueExtra.titulo}</h3>
-          <TablaDatos
-            columns={construirColumnas(reporte.bloqueExtra.columnas)}
-            data={reporte.bloqueExtra.filas}
-            mensajeVacio="Sin stock en tránsito."
-          />
-        </div>
-      )}
+      {reporte.bloqueExtra &&
+        (reporte.bloqueExtra.filas.length > 0 || reporte.bloqueExtra.mensajeVacio) && (
+          <div className="space-y-2">
+            <h3 className="text-base font-semibold">{reporte.bloqueExtra.titulo}</h3>
+            <TablaDatos
+              columns={construirColumnas(reporte.bloqueExtra.columnas)}
+              data={reporte.bloqueExtra.filas}
+              loading={cargando}
+              mensajeVacio={reporte.bloqueExtra.mensajeVacio ?? "Sin datos."}
+            />
+          </div>
+        )}
     </div>
   )
 }

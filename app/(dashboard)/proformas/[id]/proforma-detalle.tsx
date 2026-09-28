@@ -117,8 +117,14 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
   const preciosActualRef = useRef(
     new Map<string, number>(detalle.items.map((i) => [i.producto_id, i.precio_actual]))
   )
+  // T4 (PLAN_6): con/sin factura por producto; la proforma no mezcla tipos.
+  const conFacturaRef = useRef(
+    new Map<string, boolean>(detalle.items.map((i) => [i.producto_id, i.con_factura]))
+  )
 
   const valores = watch()
+  const proformaConFactura: boolean | null =
+    items.fields.length > 0 ? conFacturaRef.current.get(items.fields[0].producto_id) ?? true : null
   const totales = calcularTotales(valores.items ?? [], "ninguno", 0, valores.impuesto_porcentaje ?? 0)
 
   // T2 (PLAN_6): precio mínimo = precio del sistema para esa cantidad.
@@ -170,8 +176,17 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
       toast.error("Ese producto ya está en la proforma.")
       return
     }
+    if (proformaConFactura !== null && p.con_factura !== proformaConFactura) {
+      toast.error(
+        proformaConFactura
+          ? "Esta proforma es con factura: los productos S/F van en una proforma aparte."
+          : "Esta proforma es sin factura (S/F): los productos con factura van en una proforma aparte."
+      )
+      return
+    }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     preciosActualRef.current.set(p.id, p.precio)
+    conFacturaRef.current.set(p.id, p.con_factura)
     items.append({
       producto_id: p.id,
       codigo: p.codigo,
@@ -340,6 +355,11 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                     >
                       <span className="min-w-0">
                         <span className="text-base font-semibold">{r.codigo}</span>{" "}
+                        {!r.con_factura && (
+                          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                            S/F
+                          </span>
+                        )}{" "}
                         <span className="text-muted-foreground">— {r.descripcion}</span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2 text-base font-semibold text-primary">
@@ -353,7 +373,19 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
             </div>
 
             <div className="flex items-center justify-between">
-              <Label className="text-base">Ítems</Label>
+              <Label className="flex items-center gap-2 text-base">
+                Ítems
+                {proformaConFactura !== null && (
+                  <span
+                    className={cn(
+                      "rounded px-2 py-0.5 text-xs font-bold",
+                      proformaConFactura ? "bg-primary/10 text-primary" : "bg-amber-100 text-amber-700"
+                    )}
+                  >
+                    {proformaConFactura ? "Con factura" : "Sin factura (S/F)"}
+                  </span>
+                )}
+              </Label>
               <Button type="button" variant="outline" size="sm" className="gap-1" onClick={traerPreciosActuales}>
                 <RefreshCw className="size-3.5" /> Traer precios actuales
               </Button>

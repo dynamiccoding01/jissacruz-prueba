@@ -78,8 +78,13 @@ export function Pos() {
   // Stock disponible en la sucursal del POS por producto agregado, para no
   // pedir más de lo que hay (la venta descuenta solo de esa sucursal al confirmar).
   const stockRef = useRef(new Map<string, number>())
+  // T4 (PLAN_6): con/sin factura de cada producto agregado. El pedido es todo
+  // con factura o todo S/F; lo define el primer producto.
+  const conFacturaRef = useRef(new Map<string, boolean>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
+  const pedidoConFactura: boolean | null =
+    items.fields.length > 0 ? conFacturaRef.current.get(items.fields[0].producto_id) ?? true : null
   // T2 (PLAN_6): el POS no hace descuentos (ni por línea ni global); cobra el
   // precio del sistema.
   const totales = calcularTotales(valores.items ?? [], "ninguno", 0, valores.impuesto_porcentaje ?? 0)
@@ -92,6 +97,7 @@ export function Pos() {
     setBusqueda("")
     setClienteSel(null)
     stockRef.current.clear()
+    conFacturaRef.current.clear()
     buscadorRef.current?.focus()
   }
 
@@ -168,8 +174,18 @@ export function Pos() {
       )
       return
     }
+    // T4 (PLAN_6): no se mezclan productos con factura y S/F en un mismo pedido.
+    if (pedidoConFactura !== null && p.con_factura !== pedidoConFactura) {
+      toast.error(
+        pedidoConFactura
+          ? "Este pedido es con factura: los productos S/F van en un pedido aparte."
+          : "Este pedido es sin factura (S/F): los productos con factura van en un pedido aparte."
+      )
+      return
+    }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     stockRef.current.set(p.id, p.stockSucursalActual)
+    conFacturaRef.current.set(p.id, p.con_factura)
     const existente = items.fields.findIndex((f) => f.producto_id === p.id)
     if (existente >= 0) {
       const actual = Number(valores.items?.[existente]?.cantidad) || 0
@@ -355,6 +371,16 @@ export function Pos() {
           {cantItems > 0 && (
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-medium text-primary">
               {cantItems} ítem{cantItems === 1 ? "" : "s"}
+            </span>
+          )}
+          {pedidoConFactura !== null && (
+            <span
+              className={cn(
+                "rounded px-2 py-0.5 text-xs font-bold",
+                pedidoConFactura ? "bg-primary/10 text-primary" : "bg-amber-100 text-amber-700"
+              )}
+            >
+              {pedidoConFactura ? "Con factura" : "Sin factura (S/F)"}
             </span>
           )}
         </div>

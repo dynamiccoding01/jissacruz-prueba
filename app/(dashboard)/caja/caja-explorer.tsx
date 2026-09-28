@@ -29,7 +29,7 @@ type ItemPendiente = {
   cantidad: number
   precio_unitario: number
   subtotal_linea: number
-  productos: { codigo: string; descripcion: string } | null
+  productos: { codigo: string; descripcion: string; con_factura: boolean } | null
 }
 
 export type PendienteFila = {
@@ -44,6 +44,11 @@ export type PendienteFila = {
 
 const bs = (n: number) => `Bs ${Number(n).toFixed(2)}`
 
+// T4 (PLAN_6): un pedido con productos S/F se cobra SIEMPRE sin factura
+// (un producto S/F no se puede facturar; la BD también lo exige).
+const esPedidoSF = (p: PendienteFila) =>
+  p.venta_pendiente_items.some((it) => it.productos?.con_factura === false)
+
 export function CajaExplorer({ pendientes }: { pendientes: PendienteFila[] }) {
   const router = useRouter()
   const [confirmando, setConfirmando] = useState<PendienteFila | null>(null)
@@ -55,8 +60,10 @@ export function CajaExplorer({ pendientes }: { pendientes: PendienteFila[] }) {
   function abrirConfirmar(p: PendienteFila) {
     setConfirmando(p)
     setTipoPago("")
-    setConFactura(true)
+    setConFactura(!esPedidoSF(p))
   }
+
+  const confirmandoSF = confirmando ? esPedidoSF(confirmando) : false
 
   async function onConfirmar() {
     if (!confirmando) return
@@ -111,7 +118,14 @@ export function CajaExplorer({ pendientes }: { pendientes: PendienteFila[] }) {
           <div key={p.id} className="flex flex-col rounded-lg border border-border bg-card p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-base font-semibold">{p.numero}</p>
+                <p className="flex items-center gap-2 text-base font-semibold">
+                  {p.numero}
+                  {esPedidoSF(p) && (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                      S/F
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {format(new Date(p.creado_en), "dd/MM/yyyy HH:mm")}
                 </p>
@@ -188,7 +202,11 @@ export function CajaExplorer({ pendientes }: { pendientes: PendienteFila[] }) {
             </div>
             <div className="space-y-1">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">Factura</Label>
-              <Select value={conFactura ? "con" : "sin"} onValueChange={(v) => setConFactura(v === "con")}>
+              <Select
+                value={conFactura ? "con" : "sin"}
+                onValueChange={(v) => setConFactura(v === "con")}
+                disabled={confirmandoSF}
+              >
                 <SelectTrigger className="h-10">
                   <SelectValue />
                 </SelectTrigger>
@@ -197,6 +215,11 @@ export function CajaExplorer({ pendientes }: { pendientes: PendienteFila[] }) {
                   <SelectItem value="sin">Sin factura (S/F)</SelectItem>
                 </SelectContent>
               </Select>
+              {confirmandoSF && (
+                <p className="text-xs text-amber-700">
+                  Pedido de productos S/F: se cobra sin factura.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>

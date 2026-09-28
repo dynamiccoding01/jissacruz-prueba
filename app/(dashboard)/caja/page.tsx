@@ -16,7 +16,7 @@ export default async function CajaPage() {
   const { data } = await supabase
     .from("ventas_pendientes")
     .select(
-      "id, numero, creado_en, total, clientes(id, nombre), creador:perfiles!ventas_pendientes_creado_por_fkey(nombre_completo), venta_pendiente_items(cantidad, precio_unitario, subtotal_linea, productos(codigo, descripcion))"
+      "id, numero, creado_en, total, clientes(id, nombre), creador:perfiles!ventas_pendientes_creado_por_fkey(nombre_completo), venta_pendiente_items(cantidad, precio_unitario, subtotal_linea, productos(codigo, descripcion, con_factura))"
     )
     .eq("estado", "pendiente")
     .order("creado_en", { ascending: true })

@@ -9,11 +9,12 @@ export async function exportToExcel(
   data: Record<string, unknown>[],
   filename: string,
   // Hojas adicionales opcionales (p. ej. "En tránsito" del reporte de inventario).
-  hojasExtra?: { nombre: string; data: Record<string, unknown>[] }[]
+  hojasExtra?: { nombre: string; data: Record<string, unknown>[] }[],
+  nombreHojaPrincipal = "Datos"
 ) {
   const XLSX = await import("xlsx")
   const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(data), "Datos")
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(data), nombreHojaPrincipal)
   for (const hoja of hojasExtra ?? []) {
     if (hoja.data.length > 0) {
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(hoja.data), hoja.nombre)

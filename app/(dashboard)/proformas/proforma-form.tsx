@@ -83,8 +83,13 @@ export function ProformaForm() {
   // T1 (PLAN_5): stock por sucursal de cada producto agregado, para AVISAR (sin
   // bloquear) si la cantidad de la proforma lo supera.
   const stockRef = useRef(new Map<string, number>())
+  // T4 (PLAN_6): con/sin factura de cada producto agregado. La proforma es toda
+  // con factura o toda S/F; lo define el primer producto.
+  const conFacturaRef = useRef(new Map<string, boolean>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
+  const proformaConFactura: boolean | null =
+    items.fields.length > 0 ? conFacturaRef.current.get(items.fields[0].producto_id) ?? true : null
   // T1 (PLAN_6): la proforma ya no lleva descuentos (ni global ni por línea).
   const totales = calcularTotales(valores.items ?? [], "ninguno", 0, valores.impuesto_porcentaje ?? 0)
   const resultadosPagina = resultados.slice(pagina * tamano, (pagina + 1) * tamano)
@@ -167,8 +172,18 @@ export function ProformaForm() {
       toast.error("Ese producto ya está en la proforma.")
       return
     }
+    // T4 (PLAN_6): no se mezclan productos con factura y S/F.
+    if (proformaConFactura !== null && p.con_factura !== proformaConFactura) {
+      toast.error(
+        proformaConFactura
+          ? "Esta proforma es con factura: los productos S/F van en una proforma aparte."
+          : "Esta proforma es sin factura (S/F): los productos con factura van en una proforma aparte."
+      )
+      return
+    }
     preciosRef.current.set(p.id, { base: p.precio, escalas: p.escalas })
     stockRef.current.set(p.id, p.stock)
+    conFacturaRef.current.set(p.id, p.con_factura)
     items.append({
       producto_id: p.id,
       codigo: p.codigo,
@@ -283,6 +298,11 @@ export function ProformaForm() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-base font-semibold">{r.codigo}</span>
+                    {!r.con_factura && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                        S/F
+                      </span>
+                    )}
                     {sinPrecio && (
                       <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
                         sin precio
@@ -348,6 +368,15 @@ export function ProformaForm() {
           {cantItems > 0 && (
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-sm font-medium text-primary">
               {cantItems} ítem{cantItems === 1 ? "" : "s"}
+            </span>
+          )}
+          {proformaConFactura !== null && (
+            <span
+              className={`rounded px-2 py-0.5 text-xs font-bold ${
+                proformaConFactura ? "bg-primary/10 text-primary" : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {proformaConFactura ? "Con factura" : "Sin factura (S/F)"}
             </span>
           )}
         </div>

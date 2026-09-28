@@ -7,6 +7,7 @@ import { getPerfil } from "@/lib/auth/session"
 import { logError } from "@/lib/log"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto, validarPrecioMinimo } from "@/lib/precios-mayor-server"
+import { validarSinMezclaFactura } from "@/lib/factura-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import type { Medida } from "@/lib/medidas"
 import { ventaPendienteSchema, type VentaPendienteInput } from "@/lib/validations/venta-pendiente"
@@ -142,6 +143,14 @@ export async function crearVentaPendiente(values: VentaPendienteInput) {
   const v = parsed.data
 
   const supabase = await createClient()
+
+  // T4 (PLAN_6): el pedido es todo con factura o todo S/F.
+  const errorMezcla = await validarSinMezclaFactura(
+    supabase,
+    v.items.map((i) => i.producto_id),
+    "pedido"
+  )
+  if (errorMezcla) return { error: errorMezcla }
 
   // T2 (PLAN_6): ningún precio por debajo del precio del sistema para la cantidad.
   const errorPrecio = await validarPrecioMinimo(supabase, v.items)

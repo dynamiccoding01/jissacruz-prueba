@@ -56,6 +56,7 @@ export type ReportePdf = {
   columnas: Columna[]
   filas: Fila[]
   resumen: { label: string; value: string }[]
+  tituloTabla?: string
   bloqueExtra?: BloqueReporte
 }
 
@@ -131,15 +132,25 @@ export function ReporteDocument({
           ))}
         </View>
 
+        {reporte.tituloTabla && <Text style={styles.subBloque}>{reporte.tituloTabla}</Text>}
         <Tabla columnas={reporte.columnas} filas={reporte.filas} anchoIdx={0} />
 
-        {reporte.bloqueExtra && reporte.bloqueExtra.filas.length > 0 && (
-          <>
-            <Text style={styles.subBloque}>{reporte.bloqueExtra.titulo}</Text>
-            {/* en el bloque de tránsito la columna descriptiva es "Producto" (índice 1) */}
-            <Tabla columnas={reporte.bloqueExtra.columnas} filas={reporte.bloqueExtra.filas} anchoIdx={1} />
-          </>
-        )}
+        {reporte.bloqueExtra &&
+          (reporte.bloqueExtra.filas.length > 0 || reporte.bloqueExtra.mensajeVacio) && (
+            <>
+              <Text style={styles.subBloque}>{reporte.bloqueExtra.titulo}</Text>
+              {reporte.bloqueExtra.filas.length > 0 ? (
+                // columna descriptiva: "Producto" (1) en tránsito, "Período" (0) en rentabilidad
+                <Tabla
+                  columnas={reporte.bloqueExtra.columnas}
+                  filas={reporte.bloqueExtra.filas}
+                  anchoIdx={reporte.bloqueExtra.columnaAncha ?? 1}
+                />
+              ) : (
+                <Text style={styles.cell}>{reporte.bloqueExtra.mensajeVacio}</Text>
+              )}
+            </>
+          )}
 
         <Text style={styles.pie}>
           Generado el {format(new Date(), "dd/MM/yyyy HH:mm")} · Precios en bolivianos (Bs).

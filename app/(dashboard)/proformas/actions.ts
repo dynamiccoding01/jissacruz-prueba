@@ -7,6 +7,7 @@ import { logError } from "@/lib/log"
 import { getPerfil } from "@/lib/auth/session"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
 import { escalasVigentesPorProducto, validarPrecioMinimo } from "@/lib/precios-mayor-server"
+import { validarSinMezclaFactura } from "@/lib/factura-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import { stockSucursalPorProducto } from "@/lib/stock-sucursal-server"
 import type { Medida } from "@/lib/medidas"
@@ -48,6 +49,8 @@ export type ProductoBusqueda = {
   // T1 (PLAN_5): stock en la sucursal del usuario, para avisar si la cantidad
   // de la proforma lo supera (aviso, no bloqueo).
   stock: number
+  // T4 (PLAN_6): una proforma es toda con factura o toda S/F.
+  con_factura: boolean
 }
 
 export async function buscarProductosParaProforma(
@@ -72,6 +75,7 @@ export async function buscarProductosParaProforma(
     descripcion: string
     precio: number
     unidad_medida: string
+    con_factura: boolean
   }[]
   const ids = filas.map((p) => p.id)
   const [escalas, datos, stock] = await Promise.all([
@@ -89,6 +93,7 @@ export async function buscarProductosParaProforma(
     medidas: datos.get(p.id)?.medidas ?? [],
     originales: datos.get(p.id)?.originales ?? [],
     stock: stock.get(p.id) ?? 0,
+    con_factura: p.con_factura ?? true,
   }))
 }
 
@@ -101,6 +106,14 @@ export async function createProforma(values: ProformaInput) {
 
   const supabase = await createClient()
   const perfil = await getPerfil()
+
+  // T4 (PLAN_6): toda con factura o toda S/F.
+  const errorMezcla = await validarSinMezclaFactura(
+    supabase,
+    v.items.map((i) => i.producto_id),
+    "proforma"
+  )
+  if (errorMezcla) return { error: errorMezcla }
 
   // T2 (PLAN_6): ningún precio por debajo del precio del sistema.
   const errorPrecio = await validarPrecioMinimo(supabase, v.items)
@@ -166,6 +179,8 @@ export type ProformaDetalleItem = {
   // T2 (PLAN_6): escalas por mayor vigentes, para calcular el precio mínimo
   // (precioSegunCantidad) de las líneas que ya estaban en la proforma.
   escalas: EscalaPrecio[]
+  // T4 (PLAN_6): para no mezclar con factura y S/F al agregar productos.
+  con_factura: boolean
   descuento_tipo: "ninguno" | "monto_fijo"
   descuento_valor: number
 }
@@ -219,7 +234,7 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
 
   const { data: items, error: itemsError } = await supabase
     .from("proforma_items")
-    .select("producto_id, cantidad, precio_unitario, descuento_tipo, descuento_valor, productos(codigo, descripcion, precio)")
+    .select("producto_id, cantidad, precio_unitario, descuento_tipo, descuento_valor, productos(codigo, descripcion, precio, con_factura)")
     .eq("proforma_id", id)
 
   if (itemsError) {
@@ -258,7 +273,7 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
     total: Number(row.total ?? 0),
     items: (items ?? []).map((it) => {
       const prod = (it as Record<string, unknown>).productos as
-        | { codigo: string; descripcion: string; precio: number }
+        | { codigo: string; descripcion: string; precio: number; con_factura: boolean }
         | null
       return {
         producto_id: it.producto_id as string,
@@ -268,6 +283,7 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
         precio_unitario: Number(it.precio_unitario),
         precio_actual: Number(prod?.precio ?? 0),
         escalas: escalas.get(it.producto_id as string) ?? [],
+        con_factura: prod?.con_factura ?? true,
         descuento_tipo: descuentoParaFormulario(it.descuento_tipo),
         descuento_valor: Number(it.descuento_valor ?? 0),
       }
@@ -302,6 +318,14 @@ export async function updateProforma(id: string, values: ProformaInput) {
   if (estado === "convertida") return { error: "La proforma ya fue convertida; no se puede editar." }
   if (estado === "vencida") return { error: "La proforma está vencida (más de 3 meses); es de solo lectura." }
   if (estado === null) return { error: "La proforma no existe." }
+
+  // T4 (PLAN_6): toda con factura o toda S/F.
+  const errorMezcla = await validarSinMezclaFactura(
+    supabase,
+    v.items.map((i) => i.producto_id),
+    "proforma"
+  )
+  if (errorMezcla) return { error: errorMezcla }
 
   // T2 (PLAN_6): ningún precio por debajo del precio del sistema.
   const errorPrecio = await validarPrecioMinimo(supabase, v.items)
