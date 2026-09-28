@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { logError } from "@/lib/log"
 import { getPerfil } from "@/lib/auth/session"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
-import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
+import { escalasVigentesPorProducto, validarPrecioMinimo } from "@/lib/precios-mayor-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import { stockSucursalPorProducto } from "@/lib/stock-sucursal-server"
 import type { Medida } from "@/lib/medidas"
@@ -14,9 +14,24 @@ import {
   proformaSchema,
   calcularTotales,
   calcularSubtotalLinea,
-  normalizarDescuento,
   type ProformaInput,
+  type ProformaValues,
 } from "@/lib/validations/proforma"
+
+// T1 (PLAN_6): las proformas ya no llevan descuentos, ni global ni por línea.
+// Se fuerzan a cero acá aunque el cliente mande otra cosa (la BD también los
+// rechaza desde el script 41).
+function itemsSinDescuento(proformaId: string, items: ProformaValues["items"]) {
+  return items.map((item) => ({
+    proforma_id: proformaId,
+    producto_id: item.producto_id,
+    cantidad: item.cantidad,
+    precio_unitario: item.precio_unitario,
+    descuento_tipo: null,
+    descuento_valor: 0,
+    subtotal_linea: calcularSubtotalLinea(item.cantidad, item.precio_unitario, "ninguno", 0),
+  }))
+}
 
 export type ProductoBusqueda = {
   id: string
@@ -87,13 +102,13 @@ export async function createProforma(values: ProformaInput) {
   const supabase = await createClient()
   const perfil = await getPerfil()
 
+  // T2 (PLAN_6): ningún precio por debajo del precio del sistema.
+  const errorPrecio = await validarPrecioMinimo(supabase, v.items)
+  if (errorPrecio) return { error: errorPrecio }
+
   // Totales calculados en el servidor: nunca se confía en los del cliente.
-  const totales = calcularTotales(
-    v.items,
-    v.descuento_tipo,
-    v.descuento_valor,
-    v.impuesto_porcentaje
-  )
+  // T1 (PLAN_6): sin descuentos.
+  const totales = calcularTotales(v.items, "ninguno", 0, v.impuesto_porcentaje)
 
   const { data: proforma, error } = await supabase
     .from("proformas")
@@ -105,8 +120,8 @@ export async function createProforma(values: ProformaInput) {
       tiempo_entrega_dias: v.tiempo_entrega_dias > 0 ? v.tiempo_entrega_dias : null,
       glosa: v.glosa || null,
       subtotal: totales.subtotal,
-      descuento_tipo: normalizarDescuento(v.descuento_tipo),
-      descuento_valor: v.descuento_valor,
+      descuento_tipo: null,
+      descuento_valor: 0,
       impuesto_porcentaje: v.impuesto_porcentaje,
       total: totales.total,
       creado_por: perfil?.id,
@@ -121,22 +136,9 @@ export async function createProforma(values: ProformaInput) {
     return { error: "No se pudo crear la proforma." }
   }
 
-  const { error: itemsError } = await supabase.from("proforma_items").insert(
-    v.items.map((item) => ({
-      proforma_id: proforma.id,
-      producto_id: item.producto_id,
-      cantidad: item.cantidad,
-      precio_unitario: item.precio_unitario,
-      descuento_tipo: normalizarDescuento(item.descuento_tipo),
-      descuento_valor: item.descuento_valor,
-      subtotal_linea: calcularSubtotalLinea(
-        item.cantidad,
-        item.precio_unitario,
-        item.descuento_tipo,
-        item.descuento_valor
-      ),
-    }))
-  )
+  const { error: itemsError } = await supabase
+    .from("proforma_items")
+    .insert(itemsSinDescuento(proforma.id, v.items))
 
   if (itemsError) {
     logError("proformas.createProforma.items", itemsError, { proformaId: proforma.id })
@@ -161,6 +163,9 @@ export type ProformaDetalleItem = {
   precio_unitario: number
   // Precio ACTUAL del producto, para comparar contra el de la proforma (Q23).
   precio_actual: number
+  // T2 (PLAN_6): escalas por mayor vigentes, para calcular el precio mínimo
+  // (precioSegunCantidad) de las líneas que ya estaban en la proforma.
+  escalas: EscalaPrecio[]
   descuento_tipo: "ninguno" | "monto_fijo"
   descuento_valor: number
 }
@@ -180,6 +185,9 @@ export type ProformaDetalle = {
   glosa: string | null
   descuento_tipo: "ninguno" | "monto_fijo"
   descuento_valor: number
+  // T1 (PLAN_6): proforma histórica con algún descuento (global o de línea);
+  // al editarla se quitan, y la pantalla lo avisa.
+  tenia_descuento: boolean
   impuesto_porcentaje: number
   subtotal: number
   total: number
@@ -221,6 +229,13 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
 
   const row = p as Record<string, unknown>
   const cliente = (row.clientes as ProformaDetalle["cliente"]) ?? null
+  const escalas = await escalasVigentesPorProducto(
+    supabase,
+    (items ?? []).map((it) => it.producto_id as string)
+  )
+  const teniaDescuento =
+    Number(row.descuento_valor ?? 0) > 0 ||
+    (items ?? []).some((it) => Number(it.descuento_valor ?? 0) > 0)
 
   return {
     id: row.id as string,
@@ -237,6 +252,7 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
     glosa: (row.glosa as string | null) ?? null,
     descuento_tipo: descuentoParaFormulario(row.descuento_tipo),
     descuento_valor: Number(row.descuento_valor ?? 0),
+    tenia_descuento: teniaDescuento,
     impuesto_porcentaje: Number(row.impuesto_porcentaje ?? 0),
     subtotal: Number(row.subtotal ?? 0),
     total: Number(row.total ?? 0),
@@ -251,6 +267,7 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
         cantidad: Number(it.cantidad),
         precio_unitario: Number(it.precio_unitario),
         precio_actual: Number(prod?.precio ?? 0),
+        escalas: escalas.get(it.producto_id as string) ?? [],
         descuento_tipo: descuentoParaFormulario(it.descuento_tipo),
         descuento_valor: Number(it.descuento_valor ?? 0),
       }
@@ -286,7 +303,12 @@ export async function updateProforma(id: string, values: ProformaInput) {
   if (estado === "vencida") return { error: "La proforma está vencida (más de 3 meses); es de solo lectura." }
   if (estado === null) return { error: "La proforma no existe." }
 
-  const totales = calcularTotales(v.items, v.descuento_tipo, v.descuento_valor, v.impuesto_porcentaje)
+  // T2 (PLAN_6): ningún precio por debajo del precio del sistema.
+  const errorPrecio = await validarPrecioMinimo(supabase, v.items)
+  if (errorPrecio) return { error: errorPrecio }
+
+  // T1 (PLAN_6): sin descuentos (una proforma vieja que los tenía los pierde al editarse).
+  const totales = calcularTotales(v.items, "ninguno", 0, v.impuesto_porcentaje)
 
   // R15: PRIMERO se reemplazan los ítems y RECIÉN AL FINAL se actualiza la cabecera
   // (totales + revalidada_en). Así, si el insert de ítems falla, la proforma NO
@@ -298,22 +320,9 @@ export async function updateProforma(id: string, values: ProformaInput) {
     return { error: "No se pudieron actualizar los ítems de la proforma." }
   }
 
-  const { error: itemsError } = await supabase.from("proforma_items").insert(
-    v.items.map((item) => ({
-      proforma_id: id,
-      producto_id: item.producto_id,
-      cantidad: item.cantidad,
-      precio_unitario: item.precio_unitario,
-      descuento_tipo: normalizarDescuento(item.descuento_tipo),
-      descuento_valor: item.descuento_valor,
-      subtotal_linea: calcularSubtotalLinea(
-        item.cantidad,
-        item.precio_unitario,
-        item.descuento_tipo,
-        item.descuento_valor
-      ),
-    }))
-  )
+  const { error: itemsError } = await supabase
+    .from("proforma_items")
+    .insert(itemsSinDescuento(id, v.items))
 
   if (itemsError) {
     logError("proformas.updateProforma.items", itemsError, { id })
@@ -329,8 +338,8 @@ export async function updateProforma(id: string, values: ProformaInput) {
       tiempo_entrega_dias: v.tiempo_entrega_dias > 0 ? v.tiempo_entrega_dias : null,
       glosa: v.glosa || null,
       subtotal: totales.subtotal,
-      descuento_tipo: normalizarDescuento(v.descuento_tipo),
-      descuento_valor: v.descuento_valor,
+      descuento_tipo: null,
+      descuento_valor: 0,
       impuesto_porcentaje: v.impuesto_porcentaje,
       total: totales.total,
       revalidada_en: new Date().toISOString(),

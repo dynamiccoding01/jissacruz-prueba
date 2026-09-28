@@ -6,14 +6,10 @@ import { createClient } from "@/lib/supabase/server"
 import { getPerfil } from "@/lib/auth/session"
 import { logError } from "@/lib/log"
 import type { EscalaPrecio } from "@/lib/precios-mayor"
-import { escalasVigentesPorProducto } from "@/lib/precios-mayor-server"
+import { escalasVigentesPorProducto, validarPrecioMinimo } from "@/lib/precios-mayor-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import type { Medida } from "@/lib/medidas"
-import {
-  ventaPendienteSchema,
-  normalizarDescuento,
-  type VentaPendienteInput,
-} from "@/lib/validations/venta-pendiente"
+import { ventaPendienteSchema, type VentaPendienteInput } from "@/lib/validations/venta-pendiente"
 import { type ClienteBusqueda } from "@/app/(dashboard)/clientes/actions"
 
 // Desglose de stock por sucursal, compatible con <StockBadge /> (que solo lee
@@ -147,17 +143,23 @@ export async function crearVentaPendiente(values: VentaPendienteInput) {
 
   const supabase = await createClient()
 
+  // T2 (PLAN_6): ningún precio por debajo del precio del sistema para la cantidad.
+  const errorPrecio = await validarPrecioMinimo(supabase, v.items)
+  if (errorPrecio) return { error: errorPrecio }
+
+  // T2 (PLAN_6): el POS no hace descuentos; se fuerzan a cero (la RPC también
+  // los rechaza desde el script 41).
   const payload = {
     cliente_id: v.cliente_id || null,
-    descuento_tipo: normalizarDescuento(v.descuento_tipo),
-    descuento_valor: v.descuento_valor,
+    descuento_tipo: null,
+    descuento_valor: 0,
     impuesto_porcentaje: v.impuesto_porcentaje,
     items: v.items.map((item) => ({
       producto_id: item.producto_id,
       cantidad: item.cantidad,
       precio_unitario: item.precio_unitario,
-      descuento_tipo: normalizarDescuento(item.descuento_tipo),
-      descuento_valor: item.descuento_valor,
+      descuento_tipo: null,
+      descuento_valor: 0,
     })),
   }
 

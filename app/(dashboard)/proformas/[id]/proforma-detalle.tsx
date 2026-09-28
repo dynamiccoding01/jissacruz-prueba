@@ -14,13 +14,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -95,8 +88,9 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
       plazo_validez_dias: detalle.plazo_validez_dias,
       tiempo_entrega_dias: detalle.tiempo_entrega_dias ?? 0,
       glosa: detalle.glosa ?? "",
-      descuento_tipo: detalle.descuento_tipo,
-      descuento_valor: detalle.descuento_valor,
+      // T1 (PLAN_6): sin descuentos; una proforma vieja que los tenía los pierde al guardar.
+      descuento_tipo: "ninguno",
+      descuento_valor: 0,
       impuesto_porcentaje: detalle.impuesto_porcentaje,
       items: detalle.items.map((i) => ({
         producto_id: i.producto_id,
@@ -104,27 +98,44 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
         descripcion: i.descripcion,
         cantidad: i.cantidad,
         precio_unitario: i.precio_unitario,
-        descuento_tipo: i.descuento_tipo,
-        descuento_valor: i.descuento_valor,
+        descuento_tipo: "ninguno",
+        descuento_valor: 0,
       })),
     },
   })
 
   const items = useFieldArray({ control, name: "items" })
-  // escalas por mayor (solo para productos agregados en esta pantalla)
-  const preciosRef = useRef(new Map<string, { base: number; escalas: EscalaPrecio[] }>())
+  // Precio actual + escalas por mayor vigentes de cada producto (los que ya
+  // estaban y los que se agregan acá): de ahí salen el ajuste por cantidad y el
+  // precio mínimo de T2 (PLAN_6).
+  const preciosRef = useRef(
+    new Map<string, { base: number; escalas: EscalaPrecio[] }>(
+      detalle.items.map((i) => [i.producto_id, { base: i.precio_actual, escalas: i.escalas }])
+    )
+  )
   // precio ACTUAL del producto, para comparar contra el de la proforma (Q23)
   const preciosActualRef = useRef(
     new Map<string, number>(detalle.items.map((i) => [i.producto_id, i.precio_actual]))
   )
 
   const valores = watch()
-  const totales = calcularTotales(
-    valores.items ?? [],
-    valores.descuento_tipo,
-    valores.descuento_valor ?? 0,
-    valores.impuesto_porcentaje ?? 0
-  )
+  const totales = calcularTotales(valores.items ?? [], "ninguno", 0, valores.impuesto_porcentaje ?? 0)
+
+  // T2 (PLAN_6): precio mínimo = precio del sistema para esa cantidad.
+  function precioMinimo(productoId: string, cantidad: number): number {
+    const info = preciosRef.current.get(productoId)
+    if (!info) return 0
+    return precioSegunCantidad(info.base, info.escalas, cantidad)
+  }
+
+  function onPrecioBlur(index: number, productoId: string) {
+    const linea = valores.items?.[index]
+    const minimo = precioMinimo(productoId, Number(linea?.cantidad) || 1)
+    if ((Number(linea?.precio_unitario) || 0) < minimo) {
+      setValue(`items.${index}.precio_unitario`, minimo)
+      toast.error(`El precio no puede ser menor a ${bs(minimo)} (precio del sistema).`)
+    }
+  }
 
   async function onBuscar(texto: string, camposBusqueda: CampoBusqueda[] = campos) {
     setBusqueda(texto)
@@ -150,6 +161,11 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
   }
 
   function agregarProducto(p: ProductoBusqueda) {
+    // Igual que al crear (T4 PLAN_5): no se proforma un producto sin precio.
+    if (p.precio <= 0) {
+      toast.error("Ese producto no tiene precio; asignale un precio antes de agregarlo.")
+      return
+    }
     if (items.fields.some((f) => f.producto_id === p.id)) {
       toast.error("Ese producto ya está en la proforma.")
       return
@@ -169,16 +185,27 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
     setResultados([])
   }
 
-  // Q32: pone en todas las líneas el precio actual del producto.
+  // Q32: pone en todas las líneas el precio actual del producto (con el precio
+  // por mayor si la cantidad alcanza una escala — T2 PLAN_6).
   function traerPreciosActuales() {
     items.fields.forEach((f, index) => {
-      const actual = preciosActualRef.current.get(f.producto_id)
-      if (actual != null) setValue(`items.${index}.precio_unitario`, actual)
+      if (!preciosRef.current.has(f.producto_id)) return
+      const cantidad = Number(valores.items?.[index]?.cantidad) || 1
+      setValue(`items.${index}.precio_unitario`, precioMinimo(f.producto_id, cantidad))
     })
     toast.success("Precios actualizados a los vigentes. Revisá y guardá.")
   }
 
   function onGuardar(values: ProformaInput) {
+    const bajoMinimo = values.items.find(
+      (i) => (Number(i.precio_unitario) || 0) < precioMinimo(i.producto_id, Number(i.cantidad) || 1)
+    )
+    if (bajoMinimo) {
+      toast.error(
+        `El precio de ${bajoMinimo.codigo} está por debajo del precio del sistema. Usá "Traer precios actuales" o subilo.`
+      )
+      return
+    }
     startGuardar(async () => {
       const res = await updateProforma(detalle.id, values)
       if (res.error) {
@@ -266,6 +293,12 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
           vuelve, creá una proforma nueva.
         </div>
       )}
+      {editable && detalle.tenia_descuento && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          Esta proforma se hizo con descuento. Las proformas ya no llevan descuentos: si la guardás,
+          el descuento se quita y el total se recalcula sin él.
+        </div>
+      )}
       {detalle.estado_efectivo === "convertida" && (
         <div className="rounded-lg border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
           Esta proforma ya fue convertida en venta. Es de solo lectura.
@@ -335,15 +368,12 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                 items.fields.map((field, index) => {
                   const linea = valores.items?.[index]
                   const subtotalLinea = linea
-                    ? calcularSubtotalLinea(
-                        linea.cantidad,
-                        linea.precio_unitario,
-                        linea.descuento_tipo,
-                        linea.descuento_valor
-                      )
+                    ? calcularSubtotalLinea(linea.cantidad, linea.precio_unitario, "ninguno", 0)
                     : 0
                   const actual = preciosActualRef.current.get(field.producto_id)
                   const cambio = actual != null && Number(linea?.precio_unitario) !== actual
+                  const minimo = precioMinimo(field.producto_id, Number(linea?.cantidad) || 1)
+                  const bajoMinimo = (Number(linea?.precio_unitario) || 0) < minimo
                   return (
                     <div key={field.id} className="space-y-2.5 rounded-xl border border-border bg-background p-3.5 shadow-sm transition-colors hover:border-primary/40">
                       <div className="flex items-start justify-between gap-2">
@@ -361,7 +391,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                           <Trash2 className="size-5" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-[4.5rem_7rem_1fr_auto] items-end gap-2">
+                      <div className="grid grid-cols-[4.5rem_8rem_1fr] items-end gap-2">
                         <div className="space-y-1">
                           <Label className="text-xs">Cant.</Label>
                           <Input
@@ -375,44 +405,20 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Precio Bs</Label>
+                          <Label className="text-xs">Precio Bs (mín. {Number(minimo).toFixed(2)})</Label>
                           <Input
                             type="number"
                             step="0.01"
-                            min={0}
-                            className={cn("h-11 text-base", cambio && "border-amber-400 bg-amber-50")}
-                            {...register(`items.${index}.precio_unitario`)}
+                            min={minimo}
+                            className={cn(
+                              "h-11 text-base",
+                              cambio && "border-amber-400 bg-amber-50",
+                              bajoMinimo && "border-destructive bg-destructive/5"
+                            )}
+                            {...register(`items.${index}.precio_unitario`, {
+                              onBlur: () => onPrecioBlur(index, field.producto_id),
+                            })}
                           />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Descuento</Label>
-                          <div className="flex gap-1">
-                            <Select
-                              value={linea?.descuento_tipo ?? "ninguno"}
-                              onValueChange={(v) =>
-                                setValue(
-                                  `items.${index}.descuento_tipo`,
-                                  v as ProformaInput["items"][number]["descuento_tipo"]
-                                )
-                              }
-                            >
-                              <SelectTrigger className="h-11 w-[4.5rem]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="ninguno">—</SelectItem>
-                                <SelectItem value="monto_fijo">Bs</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              className="h-11 text-base"
-                              disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
-                              {...register(`items.${index}.descuento_valor`)}
-                            />
-                          </div>
                         </div>
                         <div className="space-y-1 text-right">
                           <Label className="text-xs">Subtotal</Label>
@@ -437,31 +443,6 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
           <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
             <div className="grid grid-cols-2 gap-3 rounded-md border border-border p-3">
               <div className="space-y-1">
-                <Label className="text-xs">Descuento global</Label>
-                <div className="flex gap-1">
-                  <Select
-                    value={valores.descuento_tipo ?? "ninguno"}
-                    onValueChange={(v) => setValue("descuento_tipo", v as ProformaInput["descuento_tipo"])}
-                  >
-                    <SelectTrigger className="h-11 w-[4.5rem]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ninguno">—</SelectItem>
-                      <SelectItem value="monto_fijo">Bs</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    className="h-11 text-base"
-                    disabled={!valores.descuento_tipo || valores.descuento_tipo === "ninguno"}
-                    {...register("descuento_valor")}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1">
                 <Label className="text-xs" htmlFor="impuesto_porcentaje">
                   Impuesto %
                 </Label>
@@ -482,12 +463,6 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium">{bs(totales.subtotal)}</span>
               </div>
-              {totales.descuento > 0 && (
-                <div className="flex justify-between text-base">
-                  <span className="text-muted-foreground">Descuento</span>
-                  <span className="font-medium">−{bs(totales.descuento)}</span>
-                </div>
-              )}
               {totales.impuesto > 0 && (
                 <div className="flex justify-between text-base">
                   <span className="text-muted-foreground">Impuesto</span>
@@ -547,9 +522,9 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                   <AlertDialogHeader>
                     <AlertDialogTitle>¿Convertir {detalle.numero} en venta?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Se registra la venta con estos ítems y descuentos por {bs(totales.total)}, y se
-                      descuenta el stock correspondiente. La proforma queda convertida y no se puede
-                      deshacer.
+                      Se registra la venta con los ítems guardados de la proforma por{" "}
+                      {bs(detalle.total)}, y se descuenta el stock correspondiente. La proforma queda
+                      convertida y no se puede deshacer.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

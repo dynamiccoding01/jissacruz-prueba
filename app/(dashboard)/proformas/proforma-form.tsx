@@ -85,12 +85,8 @@ export function ProformaForm() {
   const stockRef = useRef(new Map<string, number>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
-  const totales = calcularTotales(
-    valores.items ?? [],
-    valores.descuento_tipo,
-    valores.descuento_valor ?? 0,
-    valores.impuesto_porcentaje ?? 0
-  )
+  // T1 (PLAN_6): la proforma ya no lleva descuentos (ni global ni por línea).
+  const totales = calcularTotales(valores.items ?? [], "ninguno", 0, valores.impuesto_porcentaje ?? 0)
   const resultadosPagina = resultados.slice(pagina * tamano, (pagina + 1) * tamano)
 
   // Consulta real al servidor.
@@ -131,6 +127,25 @@ export function ProformaForm() {
     setValue(`items.${index}.precio_unitario`, precioSegunCantidad(info.base, info.escalas, cantidad))
   }
 
+  // T2 (PLAN_6): precio mínimo de la línea = precio del sistema para esa
+  // cantidad (el normal o el por mayor de la escala alcanzada).
+  function precioMinimo(productoId: string, cantidad: number): number {
+    const info = preciosRef.current.get(productoId)
+    if (!info) return 0
+    return precioSegunCantidad(info.base, info.escalas, cantidad)
+  }
+
+  // T2 (PLAN_6): el precio se puede subir, no bajar del mínimo. Si queda por
+  // debajo, vuelve al mínimo y avisa.
+  function onPrecioBlur(index: number, productoId: string) {
+    const linea = valores.items?.[index]
+    const minimo = precioMinimo(productoId, Number(linea?.cantidad) || 1)
+    if ((Number(linea?.precio_unitario) || 0) < minimo) {
+      setValue(`items.${index}.precio_unitario`, minimo)
+      toast.error(`El precio no puede ser menor a ${bs(minimo)} (precio del sistema).`)
+    }
+  }
+
   // T1 (PLAN_5): ajusta el precio por mayoreo y AVISA (sin bloquear) si la
   // cantidad supera el stock de la sucursal.
   function onCantidadChange(index: number, productoId: string, raw: string) {
@@ -167,6 +182,13 @@ export function ProformaForm() {
   }
 
   async function onSubmit(values: ProformaInput) {
+    const bajoMinimo = values.items.find(
+      (i) => (Number(i.precio_unitario) || 0) < precioMinimo(i.producto_id, Number(i.cantidad) || 1)
+    )
+    if (bajoMinimo) {
+      toast.error(`El precio de ${bajoMinimo.codigo} está por debajo del precio del sistema.`)
+      return
+    }
     setLoading(true)
     const result = await createProforma(values)
     setLoading(false)
@@ -340,30 +362,25 @@ export function ProformaForm() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[44rem] overflow-hidden rounded-lg border border-border">
-              <div className="grid grid-cols-[2rem_5.5rem_1fr_7rem_8.5rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
+            <div className="min-w-[38rem] overflow-hidden rounded-lg border border-border">
+              <div className="grid grid-cols-[2rem_5.5rem_1fr_8rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
                 <span className="text-center">N°</span>
                 <span className="text-center">Cant.</span>
                 <span>Código / Detalle</span>
                 <span className="text-right">P. Unit.</span>
-                <span className="text-center">Descuento</span>
                 <span className="text-right">Importe</span>
                 <span />
               </div>
               {items.fields.map((field, index) => {
                 const linea = valores.items?.[index]
                 const subtotalLinea = linea
-                  ? calcularSubtotalLinea(
-                      linea.cantidad,
-                      linea.precio_unitario,
-                      linea.descuento_tipo,
-                      linea.descuento_valor
-                    )
+                  ? calcularSubtotalLinea(linea.cantidad, linea.precio_unitario, "ninguno", 0)
                   : 0
+                const minimo = precioMinimo(field.producto_id, Number(linea?.cantidad) || 1)
                 return (
                   <div
                     key={field.id}
-                    className="grid grid-cols-[2rem_5.5rem_1fr_7rem_8.5rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
+                    className="grid grid-cols-[2rem_5.5rem_1fr_8rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
                   >
                     <span className="text-center text-sm text-muted-foreground">{index + 1}</span>
                     <Input
@@ -378,39 +395,21 @@ export function ProformaForm() {
                       <p className="truncate text-sm font-semibold">{field.codigo}</p>
                       <p className="truncate text-xs text-muted-foreground">{field.descripcion}</p>
                     </div>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      className="h-9 text-right text-sm"
-                      {...register(`items.${index}.precio_unitario`)}
-                    />
-                    <div className="flex gap-1">
-                      <Select
-                        value={linea?.descuento_tipo ?? "ninguno"}
-                        onValueChange={(v) =>
-                          setValue(
-                            `items.${index}.descuento_tipo`,
-                            v as ProformaInput["items"][number]["descuento_tipo"]
-                          )
-                        }
-                      >
-                        <SelectTrigger className="h-9 w-[3.25rem] px-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ninguno">—</SelectItem>
-                          <SelectItem value="monto_fijo">Bs</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    {/* T2 (PLAN_6): se puede subir, no bajar del precio del sistema. */}
+                    <div>
                       <Input
                         type="number"
                         step="0.01"
-                        min={0}
+                        min={minimo}
                         className="h-9 text-right text-sm"
-                        disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
-                        {...register(`items.${index}.descuento_valor`)}
+                        title={`Mínimo: ${bs(minimo)}`}
+                        {...register(`items.${index}.precio_unitario`, {
+                          onBlur: () => onPrecioBlur(index, field.producto_id),
+                        })}
                       />
+                      <p className="mt-0.5 text-right text-[10px] text-muted-foreground">
+                        mín. {bs(minimo)}
+                      </p>
                     </div>
                     <span className="whitespace-nowrap text-right text-sm font-bold text-primary">
                       {bs(subtotalLinea)}
@@ -431,35 +430,10 @@ export function ProformaForm() {
           </div>
         )}
 
-        {/* Descuento global + impuesto + glosa + totales */}
+        {/* Impuesto + glosa + totales (T1 PLAN_6: sin descuento global) */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="w-full max-w-md space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Descuento global</Label>
-                <div className="flex gap-1">
-                  <Select
-                    value={valores.descuento_tipo ?? "ninguno"}
-                    onValueChange={(v) => setValue("descuento_tipo", v as ProformaInput["descuento_tipo"])}
-                  >
-                    <SelectTrigger className="h-10 w-[4.25rem]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ninguno">—</SelectItem>
-                      <SelectItem value="monto_fijo">Bs</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    className="h-10 text-base"
-                    disabled={!valores.descuento_tipo || valores.descuento_tipo === "ninguno"}
-                    {...register("descuento_valor")}
-                  />
-                </div>
-              </div>
               <div className="space-y-1">
                 <Label className="text-xs" htmlFor="impuesto_porcentaje">
                   Impuesto %
@@ -486,12 +460,6 @@ export function ProformaForm() {
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium">{bs(totales.subtotal)}</span>
             </div>
-            {totales.descuento > 0 && (
-              <div className="flex justify-between text-base">
-                <span className="text-muted-foreground">Descuento</span>
-                <span className="font-medium">−{bs(totales.descuento)}</span>
-              </div>
-            )}
             {totales.impuesto > 0 && (
               <div className="flex justify-between text-base">
                 <span className="text-muted-foreground">Impuesto</span>

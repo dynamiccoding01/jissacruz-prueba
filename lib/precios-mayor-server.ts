@@ -2,7 +2,7 @@ import "server-only"
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import type { EscalaPrecio } from "./precios-mayor"
+import { precioSegunCantidad, type EscalaPrecio } from "./precios-mayor"
 
 // C3 · paso 2 — Trae las escalas de precio por mayor VIGENTES (vigente_hasta
 // null o >= hoy) de un conjunto de productos, agrupadas por producto y
@@ -28,4 +28,36 @@ export async function escalasVigentesPorProducto(
     porProducto.set(e.producto_id, lista)
   }
   return porProducto
+}
+
+type LineaConPrecio = { producto_id: string; cantidad: number; precio_unitario: number }
+
+// T2 (PLAN_6): el precio unitario no puede quedar por debajo del precio del
+// sistema para esa cantidad (el normal, o el por mayor de la escala alcanzada).
+// Devuelve el mensaje de error o null. La BD lo vuelve a exigir (fn_precio_minimo,
+// script 41); esto es para dar un mensaje claro antes de llegar ahí.
+export async function validarPrecioMinimo(
+  supabase: SupabaseClient,
+  lineas: LineaConPrecio[]
+): Promise<string | null> {
+  const ids = Array.from(new Set(lineas.map((l) => l.producto_id)))
+  if (ids.length === 0) return null
+
+  const [{ data: productos, error }, escalas] = await Promise.all([
+    supabase.from("productos").select("id, codigo, precio").in("id", ids),
+    escalasVigentesPorProducto(supabase, ids),
+  ])
+  if (error) return "No se pudieron verificar los precios del sistema."
+
+  const porId = new Map((productos ?? []).map((p) => [p.id as string, p]))
+  const centavos = (n: number) => Math.round(n * 100)
+  for (const l of lineas) {
+    const prod = porId.get(l.producto_id)
+    if (!prod) return "Uno de los productos ya no existe."
+    const minimo = precioSegunCantidad(Number(prod.precio), escalas.get(l.producto_id), l.cantidad)
+    if (centavos(l.precio_unitario) < centavos(minimo)) {
+      return `El precio de ${prod.codigo} no puede ser menor a Bs ${minimo.toFixed(2)} (precio del sistema para ${l.cantidad} u.).`
+    }
+  }
+  return null
 }

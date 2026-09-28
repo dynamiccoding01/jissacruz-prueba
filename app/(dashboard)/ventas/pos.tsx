@@ -14,13 +14,6 @@ import { StockBadge } from "@/components/shared/stock-badge"
 import { cn } from "@/lib/utils"
 import { formatearMedidas } from "@/lib/medidas"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   CriteriosBusqueda,
   CAMPOS_DEFECTO,
   type CampoBusqueda,
@@ -87,12 +80,9 @@ export function Pos() {
   const stockRef = useRef(new Map<string, number>())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const valores = watch()
-  const totales = calcularTotales(
-    valores.items ?? [],
-    valores.descuento_tipo,
-    valores.descuento_valor ?? 0,
-    valores.impuesto_porcentaje ?? 0
-  )
+  // T2 (PLAN_6): el POS no hace descuentos (ni por línea ni global); cobra el
+  // precio del sistema.
+  const totales = calcularTotales(valores.items ?? [], "ninguno", 0, valores.impuesto_porcentaje ?? 0)
   const resultadosPagina = resultados.slice(pagina * tamano, (pagina + 1) * tamano)
 
   function limpiar() {
@@ -378,30 +368,24 @@ export function Pos() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[44rem] overflow-hidden rounded-lg border border-border">
-              <div className="grid grid-cols-[2rem_5.5rem_1fr_7rem_8.5rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
+            <div className="min-w-[36rem] overflow-hidden rounded-lg border border-border">
+              <div className="grid grid-cols-[2rem_5.5rem_1fr_7rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
                 <span className="text-center">N°</span>
                 <span className="text-center">Cant.</span>
                 <span>Código / Detalle</span>
                 <span className="text-right">P. Unit.</span>
-                <span className="text-center">Descuento</span>
                 <span className="text-right">Importe</span>
                 <span />
               </div>
               {items.fields.map((field, index) => {
                 const linea = valores.items?.[index]
                 const subtotalLinea = linea
-                  ? calcularSubtotalLinea(
-                      linea.cantidad,
-                      linea.precio_unitario,
-                      linea.descuento_tipo,
-                      linea.descuento_valor
-                    )
+                  ? calcularSubtotalLinea(linea.cantidad, linea.precio_unitario, "ninguno", 0)
                   : 0
                 return (
                   <div
                     key={field.id}
-                    className="grid grid-cols-[2rem_5.5rem_1fr_7rem_8.5rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
+                    className="grid grid-cols-[2rem_5.5rem_1fr_7rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
                   >
                     <span className="text-center text-sm text-muted-foreground">{index + 1}</span>
                     <Input
@@ -421,33 +405,6 @@ export function Pos() {
                     <span className="whitespace-nowrap px-1 text-right text-sm font-medium tabular-nums">
                       {bs(Number(linea?.precio_unitario) || 0)}
                     </span>
-                    <div className="flex gap-1">
-                      <Select
-                        value={linea?.descuento_tipo ?? "ninguno"}
-                        onValueChange={(v) =>
-                          setValue(
-                            `items.${index}.descuento_tipo`,
-                            v as VentaPendienteInput["items"][number]["descuento_tipo"]
-                          )
-                        }
-                      >
-                        <SelectTrigger className="h-9 w-[3.25rem] px-2">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ninguno">—</SelectItem>
-                          <SelectItem value="monto_fijo">Bs</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        className="h-9 text-right text-sm"
-                        disabled={!linea?.descuento_tipo || linea.descuento_tipo === "ninguno"}
-                        {...register(`items.${index}.descuento_valor`)}
-                      />
-                    </div>
                     <span className="whitespace-nowrap text-right text-sm font-bold text-primary">
                       {bs(subtotalLinea)}
                     </span>
@@ -467,34 +424,9 @@ export function Pos() {
           </div>
         )}
 
-        {/* Descuento global + impuesto + totales */}
+        {/* Impuesto + totales (T2 PLAN_6: sin descuento global) */}
         <div className="flex flex-col items-end gap-3">
           <div className="grid w-full max-w-sm grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">Descuento global</Label>
-              <div className="flex gap-1">
-                <Select
-                  value={valores.descuento_tipo ?? "ninguno"}
-                  onValueChange={(v) => setValue("descuento_tipo", v as VentaPendienteInput["descuento_tipo"])}
-                >
-                  <SelectTrigger className="h-10 w-[4.25rem]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ninguno">—</SelectItem>
-                    <SelectItem value="monto_fijo">Bs</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  className="h-10 text-base"
-                  disabled={!valores.descuento_tipo || valores.descuento_tipo === "ninguno"}
-                  {...register("descuento_valor")}
-                />
-              </div>
-            </div>
             <div className="space-y-1">
               <Label className="text-xs" htmlFor="impuesto_porcentaje">
                 Impuesto %
@@ -516,12 +448,6 @@ export function Pos() {
               <span className="text-muted-foreground">Subtotal</span>
               <span className="font-medium">{bs(totales.subtotal)}</span>
             </div>
-            {totales.descuento > 0 && (
-              <div className="flex justify-between text-base">
-                <span className="text-muted-foreground">Descuento</span>
-                <span className="font-medium">−{bs(totales.descuento)}</span>
-              </div>
-            )}
             {totales.impuesto > 0 && (
               <div className="flex justify-between text-base">
                 <span className="text-muted-foreground">Impuesto</span>
