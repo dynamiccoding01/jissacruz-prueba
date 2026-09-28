@@ -77,7 +77,7 @@
 
 ---
 
-## T5 — Nuevo módulo CAJA: confirmar ventas ✅ CÓDIGO LISTO (2026-09-11) — ⚠️ falta correr `40_ventas_pendientes.sql` en dev+prod
+## T5 — Nuevo módulo CAJA: confirmar ventas ✅ COMPLETADO (2026-09-11) — script `40` corrido en dev + prod (2026-09-27)
 
 **Qué pide:** separar el flujo de ventas en dos pasos. El **vendedor crea** un pedido en el POS (sin cobrar, sin mover stock) y el **cajero confirma/cobra** en un módulo nuevo **CAJA**, que lista los pedidos pendientes de otros usuarios.
 
@@ -97,6 +97,6 @@
 - **Factura PDF:** se genera **al confirmar** (en CAJA), no en el POS.
 - **Permisos:** POS crear = vendedor + cajero + admin; CAJA confirmar/cancelar = cajero + admin.
 
-**SQL pendiente:** ⚠️ correr `40_ventas_pendientes.sql` en dev + prod y reflejar en `produccion_setup.sql`.
+**SQL:** ✅ `40_ventas_pendientes.sql` corrido en dev + prod (2026-09-27) y reflejado en `produccion_setup.sql`.
 
 **Nota:** esto cambia la invariante que hoy documenta CLAUDE.md ("no hay bandeja de ventas pendientes; fn_registrar_venta atómica"). Al cerrar T5 hay que **actualizar CLAUDE.md** con el nuevo flujo.

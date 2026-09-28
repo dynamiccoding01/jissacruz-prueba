@@ -20,13 +20,13 @@
 3. **T3** — cuadro de Rentabilidad en el dashboard (script `42`).
 
 ### Scripts SQL de esta tanda
-La base está en el **40** (⚠️ confirmar que el `40_ventas_pendientes.sql` ya corrió en **producción**: el esquema de prod del 2026-09-27 no lo tenía). Lo nuevo:
+La base está en el **40** (✅ corrido en dev + prod el 2026-09-27). Lo nuevo — **✅ 41 y 42 corridos en dev + prod (2026-09-27)**, verificado con `pg_proc` (existen `fn_precio_minimo`, `fn_proformas_sin_descuento`, `fn_resumen_rentabilidad`):
 - `41_precio_minimo_sin_descuentos.sql` (T1 + T2) — **requiere el 40**.
 - `42_rentabilidad.sql` (T3).
 
 ---
 
-## T1 — Proforma sin descuentos ✅ CÓDIGO LISTO (2026-09-27) — ⚠️ falta correr `41` en dev + prod
+## T1 — Proforma sin descuentos ✅ COMPLETADO (2026-09-27) — script `41` corrido en dev + prod
 
 **Qué pide:** quitar la opción de descuento en proforma (la imagen muestra "Descuento global").
 **Decisión:** se quitan el global **y** el de cada línea.
@@ -41,7 +41,7 @@ La base está en el **40** (⚠️ confirmar que el `40_ventas_pendientes.sql` y
 
 ---
 
-## T2 — Precio unitario mínimo (Proforma y POS) ✅ CÓDIGO LISTO (2026-09-27) — ⚠️ falta correr `41` en dev + prod
+## T2 — Precio unitario mínimo (Proforma y POS) ✅ COMPLETADO (2026-09-27) — script `41` corrido en dev + prod
 
 **Qué pide:** que no se pueda bajar el precio unitario por debajo del que está en el sistema, en Proforma y en Ventas (POS).
 
@@ -57,7 +57,7 @@ La base está en el **40** (⚠️ confirmar que el `40_ventas_pendientes.sql` y
 
 ---
 
-## T3 — Rentabilidad en el dashboard ✅ CÓDIGO LISTO (2026-09-27) — ⚠️ falta correr `42` en dev + prod
+## T3 — Rentabilidad en el dashboard ✅ COMPLETADO (2026-09-27) — script `42` corrido en dev + prod
 
 **Qué pide:** ver en el dashboard (admin) la diferencia entre compra y venta: con cuánto ingresó y cuál es la ganancia, con nombres profesionales.
 
