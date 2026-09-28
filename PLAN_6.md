@@ -74,7 +74,7 @@ La base está en el **40** (✅ corrido en dev + prod el 2026-09-27). Lo nuevo �
 
 ---
 
-## T4 — Ganancias separadas: con factura y sin factura (sin mezclarlas) ✅ CÓDIGO LISTO (2026-09-27) — ⚠️ falta correr `43` en dev + prod
+## T4 — Ganancias separadas: con factura y sin factura (sin mezclarlas) ✅ COMPLETADO (2026-09-27) — script `43` corrido en dev (verificado con `pg_proc`); ⚠️ confirmar que corrió en prod
 
 **Qué pide:** separar las ganancias **con factura** de las **sin factura**, sin mezclarlas. Hoy el bloque Rentabilidad de T3 las suma juntas.
 
