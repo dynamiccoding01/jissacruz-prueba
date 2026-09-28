@@ -142,3 +142,16 @@ order by v.creado_en;
 - **De paso:** la ruta `/api/pdf/reporte` ahora exige admin (antes cualquier usuario logueado podía bajar un reporte, y este trae costos y utilidades).
 
 **Prueba:** POS → agregar un producto normal y después uno S/F → no deja. Pedido S/F → en Caja el selector queda en "Sin factura". Dashboard → dos paneles que no se suman. Reportes → Rentabilidad del mes → dos tablas, PDF y Excel con las dos por separado.
+
+---
+
+## Arreglos de la revisión del sistema ✅ COMPLETADO (2026-09-27) — sin SQL para correr
+
+Encontrados en la inspección del 2026-09-27 y aprobados por el cliente ("sí, hazlo").
+
+1. **Instalador `produccion_setup.sql` completo:** le faltaban los scripts **35–38** (saltaba del 34 al 39). Se insertaron en orden antes del 39. Una base nueva armada con ese archivo ahora queda con `tipo_pago`, `con_factura`, rol `cajero` y unidades KG/LT. **No hay que correr nada** en las bases actuales (ya los tienen).
+2. **Cada rol entra a su pantalla:** `rutaInicio(rol)` en `lib/auth/session.ts` — admin → Dashboard, **cajero → Caja** (antes caía en Proformas, que no es de su rol), vendedor → Proformas. Lo usan el login, la raíz `/` y las guardas. Nueva guarda `requireRol([...])`: Proformas (lista, nueva y detalle) y Pedidos entre sucursales quedan solo para admin + vendedor; Caja para admin + cajero; POS para admin + vendedor. Las acciones de escritura de Proformas y Pedidos también chequean el rol.
+
+**Prueba:** iniciar sesión como cajero → entra directo a **Caja**; escribir `/proformas` o `/traspasos` en la barra → vuelve a Caja.
+
+**Pendiente (decisión del cliente):** convertir una proforma en venta la registra directo, sin pasar por Caja. ¿Debe ir a Caja como pedido pendiente?

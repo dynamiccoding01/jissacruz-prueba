@@ -6,7 +6,7 @@ Ejecutar en el **SQL Editor de Supabase**, en un proyecto nuevo.
 
 **Para clonar la base completa en un proyecto Supabase nuevo, usá
 [`produccion_setup.sql`](produccion_setup.sql) — un solo archivo, una sola corrida.**
-Es la concatenación de TODOS los scripts (01–32) en el **orden de dependencia
+Es la concatenación de TODOS los scripts (01–43; los 35–38 se sumaron el 27 sep 2026) en el **orden de dependencia
 correcto** (no numérico: 29 antes que 22, 26 antes que 25), así reproduce el estado
 real de producción sin que un script pise a otro. Incluye extensión `unaccent`,
 todas las tablas, triggers, funciones/RPC en su versión final, RLS (con la
