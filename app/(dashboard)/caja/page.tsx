@@ -1,16 +1,11 @@
-import { redirect } from "next/navigation"
-
-import { getPerfil } from "@/lib/auth/session"
+import { requireRol } from "@/lib/auth/session"
 import { createClient } from "@/lib/supabase/server"
 import { CajaExplorer, type PendienteFila } from "./caja-explorer"
 
 // PLAN_5 · T5: CAJA lista los pedidos pendientes (creados por los vendedores) y el
 // cajero los confirma/cobra o cancela. Solo cajero y admin.
 export default async function CajaPage() {
-  const perfil = await getPerfil()
-  if (!perfil || (perfil.rol !== "admin" && perfil.rol !== "cajero")) {
-    redirect("/proformas")
-  }
+  await requireRol(["admin", "cajero"])
 
   const supabase = await createClient()
   const { data } = await supabase

@@ -1,12 +1,10 @@
 import { redirect } from "next/navigation"
 
-import { createClient } from "@/lib/supabase/server"
+import { getPerfil, rutaInicio } from "@/lib/auth/session"
 
 export default async function Home() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const perfil = await getPerfil()
 
-  redirect(user ? "/dashboard" : "/login")
+  // Cada rol entra a su pantalla de inicio; sin sesión, al login.
+  redirect(perfil ? rutaInicio(perfil.rol) : "/login")
 }

@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
+import { requireRol } from "@/lib/auth/session"
 import { ProformasExplorer, type ProformaFila } from "./proformas-explorer"
 
 export default async function ProformasPage() {
+  // Proformas es de vendedor y admin (el cajero no la tiene en su menú).
+  await requireRol(["admin", "vendedor"])
   const supabase = await createClient()
 
   const [{ data: proformas }, { data: clientes }] = await Promise.all([

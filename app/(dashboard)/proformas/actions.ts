@@ -19,6 +19,14 @@ import {
   type ProformaValues,
 } from "@/lib/validations/proforma"
 
+// Proformas es de vendedor y admin: el cajero no crea, edita ni convierte (la
+// página ya lo bloquea; esto cubre una llamada directa a la acción).
+const SIN_PERMISO_PROFORMAS = "Tu rol no puede usar Proformas."
+async function puedeUsarProformas() {
+  const perfil = await getPerfil()
+  return !!perfil && (perfil.rol === "admin" || perfil.rol === "vendedor")
+}
+
 // T1 (PLAN_6): las proformas ya no llevan descuentos, ni global ni por línea.
 // Se fuerzan a cero acá aunque el cliente mande otra cosa (la BD también los
 // rechaza desde el script 41).
@@ -98,6 +106,7 @@ export async function buscarProductosParaProforma(
 }
 
 export async function createProforma(values: ProformaInput) {
+  if (!(await puedeUsarProformas())) return { error: SIN_PERMISO_PROFORMAS }
   const parsed = proformaSchema.safeParse(values)
   if (!parsed.success) {
     return { error: "Revisá los datos de la proforma." }
@@ -305,6 +314,7 @@ async function estadoEfectivoDe(
 }
 
 export async function updateProforma(id: string, values: ProformaInput) {
+  if (!(await puedeUsarProformas())) return { error: SIN_PERMISO_PROFORMAS }
   const parsed = proformaSchema.safeParse(values)
   if (!parsed.success) {
     return { error: "Revisá los datos de la proforma." }
@@ -383,6 +393,7 @@ export async function updateProforma(id: string, values: ProformaInput) {
 // Revalida sin cambiar nada (confirma que los precios siguen bien): reinicia el
 // plazo desde ahora. No permitido en convertida ni vencida.
 export async function revalidarProforma(id: string) {
+  if (!(await puedeUsarProformas())) return { error: SIN_PERMISO_PROFORMAS }
   const supabase = await createClient()
 
   const estado = await estadoEfectivoDe(supabase, id)
@@ -406,6 +417,7 @@ export async function revalidarProforma(id: string) {
 }
 
 export async function convertirProformaAVenta(proformaId: string) {
+  if (!(await puedeUsarProformas())) return { error: SIN_PERMISO_PROFORMAS }
   const supabase = await createClient()
 
   const { data: ventaId, error } = await supabase.rpc("fn_convertir_proforma_a_venta", {

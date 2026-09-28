@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { rutaInicio } from "@/lib/auth/session"
 import { redirect } from "next/navigation"
 
 export async function signIn(email: string, password: string) {
@@ -13,7 +14,7 @@ export async function signIn(email: string, password: string) {
 
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("activo")
+    .select("activo, rol")
     .eq("id", data.user.id)
     .single()
 
@@ -22,7 +23,8 @@ export async function signIn(email: string, password: string) {
     return { error: "Tu usuario esta desactivado. Contacta al administrador." }
   }
 
-  redirect("/dashboard")
+  // Cada rol entra a su pantalla (admin → Dashboard, cajero → Caja, vendedor → Proformas).
+  redirect(rutaInicio(perfil.rol))
 }
 
 export async function signOut() {

@@ -1,16 +1,13 @@
 import { redirect } from "next/navigation"
 
-import { createClient } from "@/lib/supabase/server"
+import { getPerfil, rutaInicio } from "@/lib/auth/session"
 import { LoginForm } from "./login-form"
 
 export default async function LoginPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (user) {
-    redirect("/dashboard")
+  // Con sesión y perfil activo, directo a la pantalla de inicio de su rol.
+  const perfil = await getPerfil()
+  if (perfil?.activo) {
+    redirect(rutaInicio(perfil.rol))
   }
 
   return (

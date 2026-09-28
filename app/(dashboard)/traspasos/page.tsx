@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
-import { getPerfil } from "@/lib/auth/session"
+import { requireRol } from "@/lib/auth/session"
 import { getSucursalesActivas } from "@/lib/datos-cacheados"
 import { TraspasosExplorer, type TraspasoFila } from "./traspasos-explorer"
 import type { SucursalOption } from "./traspaso-form"
 
 export default async function TraspasosPage() {
-  const perfil = await getPerfil()
+  // Pedidos entre sucursales es de vendedor y admin (no del cajero).
+  const perfil = await requireRol(["admin", "vendedor"])
   const supabase = await createClient()
 
   const sucursalData = await getSucursalesActivas()
@@ -35,8 +36,8 @@ export default async function TraspasosPage() {
       <TraspasosExplorer
         traspasos={(traspasoData ?? []) as unknown as TraspasoFila[]}
         sucursales={(sucursalData ?? []) as SucursalOption[]}
-        userSucursalId={perfil?.sucursal_id ?? undefined}
-        rol={perfil!.rol}
+        userSucursalId={perfil.sucursal_id ?? undefined}
+        rol={perfil.rol}
       />
     </div>
   )

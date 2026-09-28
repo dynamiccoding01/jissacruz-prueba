@@ -43,12 +43,27 @@ export const getPerfil = cache(async (): Promise<Perfil | null> => {
   }
 })
 
-// Guarda para paginas exclusivas de admin (el layout ya valida sesion/activo;
-// esto evita que un vendedor entre escribiendo la URL directamente).
-export async function requireAdmin(): Promise<Perfil> {
+type Rol = Perfil["rol"]
+
+// Pantalla de inicio de cada rol: a donde va al iniciar sesión y a donde se lo
+// manda si intenta abrir una página que no le corresponde. El cajero trabaja en
+// Caja (antes caía en Proformas, que no es de su rol).
+export function rutaInicio(rol: Rol | null | undefined): string {
+  if (rol === "admin") return "/dashboard"
+  if (rol === "cajero") return "/caja"
+  return "/proformas"
+}
+
+// Guarda de página/acción por rol (el layout ya valida sesión/activo; esto evita
+// que alguien entre escribiendo la URL de un módulo que no es de su rol).
+export async function requireRol(roles: Rol[]): Promise<Perfil> {
   const perfil = await getPerfil()
-  if (!perfil || perfil.rol !== "admin") {
-    redirect("/proformas")
-  }
+  if (!perfil) redirect("/login")
+  if (!roles.includes(perfil.rol)) redirect(rutaInicio(perfil.rol))
   return perfil
+}
+
+// Guarda para páginas exclusivas de admin.
+export async function requireAdmin(): Promise<Perfil> {
+  return requireRol(["admin"])
 }

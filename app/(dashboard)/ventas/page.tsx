@@ -1,15 +1,10 @@
-import { redirect } from "next/navigation"
-
-import { getPerfil } from "@/lib/auth/session"
+import { requireRol } from "@/lib/auth/session"
 import { Pos } from "./pos"
 
 // PLAN_5 · T5: el POS crea PEDIDOS de venta (no cobra). Lo usan el vendedor y el
 // admin; el cajero cobra/confirma en CAJA.
 export default async function VentasPage() {
-  const perfil = await getPerfil()
-  if (!perfil || (perfil.rol !== "admin" && perfil.rol !== "vendedor")) {
-    redirect("/proformas")
-  }
+  await requireRol(["admin", "vendedor"])
 
   return (
     <div>

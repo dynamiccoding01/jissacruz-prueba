@@ -2,9 +2,18 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { getPerfil } from "@/lib/auth/session"
 import { logError } from "@/lib/log"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import type { Medida } from "@/lib/medidas"
+
+// Pedidos entre sucursales es de vendedor y admin (no del cajero). La página ya
+// lo bloquea; esto cubre una llamada directa a la acción.
+const SIN_PERMISO_PEDIDOS = "Tu rol no puede usar Pedidos entre sucursales."
+async function puedeUsarPedidos() {
+  const perfil = await getPerfil()
+  return !!perfil && (perfil.rol === "admin" || perfil.rol === "vendedor")
+}
 
 export type TraspasoItemInput = {
   producto_id: string
@@ -63,6 +72,7 @@ export async function crearPedidoTraspaso(
   notas?: string,
   sucursalDestinoId?: string
 ) {
+  if (!(await puedeUsarPedidos())) return { error: SIN_PERMISO_PEDIDOS }
   const supabase = await createClient()
   const { data, error } = await supabase.rpc("fn_crear_pedido_traspaso", {
     p_sucursal_origen_id: sucursalOrigenId,
@@ -82,6 +92,7 @@ export async function crearPedidoTraspaso(
 
 // El origen puede recortar cantidades antes de despachar (0 = no manda ese ítem).
 export async function enviarTraspaso(pedidoId: string, cantidades?: TraspasoItemInput[]) {
+  if (!(await puedeUsarPedidos())) return { error: SIN_PERMISO_PEDIDOS }
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_enviar_traspaso", {
     p_pedido_id: pedidoId,
@@ -99,6 +110,7 @@ export async function enviarTraspaso(pedidoId: string, cantidades?: TraspasoItem
 }
 
 export async function recibirTraspaso(pedidoId: string) {
+  if (!(await puedeUsarPedidos())) return { error: SIN_PERMISO_PEDIDOS }
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_recibir_traspaso", { p_pedido_id: pedidoId })
   if (error) {
@@ -113,6 +125,7 @@ export async function recibirTraspaso(pedidoId: string) {
 }
 
 export async function cancelarTraspaso(pedidoId: string) {
+  if (!(await puedeUsarPedidos())) return { error: SIN_PERMISO_PEDIDOS }
   const supabase = await createClient()
   const { error } = await supabase.rpc("fn_cancelar_traspaso", { p_pedido_id: pedidoId })
   if (error) {
