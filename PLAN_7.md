@@ -12,7 +12,7 @@
 | Tarea | Qué pide el cliente | Tamaño | SQL | Estado |
 |---|---|---|---|---|
 | **T1** | Mostrar la unidad de medida en Proforma | Chica | No | ⏳ Lista para hacer (2 preguntas menores: P1, P2) |
-| **T2** | En el formulario de Productos, que "Medidas" quede solo como Etiquetas | Media | Sí — script `44` | ❓ Falta confirmar qué significa exactamente (P3, P4) |
+| **T2** | En el formulario de Productos, que en "Medidas" quede solo el campo Etiqueta | Media | Sí — script `44` | ⏳ Decisión cerrada (P3); falta P4 |
 | **T3** | Separar Inventario de Kardex: módulos independientes | Media | Opcional — script `45` | ⏳ Paso 1 listo para hacer; paso 2 según P5–P7 |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | Grande | No se espera | 🔴 **Bloqueada: la imagen todavía no llegó** (P8, P9) |
 
@@ -28,7 +28,7 @@ Cada una trae mi recomendación. Si no hay respuesta, se sigue la recomendación
 |---|---|---|---|
 | **P1** | T1 | ¿La unidad se muestra en la **pantalla** de la proforma, en el **PDF** que se le entrega al cliente, o en los dos? | En los dos. |
 | **P2** | T1 | ¿Se muestra el **nombre** ("Pieza", "Kilogramo") o el **código corto** ("PZA", "KG")? | Código corto: entra mejor en la tabla y en el PDF. |
-| **P3** | T2 | "Que quede solo Etiquetas": ¿significa **(A)** quitar los campos Valor y Unidad y dejar un solo texto libre por fila, o **(B)** solo cambiar el título del bloque de "Medidas" a "Etiquetas" dejando los tres campos? | Entiendo **(A)**. Confirmar con un ejemplo de lo que el cliente quiere escribir ahí. |
+| **P3** | T2 | "Que quede solo Etiquetas": ¿quitar los campos Valor y Unidad y dejar un solo texto libre por fila, o solo cambiar el título del bloque? | ✅ **Cerrada (2026-10-06):** queda solo el campo **Etiqueta**, texto libre (ejemplo del cliente: `110X140X12/2…`). Se quitan Valor y Unidad. |
 | **P4** | T2 | Las medidas que **ya están cargadas** (con valor y unidad): ¿se convierten a texto (`A: 45,40MM`) o se borran? | Convertirlas a texto: no se pierde nada. |
 | **P5** | T3 | Al entrar a Kardex, ¿qué se ve? **(A)** un buscador de producto y, al elegirlo, sus movimientos; **(B)** lo anterior más filtros por fecha, tipo de movimiento y sucursal. | Empezar por (A) (paso 1, sin SQL) y sumar (B) como paso 2. |
 | **P6** | T3 | ¿Quién ve el Kardex? Hoy lo ven los tres roles, **incluida la columna Costo** (lo que se pagó al proveedor). | Mantener los tres roles, pero mostrar Costo **solo al admin**. |
@@ -42,7 +42,7 @@ Cada una trae mi recomendación. Si no hay respuesta, se sigue la recomendación
 
 1. **T1** — chica, sin SQL.
 2. **T3 · paso 1** — separar los módulos, sin SQL.
-3. **T2** — necesita cerrar P3/P4 y trae el script `44`.
+3. **T2** — necesita cerrar P4 y trae el script `44`.
 4. **T3 · paso 2** — filtros y saldo calculado en la base (script `45`), si se aprueba.
 5. **T4** — cuando llegue la imagen. Es la más grande.
 
@@ -103,9 +103,15 @@ Si la mayoría sale sin unidad del catálogo, hay que decidir con el cliente có
 
 ---
 
-## T2 — "Medidas" queda solo como Etiquetas (formulario de Productos) ❓
+## T2 — En "Medidas" queda solo el campo Etiqueta (formulario de Productos) ⏳
 
-**Qué pide:** en el formulario del CRUD de productos, que el dato "Medidas" quede solo como Etiquetas.
+**Qué pide:** en el formulario del CRUD de productos, que el dato "Medidas" quede solo con la Etiqueta.
+
+**Decisión cerrada (2026-10-06, con captura del formulario):** de las tres columnas del bloque Medidas (Etiqueta, Valor, Unidad) **queda solo Etiqueta**, como texto libre. El cliente escribe ahí la medida completa, por ejemplo `110X140X12/2…`. Se quitan **Valor** y **Unidad**.
+
+*Interpretación mía, a confirmar al probar:* el bloque se sigue llamando "Medidas" y se sigue mostrando como `Medidas: …` en el resto del sistema, porque lo que se escribe sigue siendo una medida. Lo único que desaparece son los dos campos.
+
+**Por qué hace falta:** hoy el formulario exige un Valor mayor a 0 y una Unidad. Para escribir la medida como texto hay que inventar un número; con el Valor en 0, como en la captura, no deja guardar.
 
 **Cómo está hoy**
 
@@ -114,19 +120,18 @@ Si la mayoría sale sin unidad del catálogo, hay que decidir con el cliente có
 - `fn_guardar_producto` (versión vigente en el repo: script `37`) inserta los tres campos y convierte `valor` a número.
 - `fn_buscar_productos` (versión vigente en el repo: script `34`), criterio `medida`: busca sobre `etiqueta + valor + unidad` y cambia la coma decimal por punto.
 - Se muestran como `Medidas: A: 45,40MM  B: 17,00MM` (`lib/medidas.ts`) en los resultados de búsqueda de **POS, Proforma, Cotización, Compras y Pedidos**, y en los **PDF de proforma, venta y cotización**.
-- El criterio de búsqueda se llama "Medidas" (`components/shared/criterios-busqueda.tsx`).
 
-**Decisión a cerrar: P3 y P4.** El plan de abajo asume **(A)**: cada fila pasa a ser **un solo texto libre**. Si la respuesta es (B), la tarea se reduce a cambiar un título y no lleva SQL.
+**Qué se pierde:** hoy las medidas son números con unidad, decisión cerrada en el Sprint 6 (Q2). Como texto ya no se valida que sean números. La búsqueda sigue funcionando: encuentra lo que el texto contenga.
 
-**Qué se pierde con (A):** hoy las medidas son números con unidad, decisión cerrada en el Sprint 6 (Q2). Con solo etiquetas pasan a ser texto: buscar `45,40` sigue funcionando si el texto lo contiene tal cual, pero ya no se normaliza coma/punto ni se valida que sea un número.
+**Queda abierta P4:** qué hacer con las medidas ya cargadas con valor y unidad. Recomendación: convertirlas a texto (`A: 45,40MM`), así no se pierde nada.
 
-**Plan (opción A)**
+**Plan**
 
 *Base de datos — script `44_producto_etiquetas.sql`*
 
-1. `producto_medidas.valor` y `unidad` pasan a aceptar `null` (se sacan el `not null` y el default). La tabla **no se renombra**: menos riesgo, y el id del criterio de búsqueda (`medida`) tampoco cambia.
-2. `fn_guardar_producto`: guarda solo `etiqueta` y `orden`; ignora `valor` y `unidad` si llegan.
-3. `fn_buscar_productos`, criterio `medida`: busca solo sobre `etiqueta`.
+1. `producto_medidas.valor` y `unidad` pasan a aceptar `null` (se sacan el `not null` y el default). La tabla y las columnas **no se renombran ni se borran**: menos riesgo.
+2. `fn_guardar_producto`: `valor` y `unidad` pasan a ser opcionales; si no llegan, quedan en `null`. Así la versión publicada sigue guardando como hoy hasta que se despliegue la nueva.
+3. `fn_buscar_productos`, criterio `medida`: busca sobre el texto de la etiqueta (y sobre valor y unidad mientras queden filas viejas), aceptando la coma tal como se escribe. El id del criterio (`medida`) no cambia.
 4. **Conversión de lo ya cargado (si P4 = convertir):** `etiqueta` pasa a `A: 45,40MM` y `valor`/`unidad` quedan en `null`, para que correrlo dos veces no duplique nada.
 
 ⚠️ **Antes de reescribir las dos funciones, confirmar qué versión corre de verdad** en dev y en prod (`select prosrc from pg_proc where proname in ('fn_guardar_producto','fn_buscar_productos')`). El repo ya tuvo definiciones en conflicto.
@@ -134,14 +139,13 @@ Si la mayoría sale sin unidad del catálogo, hay que decidir con el cliente có
 *Aplicación*
 
 5. `lib/validations/producto.ts`: `medidaSchema` queda solo con `etiqueta`.
-6. `productos/producto-form.tsx`: el bloque se llama **Etiquetas**, con un campo de texto por fila.
-7. `lib/medidas.ts`: el tipo pasa a `{ etiqueta }` y el formateo a unir las etiquetas con un separador.
-8. Cambiar el rótulo `Medidas:` por `Etiquetas:` en las 5 pantallas y los 2 documentos PDF que lo muestran, y el nombre del criterio de búsqueda.
-9. Ajustar los `select` que piden `valor` y `unidad`: `productos/actions.ts`, `lib/producto-busqueda-server.ts` y las rutas PDF de proforma, venta y cotización.
+6. `productos/producto-form.tsx`: cada fila del bloque Medidas es **un solo campo de texto** (más el botón de borrar). Se ajusta el mensaje de error.
+7. `lib/medidas.ts`: el tipo pasa a `{ etiqueta }` y el formateo a unir las etiquetas con un separador. Las pantallas y los PDF que muestran `Medidas: …` usan ese helper, así que cambian solos.
+8. Ajustar los `select` y tipos que piden `valor` y `unidad`: `productos/actions.ts`, `lib/producto-busqueda-server.ts` y las rutas PDF de proforma, venta y cotización.
 
-**Orden al desplegar (importante).** Los puntos 1–3 son compatibles con la versión publicada, pero la conversión de datos (punto 4) no: la versión vieja mostraría las medidas convertidas mal formateadas. Entonces: correr 1–3 en prod → desplegar el código → **recién ahí** correr la conversión.
+**Orden al desplegar (importante).** Los puntos 1–3 son compatibles con la versión publicada. La conversión de datos (punto 4) no: la versión vieja mostraría mal las medidas convertidas. Entonces: correr 1–3 en prod → desplegar el código → **recién ahí** correr la conversión.
 
-**Archivos:** `supabase/44_producto_etiquetas.sql`, `supabase/produccion_setup.sql`, `lib/validations/producto.ts`, `lib/medidas.ts`, `lib/producto-busqueda-server.ts`, `productos/producto-form.tsx`, `productos/actions.ts`, `components/shared/criterios-busqueda.tsx`, los 5 formularios con búsqueda (`ventas/pos.tsx`, `proformas/proforma-form.tsx`, `cotizacion/cotizador.tsx`, `compras/orden-compra-form.tsx`, `traspasos/traspaso-form.tsx`), `lib/pdf/proforma-document.tsx`, `lib/pdf/venta-document.tsx` y las 3 rutas PDF.
+**Archivos:** `supabase/44_producto_etiquetas.sql`, `supabase/produccion_setup.sql`, `lib/validations/producto.ts`, `lib/medidas.ts`, `lib/producto-busqueda-server.ts`, `productos/producto-form.tsx`, `productos/actions.ts` y las 3 rutas PDF (`app/api/pdf/proforma/[id]`, `venta/[id]`, `cotizacion/[id]`).
 
 **Diagnóstico previo (prod):** cuántas medidas hay cargadas y con qué etiquetas, para decidir P4 con datos.
 
@@ -153,7 +157,7 @@ select etiqueta, unidad, count(*) from public.producto_medidas
 group by 1, 2 order by 3 desc limit 30;
 ```
 
-**Prueba:** Editar un producto → el bloque dice "Etiquetas" y cada fila es un solo campo → guardar → reabrir y siguen ahí. Buscar por una etiqueta con el criterio marcado → lo encuentra. POS, Proforma y PDF muestran `Etiquetas: …`. Un producto que tenía medidas viejas las conserva como texto.
+**Prueba:** Editar un producto → en Medidas cada fila es un solo campo → escribir `110X140X12/2` → guarda sin pedir valor ni unidad → reabrir y sigue ahí. Buscar `110X140` con el criterio Medidas marcado → lo encuentra. POS, Proforma y PDF muestran `Medidas: 110X140X12/2`. Un producto que tenía medidas viejas las conserva como texto.
 
 ---
 
