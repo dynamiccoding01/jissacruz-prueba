@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Package,
   Boxes,
+  History,
   ArrowLeftRight,
   Truck,
   ShoppingCart,
@@ -42,7 +43,9 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Inventario",
     items: [
       { label: "Productos", href: "/productos", icon: Package, roles: ["admin", "vendedor", "cajero"] },
-      { label: "Inventario / Kardex", href: "/inventario", icon: Boxes, roles: ["admin", "vendedor", "cajero"] },
+      { label: "Inventario", href: "/inventario", icon: Boxes, roles: ["admin", "vendedor", "cajero"] },
+      // PLAN_7 · T3: el Kardex es un módulo propio (antes solo se entraba desde Inventario).
+      { label: "Kardex", href: "/kardex", icon: History, roles: ["admin", "vendedor", "cajero"] },
       { label: "Pedidos", href: "/traspasos", icon: ArrowLeftRight, roles: ["admin", "vendedor"] },
     ],
   },

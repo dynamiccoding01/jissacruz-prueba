@@ -222,7 +222,8 @@ Usado en: Catálogo, Proformas, POS.
 |---|---|---|
 | Ver Dashboard con KPIs | ✅ | ❌ |
 | Crear/editar productos | ✅ | ❌ (solo consulta) |
-| Ver inventario / Kardex | ✅ | 👁️ solo lectura |
+| Ver inventario | ✅ | 👁️ solo lectura |
+| Ver Kardex (módulo propio) | ✅ con costo | 👁️ solo lectura, sin costo |
 | Ajustar stock manualmente | ✅ | ❌ |
 | Gestionar proveedores y compras | ✅ | ❌ |
 | Crear proformas | ✅ | ✅ |

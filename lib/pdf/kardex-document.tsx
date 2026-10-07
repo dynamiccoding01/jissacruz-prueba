@@ -36,7 +36,8 @@ const styles = StyleSheet.create({
 export type MovimientoPdf = {
   tipo_movimiento: TipoMovimiento
   cantidad: number
-  costo_unitario: number
+  // PLAN_7 · T3: solo viene cuando el PDF lo pide un admin (`mostrarCosto`).
+  costo_unitario?: number
   motivo: string | null
   creado_en: string
   saldo: number
@@ -47,10 +48,12 @@ export function KardexDocument({
   producto,
   movimientos,
   logo,
+  mostrarCosto = true,
 }: {
   producto: { codigo: string; descripcion: string; stock_actual: number }
   movimientos: MovimientoPdf[]
   logo?: string | null
+  mostrarCosto?: boolean
 }) {
   return (
     <Document>
@@ -73,7 +76,7 @@ export function KardexDocument({
           <Text style={[styles.headerCell, { flex: 1.4 }]}>Movimiento</Text>
           <Text style={styles.headerCell}>Sucursal</Text>
           <Text style={styles.headerCell}>Cantidad</Text>
-          <Text style={styles.headerCell}>Costo (Bs)</Text>
+          {mostrarCosto && <Text style={styles.headerCell}>Costo (Bs)</Text>}
           <Text style={styles.headerCell}>Saldo</Text>
           <Text style={[styles.headerCell, { flex: 2 }]}>Motivo</Text>
         </View>
@@ -87,7 +90,9 @@ export function KardexDocument({
               {esEntrada(m.tipo_movimiento) ? "+" : "-"}
               {m.cantidad}
             </Text>
-            <Text style={styles.cell}>{Number(m.costo_unitario).toFixed(2)}</Text>
+            {mostrarCosto && (
+              <Text style={styles.cell}>{Number(m.costo_unitario ?? 0).toFixed(2)}</Text>
+            )}
             <Text style={styles.cell}>{m.saldo}</Text>
             <Text style={[styles.cell, { flex: 2 }]}>{m.motivo ?? "—"}</Text>
           </View>

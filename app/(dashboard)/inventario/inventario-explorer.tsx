@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Boxes, Search, SlidersHorizontal } from "lucide-react"
+import { History, Search, SlidersHorizontal } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -100,7 +100,7 @@ export function InventarioExplorer({
         <div className="flex justify-end gap-1">
           <Button variant="ghost" size="icon" title="Ver Kardex" asChild>
             <Link href={`/kardex?producto=${row.original.id}`}>
-              <Boxes className="size-4" />
+              <History className="size-4" />
             </Link>
           </Button>
           {esAdmin && (

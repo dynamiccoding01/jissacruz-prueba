@@ -1,20 +1,25 @@
 import { createClient } from "@/lib/supabase/server"
+import { requireRol } from "@/lib/auth/session"
 import { calcularSaldo } from "@/lib/kardex"
+import { KardexExplorer } from "./kardex-explorer"
 import { KardexView, type MovimientoConSaldo } from "./kardex-view"
 
+// PLAN_7 · T3: el Kardex es un módulo propio. Sin producto elegido muestra su
+// buscador; con `?producto=` muestra los movimientos (así sigue funcionando el
+// atajo "Ver Kardex" de Inventario).
 export default async function KardexPage({
   searchParams,
 }: {
   searchParams: { producto?: string }
 }) {
+  const perfil = await requireRol(["admin", "vendedor", "cajero"])
+  // El costo de compra es solo para el admin: a los demás roles ni se les pide
+  // a la base (no alcanza con esconder la columna).
+  const verCosto = perfil.rol === "admin"
   const productoId = searchParams.producto
 
   if (!productoId) {
-    return (
-      <p className="text-muted-foreground">
-        Seleccioná un producto desde Inventario para ver su Kardex.
-      </p>
-    )
+    return <KardexExplorer />
   }
 
   const supabase = await createClient()
@@ -31,7 +36,11 @@ export default async function KardexPage({
 
   const { data: movimientosRaw } = await supabase
     .from("kardex_movimientos")
-    .select("id, tipo_movimiento, cantidad, costo_unitario, motivo, creado_en, sucursal:sucursales(codigo, nombre)")
+    .select(
+      verCosto
+        ? "id, tipo_movimiento, cantidad, costo_unitario, motivo, creado_en, sucursal:sucursales(codigo, nombre)"
+        : "id, tipo_movimiento, cantidad, motivo, creado_en, sucursal:sucursales(codigo, nombre)"
+    )
     .eq("producto_id", productoId)
     .order("creado_en", { ascending: true })
     .order("consecutivo", { ascending: true })
@@ -40,5 +49,5 @@ export default async function KardexPage({
   // producto y por eso cada fila muestra a que sucursal pertenece.
   const movimientos = calcularSaldo((movimientosRaw ?? []) as unknown as MovimientoConSaldo[])
 
-  return <KardexView producto={producto} movimientos={movimientos} />
+  return <KardexView producto={producto} movimientos={movimientos} verCosto={verCosto} />
 }

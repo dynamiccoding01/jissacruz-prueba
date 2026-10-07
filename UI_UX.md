@@ -81,7 +81,8 @@ Fuente: `Brand Guidebook Jissacruz.pdf` (carpeta `SISTEMA INVENTARIO`). La palet
 |---|---|---|---|
 | Dashboard | `LayoutDashboard` | ✅ | ❌ (o vista simplificada) |
 | Productos | `Package` | ✅ | 👁️ solo lectura |
-| Inventario / Kardex | `Boxes` | ✅ | 👁️ solo lectura |
+| Inventario | `Boxes` | ✅ | 👁️ solo lectura |
+| Kardex | `History` | ✅ | 👁️ solo lectura, sin la columna Costo |
 | Proveedores | `Truck` | ✅ | ❌ |
 | Compras | `ShoppingCart` | ✅ | ❌ |
 | Proformas | `FileText` | ✅ | ✅ |
@@ -111,11 +112,15 @@ Fuente: `Brand Guidebook Jissacruz.pdf` (carpeta `SISTEMA INVENTARIO`). La palet
   - Sección "Códigos equivalentes" (lista editable, agregar/quitar)
   - Sección "Compatibilidad con vehículos" (lista editable de marca/modelo)
 
-### 4.4 Inventario / Kardex
-- Vista de stock actual: tabla con indicador de color, cantidad, stock mínimo configurado.
-- Botón para ver Kardex de un producto específico: tabla cronológica de movimientos (entrada/salida/venta, cantidad, costo, saldo).
-- Botones de exportación: "Exportar PDF" y "Exportar Excel".
+### 4.4 Inventario
+- Vista de stock actual: tabla con indicador de color, cantidad por sucursal y stock mínimo configurado.
+- Atajo "Ver Kardex" en cada producto (abre el módulo Kardex ya con ese producto).
 - Opción de "Ajuste manual de stock" (con motivo obligatorio) — solo Admin.
+
+### 4.4 bis Kardex (módulo propio desde PLAN_7 · T3)
+- Entrada con buscador de producto (mismos criterios que el catálogo); al elegir uno se ven sus movimientos.
+- Tabla cronológica de movimientos (entrada/salida/venta/traspaso, sucursal, cantidad, saldo). La columna **Costo** es solo para el Administrador, también en el PDF y el Excel.
+- Botones de exportación: "Exportar PDF" y "Exportar Excel".
 
 ### 4.5 Proveedores
 - Tabla simple: nombre, contacto, RUC, dirección, acciones.
