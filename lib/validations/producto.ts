@@ -11,11 +11,10 @@ export const codigoOriginalSchema = z.object({
   codigo_original: z.string().min(1, "El código es obligatorio"),
 })
 
-// Medida estructurada del producto (Q2: la etiqueta es obligatoria).
+// Medida del producto. PLAN_7 · T2: es solo la etiqueta, texto libre (p. ej.
+// "110X140X12/2"); se quitaron el valor numérico y la unidad (MM/CM/PULG).
 export const medidaSchema = z.object({
-  etiqueta: z.string().min(1, "La etiqueta es obligatoria"),
-  valor: z.coerce.number().positive("El valor debe ser mayor a 0"),
-  unidad: z.enum(["MM", "CM", "PULG"]).default("MM"),
+  etiqueta: z.string().min(1, "La medida no puede estar vacía"),
 })
 
 // convierte "" (input vacio) en undefined antes de intentar coercionar a numero

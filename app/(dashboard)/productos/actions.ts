@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { logError } from "@/lib/log"
 import { productoSchema, type ProductoFormInput } from "@/lib/validations/producto"
 import { ultimoCostoDeProducto } from "@/lib/costos-server"
+import { textoMedida } from "@/lib/medidas"
 
 const bs = (n: number) =>
   `Bs ${Number(n).toLocaleString("es-BO", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -162,10 +163,15 @@ export async function getProductoConDetalle(id: string) {
     ultimoCosto,
     codigos: codigos ?? [],
     originales: originales ?? [],
+    // PLAN_7 · T2: la medida es solo texto. Las que todavía tienen valor y
+    // unidad (cargadas antes) se pasan a texto acá ("A: 45,40MM"), para que
+    // editar el producto no las pierda al guardar.
     medidas: (medidas ?? []).map((m) => ({
-      etiqueta: m.etiqueta,
-      valor: Number(m.valor),
-      unidad: m.unidad as "MM" | "CM" | "PULG",
+      etiqueta: textoMedida({
+        etiqueta: m.etiqueta,
+        valor: m.valor == null ? null : Number(m.valor),
+        unidad: m.unidad,
+      }),
     })),
     precios_mayor: (preciosMayor ?? []).map((p) => ({
       cantidad_minima: p.cantidad_minima,

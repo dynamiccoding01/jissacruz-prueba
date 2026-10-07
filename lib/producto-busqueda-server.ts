@@ -8,7 +8,8 @@ import type { Medida } from "@/lib/medidas"
 // ids devueltos, para meterla en el Promise.all del action (no en serie).
 export type DatosBusquedaProducto = { medidas: Medida[]; originales: string[] }
 
-type MedidaRow = { producto_id: string; etiqueta: string; valor: number; unidad: string }
+// valor y unidad solo vienen en las medidas cargadas antes de PLAN_7 · T2.
+type MedidaRow = { producto_id: string; etiqueta: string; valor: number | null; unidad: string | null }
 type OriginalRow = { producto_id: string; codigo_original: string }
 
 export async function datosBusquedaPorProducto(
@@ -39,7 +40,7 @@ export async function datosBusquedaPorProducto(
   for (const r of (medidasRes.data ?? []) as unknown as MedidaRow[]) {
     get(r.producto_id).medidas.push({
       etiqueta: r.etiqueta,
-      valor: Number(r.valor),
+      valor: r.valor == null ? null : Number(r.valor),
       unidad: r.unidad,
     })
   }

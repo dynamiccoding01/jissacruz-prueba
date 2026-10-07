@@ -58,13 +58,17 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       descripcion: string
       linea_marca: string | null
       unidad_medida: string | null
-      producto_medidas: { etiqueta: string; valor: number; unidad: string; orden: number }[] | null
+      producto_medidas: { etiqueta: string; valor: number | null; unidad: string | null; orden: number }[] | null
       producto_codigos_originales: { codigo_original: string }[] | null
     } | null
     const medidas = (producto?.producto_medidas ?? [])
       .slice()
       .sort((a, b) => a.orden - b.orden)
-      .map((m) => ({ etiqueta: m.etiqueta, valor: Number(m.valor), unidad: m.unidad }))
+      .map((m) => ({
+        etiqueta: m.etiqueta,
+        valor: m.valor == null ? null : Number(m.valor),
+        unidad: m.unidad,
+      }))
     return {
       codigo: producto?.codigo ?? "—",
       descripcion: producto?.descripcion ?? "",

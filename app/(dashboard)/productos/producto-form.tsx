@@ -476,7 +476,7 @@ export function ProductoForm({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => medidasArray.append({ etiqueta: "", valor: 0, unidad: "MM" })}
+                    onClick={() => medidasArray.append({ etiqueta: "" })}
                   >
                     <Plus className="size-4" /> Agregar
                   </Button>
@@ -485,31 +485,10 @@ export function ProductoForm({
               {medidasArray.fields.length === 0 && readOnly && (
                 <p className="text-sm text-muted-foreground">Sin medidas.</p>
               )}
-              {medidasArray.fields.length > 0 && (
-                <div className="grid grid-cols-[1fr_1fr_5rem_auto] gap-2 text-xs text-muted-foreground">
-                  <span>Etiqueta (A, B…)</span>
-                  <span>Valor</span>
-                  <span>Unidad</span>
-                  <span />
-                </div>
-              )}
+              {/* PLAN_7 · T2: cada medida es solo la etiqueta (texto libre). */}
               {medidasArray.fields.map((field, index) => (
-                <div key={field.id} className="grid grid-cols-[1fr_1fr_5rem_auto] items-end gap-2">
-                  <Input placeholder="A" {...register(`medidas.${index}.etiqueta`)} />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="45.40"
-                    {...register(`medidas.${index}.valor`)}
-                  />
-                  <select
-                    className="h-10 rounded-md border border-input bg-background px-2 text-sm"
-                    {...register(`medidas.${index}.unidad`)}
-                  >
-                    <option value="MM">MM</option>
-                    <option value="CM">CM</option>
-                    <option value="PULG">PULG</option>
-                  </select>
+                <div key={field.id} className="flex gap-2">
+                  <Input placeholder="110X140X12" {...register(`medidas.${index}.etiqueta`)} />
                   {!readOnly && (
                     <Button
                       type="button"
@@ -524,7 +503,7 @@ export function ProductoForm({
               ))}
               {errors.medidas && (
                 <p className="text-sm text-destructive">
-                  Revisá las medidas: la etiqueta es obligatoria y el valor debe ser mayor a 0.
+                  Revisá las medidas: no puede quedar una fila vacía.
                 </p>
               )}
             </div>
