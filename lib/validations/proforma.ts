@@ -21,6 +21,9 @@ export const proformaItemSchema = z.object({
   producto_id: z.string().uuid("Seleccioná un producto"),
   codigo: z.string(),
   descripcion: z.string(),
+  // T1 (PLAN_7): unidad del producto, solo para mostrarla en la línea (no se
+  // guarda en la BD; el PDF la relee del producto).
+  unidad: z.string().optional(),
   cantidad: z.coerce.number().int().positive("La cantidad debe ser mayor a 0"),
   precio_unitario: z.coerce.number().min(0, "El precio no puede ser negativo"),
   descuento_tipo: descuentoTipo,

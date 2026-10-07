@@ -188,6 +188,7 @@ export function ProformaForm() {
       producto_id: p.id,
       codigo: p.codigo,
       descripcion: p.descripcion,
+      unidad: p.unidad,
       cantidad: 1,
       precio_unitario: p.precio,
       descuento_tipo: "ninguno",
@@ -325,9 +326,8 @@ export function ProformaForm() {
                 <div className="shrink-0 text-right">
                   <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Precio</p>
                   <p className="text-lg font-bold text-primary">{bs(r.precio)}</p>
-                  {r.unidad && r.unidad !== "unidad" && (
-                    <p className="text-[11px] text-muted-foreground">/ {r.unidad}</p>
-                  )}
+                  {/* T1 (PLAN_7): la unidad se muestra siempre. */}
+                  <p className="text-[11px] text-muted-foreground">/ {r.unidad}</p>
                 </div>
                 <Button
                   type="button"
@@ -391,10 +391,11 @@ export function ProformaForm() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <div className="min-w-[38rem] overflow-hidden rounded-lg border border-border">
-              <div className="grid grid-cols-[2rem_5.5rem_1fr_8rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
+            <div className="min-w-[42rem] overflow-hidden rounded-lg border border-border">
+              <div className="grid grid-cols-[2rem_5.5rem_4rem_1fr_8rem_7rem_2rem] items-center gap-2 bg-primary px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
                 <span className="text-center">N°</span>
                 <span className="text-center">Cant.</span>
+                <span className="text-center">Unidad</span>
                 <span>Código / Detalle</span>
                 <span className="text-right">P. Unit.</span>
                 <span className="text-right">Importe</span>
@@ -409,7 +410,7 @@ export function ProformaForm() {
                 return (
                   <div
                     key={field.id}
-                    className="grid grid-cols-[2rem_5.5rem_1fr_8rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
+                    className="grid grid-cols-[2rem_5.5rem_4rem_1fr_8rem_7rem_2rem] items-center gap-2 border-t border-border px-3 py-2"
                   >
                     <span className="text-center text-sm text-muted-foreground">{index + 1}</span>
                     <Input
@@ -420,6 +421,10 @@ export function ProformaForm() {
                         onChange: (e) => onCantidadChange(index, field.producto_id, e.target.value),
                       })}
                     />
+                    {/* T1 (PLAN_7): unidad de medida del producto. */}
+                    <span className="truncate text-center text-sm text-muted-foreground">
+                      {field.unidad || "unidad"}
+                    </span>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{field.codigo}</p>
                       <p className="truncate text-xs text-muted-foreground">{field.descripcion}</p>

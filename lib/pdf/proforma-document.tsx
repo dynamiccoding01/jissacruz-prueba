@@ -221,7 +221,8 @@ export function ProformaDocument({
         </View>
 
         {items.map((it, i) => {
-          const unidadCorta = it.unidad && it.unidad !== "unidad" ? ` ${it.unidad}` : ""
+          // T1 (PLAN_7): la unidad se muestra siempre, como código corto (PZA, KG).
+          const unidadCorta = it.unidad ? ` ${it.unidad}` : ""
           const oem =
             it.originales.slice(0, TOPE_OEM).join("  ") +
             (it.originales.length > TOPE_OEM ? "  …" : "")

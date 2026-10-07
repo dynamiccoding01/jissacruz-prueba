@@ -96,6 +96,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
         producto_id: i.producto_id,
         codigo: i.codigo,
         descripcion: i.descripcion,
+        unidad: i.unidad,
         cantidad: i.cantidad,
         precio_unitario: i.precio_unitario,
         descuento_tipo: "ninguno",
@@ -191,6 +192,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
       producto_id: p.id,
       codigo: p.codigo,
       descripcion: p.descripcion,
+      unidad: p.unidad,
       cantidad: 1,
       precio_unitario: p.precio,
       descuento_tipo: "ninguno",
@@ -364,6 +366,8 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                       </span>
                       <span className="flex shrink-0 items-center gap-2 text-base font-semibold text-primary">
                         {bs(r.precio)}
+                        {/* T1 (PLAN_7): unidad de medida del producto. */}
+                        <span className="text-xs font-normal text-muted-foreground">/ {r.unidad}</span>
                         <Plus className="size-5" />
                       </span>
                     </button>
@@ -412,6 +416,9 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                         <div className="min-w-0">
                           <p className="text-base font-semibold">{field.codigo}</p>
                           <p className="text-sm text-muted-foreground">{field.descripcion}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Unidad: {field.unidad || "unidad"}
+                          </p>
                         </div>
                         <Button
                           type="button"
@@ -584,7 +591,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
                 </div>
                 <div className="shrink-0 text-right text-sm">
                   <p>
-                    {it.cantidad} × {bs(it.precio_unitario)}
+                    {it.cantidad} {it.unidad} × {bs(it.precio_unitario)}
                   </p>
                   <p className="font-semibold text-primary">
                     {bs(

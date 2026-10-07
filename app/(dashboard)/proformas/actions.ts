@@ -10,6 +10,7 @@ import { escalasVigentesPorProducto, validarPrecioMinimo } from "@/lib/precios-m
 import { validarSinMezclaFactura } from "@/lib/factura-server"
 import { datosBusquedaPorProducto } from "@/lib/producto-busqueda-server"
 import { stockSucursalPorProducto } from "@/lib/stock-sucursal-server"
+import { resolverUnidadCorta } from "@/lib/unidades-server"
 import type { Medida } from "@/lib/medidas"
 import {
   proformaSchema,
@@ -51,6 +52,7 @@ export type ProductoBusqueda = {
   // servidor), ordenadas por cantidad_minima ascendente.
   escalas: EscalaPrecio[]
   // Sprint 6: unidad, medidas y códigos originales (OEM) para mostrar.
+  // T1 (PLAN_7): la unidad va como código corto del catálogo (PZA, KG).
   unidad: string
   medidas: Medida[]
   originales: string[]
@@ -83,13 +85,15 @@ export async function buscarProductosParaProforma(
     descripcion: string
     precio: number
     unidad_medida: string
+    unidad_medida_id: string | null
     con_factura: boolean
   }[]
   const ids = filas.map((p) => p.id)
-  const [escalas, datos, stock] = await Promise.all([
+  const [escalas, datos, stock, unidadCorta] = await Promise.all([
     escalasVigentesPorProducto(supabase, ids),
     datosBusquedaPorProducto(supabase, ids),
     stockSucursalPorProducto(supabase, ids, sucursalId),
+    resolverUnidadCorta(),
   ])
   return filas.map((p) => ({
     id: p.id,
@@ -97,7 +101,7 @@ export async function buscarProductosParaProforma(
     descripcion: p.descripcion,
     precio: Number(p.precio),
     escalas: escalas.get(p.id) ?? [],
-    unidad: p.unidad_medida,
+    unidad: unidadCorta(p.unidad_medida_id, p.unidad_medida),
     medidas: datos.get(p.id)?.medidas ?? [],
     originales: datos.get(p.id)?.originales ?? [],
     stock: stock.get(p.id) ?? 0,
@@ -181,6 +185,8 @@ export type ProformaDetalleItem = {
   producto_id: string
   codigo: string
   descripcion: string
+  // T1 (PLAN_7): unidad actual del producto, como código corto (PZA, KG).
+  unidad: string
   cantidad: number
   precio_unitario: number
   // Precio ACTUAL del producto, para comparar contra el de la proforma (Q23).
@@ -243,7 +249,7 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
 
   const { data: items, error: itemsError } = await supabase
     .from("proforma_items")
-    .select("producto_id, cantidad, precio_unitario, descuento_tipo, descuento_valor, productos(codigo, descripcion, precio, con_factura)")
+    .select("producto_id, cantidad, precio_unitario, descuento_tipo, descuento_valor, productos(codigo, descripcion, precio, con_factura, unidad_medida, unidad_medida_id)")
     .eq("proforma_id", id)
 
   if (itemsError) {
@@ -253,10 +259,13 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
 
   const row = p as Record<string, unknown>
   const cliente = (row.clientes as ProformaDetalle["cliente"]) ?? null
-  const escalas = await escalasVigentesPorProducto(
-    supabase,
-    (items ?? []).map((it) => it.producto_id as string)
-  )
+  const [escalas, unidadCorta] = await Promise.all([
+    escalasVigentesPorProducto(
+      supabase,
+      (items ?? []).map((it) => it.producto_id as string)
+    ),
+    resolverUnidadCorta(),
+  ])
   const teniaDescuento =
     Number(row.descuento_valor ?? 0) > 0 ||
     (items ?? []).some((it) => Number(it.descuento_valor ?? 0) > 0)
@@ -282,12 +291,20 @@ export async function obtenerProformaDetalle(id: string): Promise<ProformaDetall
     total: Number(row.total ?? 0),
     items: (items ?? []).map((it) => {
       const prod = (it as Record<string, unknown>).productos as
-        | { codigo: string; descripcion: string; precio: number; con_factura: boolean }
+        | {
+            codigo: string
+            descripcion: string
+            precio: number
+            con_factura: boolean
+            unidad_medida: string | null
+            unidad_medida_id: string | null
+          }
         | null
       return {
         producto_id: it.producto_id as string,
         codigo: prod?.codigo ?? "—",
         descripcion: prod?.descripcion ?? "",
+        unidad: unidadCorta(prod?.unidad_medida_id, prod?.unidad_medida),
         cantidad: Number(it.cantidad),
         precio_unitario: Number(it.precio_unitario),
         precio_actual: Number(prod?.precio ?? 0),
