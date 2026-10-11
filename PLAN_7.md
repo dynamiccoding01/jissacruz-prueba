@@ -16,7 +16,7 @@
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
 | **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Publicada en producción el 2026-10-11 — falta probar y confirmar |
-| **T6** | PDF de venta: Cantidad y Código centrados, y columna de unidad de medida | No | ✅ Código listo (2026-10-11) — **sin subir todavía** |
+| **T6** | PDF de venta: Cantidad y Código centrados, y columna de unidad de medida | No | ✅ Publicada en producción el 2026-10-11 18:48 — falta que el usuario lo confirme en pantalla |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
 
@@ -265,7 +265,7 @@ Son reglas de las tandas anteriores, exigidas también en la base:
 
 ---
 
-## T6 — PDF de venta: columnas centradas y unidad de medida ✅ código listo (2026-10-11) — sin SQL
+## T6 — PDF de venta: columnas centradas y unidad de medida ✅ publicada (2026-10-11) — sin SQL
 
 **Qué pide:** en el PDF de venta, la Cantidad y el Código salían pegados (`CantidadCódigo`, `1TKL35014`) y tienen que ir centrados; además faltaba la unidad de medida. Referencia del cliente: una factura de Velacuss con columna "Unidad de medida".
 
