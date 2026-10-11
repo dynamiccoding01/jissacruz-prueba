@@ -1,7 +1,7 @@
 # PLAN_7.md — Séptima tanda de tareas (una por una)
 
 > Tareas nuevas del cliente. Se hacen **de a una**: implementar → probar → confirmar → siguiente.
-> Armado: 2026-10-06. **Estado: T1, T2 y T3 (paso 1) implementadas en código el 2026-10-06. Falta correr los scripts `44`/`45`, probar en `localhost`, confirmar, subir y desplegar. T4 sigue bloqueada (falta la imagen).**
+> Armado: 2026-10-06. **Estado al 2026-10-11: T1, T2 y T3 (paso 1) implementadas en código y subidas a los dos remotos el 2026-10-06. Falta correr los scripts `44`/`45`, probar en `localhost`, confirmar y desplegar. T4: llegó la imagen y está planificada, sin implementar.**
 > **Todo va a los dos entornos:** código a `origin` (jissacruz-prueba) **y** `produccion` (JissaCruz_Project); cada script SQL en la base de **desarrollo y en la de producción**.
 > **Una sola rama:** todo el trabajo va directo en `main`. No se crean ramas ni worktrees.
 
@@ -14,7 +14,7 @@
 | **T1** | Mostrar la unidad de medida en Proforma | No | ✅ Código listo — falta probar y confirmar |
 | **T2** | En el formulario de Productos, que en "Medidas" quede solo el campo Etiqueta | Sí — `44` y `45` | ✅ Código listo — ⚠️ **falta correr `44` (antes de usar) y `45` (después de desplegar) en dev + prod** |
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
-| **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | 🔴 **Bloqueada: la imagen todavía no llegó** |
+| **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
 
@@ -45,8 +45,8 @@ Cerradas el 2026-10-06. P3 con una captura del formulario; el resto con "hacé t
 | **P5** | T3 | ¿Qué se ve al entrar a Kardex? | ✅ Buscador de producto y sus movimientos. Los filtros por fecha, tipo y sucursal quedan para un paso 2. |
 | **P6** | T3 | ¿Quién ve el Kardex y el costo? | ✅ Los tres roles ven el Kardex; **el costo, solo el admin**. |
 | **P7** | T3 | ¿Inventario conserva el botón "Ver Kardex"? | ✅ Sí, como atajo. |
-| **P8** | T4 | Falta la imagen de referencia. | ⏳ Abierta. |
-| **P9** | T4 | ¿El rediseño es de las pantallas o de los PDF? ¿Incluye Cotización S/F y Caja? | ⏳ Abierta: se define al ver la imagen. |
+| **P8** | T4 | Falta la imagen de referencia. | ✅ Recibida el 2026-10-11 (captura de Velacuss, pantalla de cotización). |
+| **P9** | T4 | ¿El rediseño es de las pantallas o de los PDF? | ✅ De las pantallas: la imagen es una lista de productos en pantalla. Qué pantallas incluye es P11 (en T4). |
 
 **Queda abierta de T1 (datos, no código):** los productos cargados desde los catálogos tienen la unidad genérica `unidad`. Por ahora se muestra así. Ver el diagnóstico en T1.
 
@@ -162,37 +162,84 @@ from public.producto_medidas;
 
 ---
 
-## T4 — Diseño de Ventas y Proformas según la imagen de referencia 🔴
+## T4 — Diseño de Ventas y Proformas según la imagen de referencia ⏳ planificada (2026-10-11) — sin SQL
 
-**Qué pide:** rediseñar Ventas y Proformas de acuerdo a una imagen de referencia.
+**Qué pide:** que Ventas y Proformas se vean como la imagen de referencia.
 
-**Bloqueada:** la imagen no llegó con el pedido. Sin ella no se puede definir alcance ni tamaño. Tampoco está claro si se refiere a las pantallas o a los documentos impresos (P9).
+**La imagen (recibida el 2026-10-11):** captura del sistema Velacuss, pantalla `venta/cotizacion/details`. Es una **lista de productos con una fila grande por producto**, que muestra toda la ficha sin tener que abrir nada. Confirma que el pedido es sobre las **pantallas**, no sobre los PDF.
 
-**Cómo está hoy** (para comparar contra la imagen cuando llegue)
+### Lo que se ve en cada fila (de izquierda a derecha)
 
-- **POS** (`ventas/pos.tsx`), una sola columna: cliente opcional → buscador con criterios → resultados en filas con botón Agregar → tabla del pedido (N°, Cant., Código / Detalle, P. Unit., Importe) → impuesto y totales → botón "Enviar a caja".
-- **Proforma — alta** (`proformas/proforma-form.tsx`), una sola columna: cabecera (cliente, tipo de pago, tiempo de entrega) → buscador → resultados → tabla de ítems (N°, Cant., Unidad, Código / Detalle, P. Unit., Importe), con precio editable hacia arriba → impuesto, glosa y totales → "Crear proforma".
-- **Proforma — edición y lectura** (`proformas/[id]/proforma-detalle.tsx`): **dos columnas** (ítems a la izquierda, resumen y acciones a la derecha). Hoy no coincide con la pantalla de alta.
-- **PDF** de proforma y de venta: encabezado con logo y datos de la empresa, datos del cliente, glosa, tabla (N°, Cantidad, Código, Línea, Detalle, P. Unit., Importe), total en literal.
+1. **Número de fila.**
+2. **Código**, en dos líneas: uno gris (`WABC0286`) y debajo otro en negrita (`4410501010`).
+3. **Ficha del producto**, como lista de rótulo + valor:
+   - `LÍNEA` (WABCO)
+   - `DESCRIPCIÓN`
+   - `UNIDAD DE MEDIDA` (PIEZAS, con el nombre completo)
+   - `MEDIDA` (110X140X12/22), solo si el producto tiene
+   - `CÓDIGO ORIGINAL`, varios en una línea
+   - `EQUIVALENTES`, uno por línea
+   - `TOTAL` (stock total) y, debajo, una tira de etiquetas `sucursal:cantidad`, una por sucursal, en verde si hay stock y en naranja si está en cero.
+4. **Precio y stock:** `Precio: Bs 550.00`, `Total stock: 2:0` (la sucursal del usuario y su cantidad) y un cuadro `Descuentos` con columnas Tipo / Cant / Bs / Lím. (`PRECIO POR MAYOR · 3 · 465.00 · 31-12-2026`).
+5. **Carga:** campo de cantidad, campo de precio, subtotal de la línea, botón de carrito (agregar) y botón rojo (quitar).
 
-**Reglas que el rediseño no puede romper** (vienen de las tandas anteriores y están exigidas también en la base):
+### Qué tiene SISREP de todo eso
 
-- Proforma y POS **sin descuentos**; el precio unitario no baja del precio del sistema para esa cantidad (PLAN_6 · T1/T2).
-- En el POS el precio **no se edita** (PLAN_4 · T2).
-- Un pedido o una proforma **no mezclan** productos con factura y S/F (PLAN_6 · T4).
-- No se agrega un producto sin precio ni más cantidad que el stock de la sucursal (PLAN_5).
-- El POS **no cobra**: envía el pedido a Caja (PLAN_5 · T5).
-- Paleta y tipografía de la marca JISSACRUZ.
+| Dato de la imagen | En SISREP | Hoy se muestra en POS / Proforma |
+|---|---|---|
+| Código | ✅ `productos.codigo` | Sí |
+| Segundo código (el de abajo, en negrita) | ❌ No existe: cada producto tiene un solo código | — |
+| Línea | ✅ `linea_marca` | No en los resultados |
+| Descripción | ✅ | Sí |
+| Unidad de medida | ✅ | Sí, chica (T1) |
+| Medida | ✅ (T2: texto libre) | Sí, en una línea chica |
+| Código original | ✅ `producto_codigos_originales` | Solo los primeros 4 |
+| Equivalentes | ✅ `producto_codigos_equivalentes` | **No:** la búsqueda ni los trae |
+| Stock total y por sucursal | ✅ `producto_stock_sucursal` | POS sí; Proforma solo el de la sucursal del usuario |
+| Precio | ✅ | Sí |
+| Precio por mayor (cantidad, precio, vigencia) | ✅ `producto_precios_mayor` | **No:** se usa para calcular, pero no se ve |
+| Cantidad antes de agregar | — | No: "Agregar" suma 1 y la cantidad se cambia después |
 
-**Plan (se completa al recibir la imagen)**
+**Todos los datos ya existen: no se espera SQL.** Lo que cambia es la presentación y lo que trae la búsqueda.
 
-1. Recibir la imagen. Escribir acá, en texto, lo que se ve en ella (zonas, columnas, orden, qué datos muestra) y **confirmarlo con el cliente** antes de maquetar.
-2. Listar las diferencias contra lo de hoy y marcar si alguna pide un dato que el sistema no tiene (eso sí sería SQL).
-3. Decidir si las piezas comunes (buscador, tabla de ítems, bloque de totales) pasan a `components/shared/`, para que POS y Proforma no se vuelvan a separar.
-4. Implementar en este orden: POS → Proforma alta → Proforma edición y lectura → (si aplica) Cotización S/F, Caja y PDF.
-5. Probar en pantalla chica y grande.
+### Lo que NO se copia de la imagen
 
-**Relacionado, pendiente de PLAN_6:** convertir una proforma en venta la registra directo, sin pasar por Caja. Si T4 toca ese flujo, conviene cerrar esa decisión en el mismo momento.
+Son reglas de las tandas anteriores, exigidas también en la base:
+
+- El cuadro se llama **"Precio por mayor"**, no "Descuentos": en POS y Proforma no hay descuentos (PLAN_6).
+- En el **POS el precio no se edita** (PLAN_4). En **Proforma** se puede subir, nunca bajar del precio del sistema (PLAN_6).
+- No se mezclan productos con factura y S/F; se mantiene la etiqueta **S/F**.
+- En el POS no se agrega un producto sin stock en la sucursal ni sin precio.
+- Colores y tipografía de **JISSACRUZ**, no los de Velacuss. Los colores de stock (verde / amarillo / rojo) se mantienen.
+
+### Decisiones a cerrar
+
+| # | Pregunta | Recomendación |
+|---|---|---|
+| **P10** | ¿Dónde va la fila grande: solo en los **resultados de búsqueda** (antes de agregar), o también en la lista de productos ya agregados? | Solo en los resultados. La lista del pedido queda compacta, como hoy, para que el total se vea sin bajar mucho. |
+| **P11** | ¿En qué pantallas? | POS, Proforma nueva, Proforma en edición y **también Cotización S/F** (la imagen es justamente una cotización). Caja no. |
+| **P12** | La imagen muestra dos códigos por producto; SISREP tiene uno. | Mostrar solo el código que hay. Si el cliente necesita el segundo, es un dato nuevo (eso sí sería SQL y carga de datos). |
+| **P13** | ¿La unidad en la ficha va con nombre completo ("PIEZAS", como la imagen) o con el código corto de T1 ("PZA")? | Nombre completo en la ficha, donde hay lugar. El código corto queda en la tabla del pedido y en el PDF. |
+| **P14** | ¿Se elige la cantidad en la misma fila antes de agregar, como en la imagen? | Sí: campo de cantidad + botón agregar en la fila. |
+| **P15** | Las filas son altas. ¿Cuántos resultados por página? | 5 por página en estas pantallas (hoy son 10), con el selector de siempre. |
+
+### Plan
+
+1. **Datos de la búsqueda.** `lib/producto-busqueda-server.ts` suma los **equivalentes**. Las acciones de búsqueda de POS, Proforma y Cotización pasan a devolver lo mismo: línea, unidad (nombre y código), medidas, originales, equivalentes, stock total y por sucursal, y precios por mayor. Hoy son tres funciones casi iguales: se unifican en un helper para no mantener tres copias.
+2. **Componente compartido** `components/shared/producto-ficha.tsx`: la fila grande con las cinco zonas. Reutiliza `<StockBadge />` para el stock por sucursal.
+3. **POS** (`ventas/pos.tsx`): los resultados usan la fila nueva; precio de solo lectura.
+4. **Proforma nueva** (`proformas/proforma-form.tsx`) y **Proforma en edición** (`proformas/[id]/proforma-detalle.tsx`): lo mismo, con el precio editable hacia arriba. La edición hoy muestra los resultados en una lista chica; pasa a usar la misma fila.
+5. **Cotización S/F** (`cotizacion/cotizador.tsx`), si se aprueba P11.
+6. **Pantalla chica:** las cinco zonas se apilan en vez de ir en una sola fila.
+7. `tsc` + lint + build → prueba en `localhost` → confirmar.
+
+**Orden sugerido:** POS primero. Se muestra, se ajusta lo que haga falta y recién después se replica en Proforma y Cotización.
+
+**Tamaño:** grande (4 pantallas + un componente nuevo), sin SQL.
+
+**Relacionado, pendiente de PLAN_6:** convertir una proforma en venta la registra directo, sin pasar por Caja. T4 no toca ese flujo; sigue siendo una decisión aparte.
+
+**Prueba:** POS → buscar un producto → la fila muestra línea, descripción, unidad, medida, códigos originales, equivalentes, stock por sucursal, precio y precio por mayor → poner cantidad 3 → agregar → entra al pedido con cantidad 3 y, si corresponde, con el precio por mayor. Lo mismo en Proforma nueva, Proforma en edición y Cotización. Verificar en pantalla chica.
 
 ---
 
