@@ -40,7 +40,8 @@ import { Paginacion } from "@/components/shared/paginacion"
 const VACIO: ProformaInput = {
   cliente_id: "",
   tipo_pago: "",
-  // Q20 (Sprint 6): vigencia fija en 3 días; ya no se pide en el formulario.
+  // PLAN_7 · T5: la validez se elige en el formulario (como en Cotización);
+  // arranca en 3 días, que era el valor fijo desde el Sprint 6 (Q20).
   plazo_validez_dias: 3,
   tiempo_entrega_dias: 0,
   glosa: "",
@@ -221,7 +222,7 @@ export function ProformaForm() {
   return (
     <div className="space-y-4">
       {/* 1. Cliente + pago + entrega */}
-      <div className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-3">
+      <div className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-4">
         <div className="space-y-1">
           <Label className="text-xs uppercase tracking-wide text-muted-foreground">Cliente</Label>
           <BuscadorCliente
@@ -249,6 +250,23 @@ export function ProformaForm() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+        {/* PLAN_7 · T5: validez de la oferta, igual que en Cotización. */}
+        <div className="space-y-1">
+          <Label className="text-xs uppercase tracking-wide text-muted-foreground" htmlFor="plazo_validez_dias">
+            Validez (días)
+          </Label>
+          <Input
+            id="plazo_validez_dias"
+            type="number"
+            min={1}
+            max={90}
+            className="h-10"
+            {...register("plazo_validez_dias")}
+          />
+          {errors.plazo_validez_dias && (
+            <p className="text-sm text-destructive">{errors.plazo_validez_dias.message}</p>
+          )}
         </div>
         <div className="space-y-1">
           <Label className="text-xs uppercase tracking-wide text-muted-foreground" htmlFor="tiempo_entrega_dias">

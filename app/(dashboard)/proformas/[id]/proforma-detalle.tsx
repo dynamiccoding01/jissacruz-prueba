@@ -80,6 +80,7 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
     handleSubmit,
     watch,
     setValue,
+    formState: { errors },
   } = useForm<ProformaInput>({
     resolver: zodResolver(proformaSchema),
     defaultValues: {
@@ -514,19 +515,39 @@ export function ProformaDetalleView({ detalle }: { detalle: ProformaDetalle }) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tiempo_entrega_dias" className="text-xs">
-                Entrega (días)
-              </Label>
-              <Input
-                id="tiempo_entrega_dias"
-                type="number"
-                min={0}
-                className="h-11"
-                placeholder="0 = no indicar"
-                {...register("tiempo_entrega_dias")}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              {/* PLAN_7 · T5: validez de la oferta, igual que en Cotización. Al
+                  guardar, la proforma queda vigente esa cantidad de días desde hoy. */}
+              <div className="space-y-2">
+                <Label htmlFor="plazo_validez_dias" className="text-xs">
+                  Validez (días)
+                </Label>
+                <Input
+                  id="plazo_validez_dias"
+                  type="number"
+                  min={1}
+                  max={90}
+                  className="h-11"
+                  {...register("plazo_validez_dias")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tiempo_entrega_dias" className="text-xs">
+                  Entrega (días)
+                </Label>
+                <Input
+                  id="tiempo_entrega_dias"
+                  type="number"
+                  min={0}
+                  className="h-11"
+                  placeholder="0 = no indicar"
+                  {...register("tiempo_entrega_dias")}
+                />
+              </div>
             </div>
+            {errors.plazo_validez_dias && (
+              <p className="text-sm text-destructive">{errors.plazo_validez_dias.message}</p>
+            )}
             <div className="space-y-2">
               <Label htmlFor="glosa" className="text-xs">
                 Glosa (opcional)

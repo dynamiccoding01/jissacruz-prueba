@@ -81,6 +81,9 @@ type Empresa = { nombre: string; nit: string | null; direccion: string | null; t
 export type ProformaPdf = {
   numero: string
   creado_en: string
+  // PLAN_7 · T5: si la proforma se revisó (editó o revalidó), la validez corre
+  // desde ahí, igual que en el sistema. La cotización no lo manda.
+  revalidada_en?: string | null
   tipo_pago: string | null
   plazo_validez_dias: number
   tiempo_entrega_dias: number | null
@@ -148,9 +151,12 @@ export function ProformaDocument({
     ? proforma.numero.split("-").pop()
     : proforma.numero
 
-  // T9: fecha concreta de vencimiento = emisión + plazo de validez.
+  // T9: fecha concreta de vencimiento = emisión + plazo de validez. PLAN_7 · T5:
+  // si la proforma se revisó, el plazo corre desde esa revisión (misma regla que
+  // `vista_proformas`), para que el PDF no muestre una fecha distinta a la del sistema.
+  const baseValidez = proforma.revalidada_en ?? proforma.creado_en
   const fechaVence = format(
-    addDays(new Date(proforma.creado_en), proforma.plazo_validez_dias),
+    addDays(new Date(baseValidez), proforma.plazo_validez_dias),
     "dd/MM/yyyy"
   )
 
@@ -278,7 +284,8 @@ export function ProformaDocument({
 
         <Text style={styles.pie}>
           {rotulo.charAt(0) + rotulo.slice(1).toLowerCase()} sin valor fiscal. Precios en bolivianos (Bs).{"\n"}
-          Válida hasta el {fechaVence} ({proforma.plazo_validez_dias} día(s) desde la emisión).
+          Válida hasta el {fechaVence} ({proforma.plazo_validez_dias} día(s) desde{" "}
+          {proforma.revalidada_en ? "su última revisión" : "la emisión"}).
           {proforma.tiempo_entrega_dias != null
             ? ` Tiempo de entrega: ${proforma.tiempo_entrega_dias} día(s).`
             : ""}

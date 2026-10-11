@@ -386,6 +386,9 @@ export async function updateProforma(id: string, values: ProformaInput) {
     .from("proformas")
     .update({
       tipo_pago: v.tipo_pago || null,
+      // PLAN_7 · T5: la validez se puede cambiar al editar; como acá también se
+      // setea revalidada_en, la proforma queda vigente esos días desde ahora.
+      plazo_validez_dias: v.plazo_validez_dias,
       tiempo_entrega_dias: v.tiempo_entrega_dias > 0 ? v.tiempo_entrega_dias : null,
       glosa: v.glosa || null,
       subtotal: totales.subtotal,

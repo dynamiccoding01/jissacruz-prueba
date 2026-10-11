@@ -1,7 +1,7 @@
 # PLAN_7.md — Séptima tanda de tareas (una por una)
 
 > Tareas nuevas del cliente. Se hacen **de a una**: implementar → probar → confirmar → siguiente.
-> Armado: 2026-10-06. **Estado al 2026-10-11: T1, T2 y T3 (paso 1) implementadas en código y subidas a los dos remotos el 2026-10-06. Falta correr los scripts `44`/`45`, probar en `localhost`, confirmar y desplegar. T4: llegó la imagen y está planificada, sin implementar.**
+> Armado: 2026-10-06. **Estado al 2026-10-11: T1, T2 y T3 (paso 1) implementadas en código y subidas a los dos remotos el 2026-10-06. Falta correr los scripts `44`/`45`, probar en `localhost`, confirmar y desplegar. T4: llegó la imagen y está planificada, sin implementar. T5 (validez en Proforma): código listo el 2026-10-11.**
 > **Todo va a los dos entornos:** código a `origin` (jissacruz-prueba) **y** `produccion` (JissaCruz_Project); cada script SQL en la base de **desarrollo y en la de producción**.
 > **Una sola rama:** todo el trabajo va directo en `main`. No se crean ramas ni worktrees.
 
@@ -15,6 +15,7 @@
 | **T2** | En el formulario de Productos, que en "Medidas" quede solo el campo Etiqueta | Sí — `44` y `45` | ✅ Código listo — ⚠️ **falta correr `44` (antes de usar) y `45` (después de desplegar) en dev + prod** |
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
+| **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Código listo (2026-10-11) — falta probar y confirmar |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
 
@@ -240,6 +241,24 @@ Son reglas de las tandas anteriores, exigidas también en la base:
 **Relacionado, pendiente de PLAN_6:** convertir una proforma en venta la registra directo, sin pasar por Caja. T4 no toca ese flujo; sigue siendo una decisión aparte.
 
 **Prueba:** POS → buscar un producto → la fila muestra línea, descripción, unidad, medida, códigos originales, equivalentes, stock por sucursal, precio y precio por mayor → poner cantidad 3 → agregar → entra al pedido con cantidad 3 y, si corresponde, con el precio por mayor. Lo mismo en Proforma nueva, Proforma en edición y Cotización. Verificar en pantalla chica.
+
+---
+
+## T5 — Validez de la oferta en Proforma ✅ código listo (2026-10-11) — sin SQL
+
+**Qué pide:** que la proforma tenga la validez de la oferta en días, igual que la Cotización. Pedido aparte de T4, del 2026-10-11.
+
+**Cómo estaba:** desde el Sprint 6 (decisión Q20) la validez era **fija en 3 días** y el campo se había quitado del formulario. Este pedido revierte esa decisión.
+
+**Cómo quedó**
+
+- **Proforma nueva** (`proformas/proforma-form.tsx`): campo **"Validez (días)"** en la cabecera, junto a Tipo de pago y Entrega. Arranca en 3.
+- **Proforma en edición** (`proformas/[id]/proforma-detalle.tsx`): el mismo campo, junto a "Entrega (días)". Al guardar, la proforma queda vigente esa cantidad de días **desde ese momento** (`updateProforma` ahora guarda el plazo; antes no lo tocaba).
+- **Límites:** entre **1 y 90 días** (`lib/validations/proforma.ts`). Con 0 la proforma nacería ya "pendiente de revisar precios"; y a los 3 meses la base la da por vencida igual, así que más de 90 no tiene efecto. En Cotización no cambió nada.
+- **PDF:** la leyenda "Válida hasta el …" usa la validez elegida. Si la proforma se revisó (edición o revalidación), cuenta **desde la última revisión**, igual que el sistema; antes contaba siempre desde la emisión y podía mostrar una fecha distinta.
+- **Sin SQL:** la columna `plazo_validez_dias`, la vista `vista_proformas` y `fn_convertir_proforma_a_venta` ya usaban el plazo de cada proforma (script 27).
+
+**Prueba:** Nueva proforma → aparece "Validez (días)" con 3 → poner 10 → crear → el PDF dice "Válida hasta el …" a 10 días. Poner 0 o 100 → no deja guardar y avisa. Editar una proforma → cambiar la validez → guardar → sigue vigente por esos días. Una proforma pendiente → guardar con la validez nueva → vuelve a estar vigente.
 
 ---
 

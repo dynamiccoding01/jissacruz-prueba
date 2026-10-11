@@ -33,7 +33,15 @@ export const proformaItemSchema = z.object({
 export const proformaSchema = z.object({
   cliente_id: z.string().uuid("Seleccioná un cliente"),
   tipo_pago: z.string().optional(),
-  plazo_validez_dias: z.coerce.number().int().min(0).default(15),
+  // PLAN_7 · T5: la validez de la oferta vuelve a pedirse en el formulario (como
+  // en Cotización). Mínimo 1 día: con 0 la proforma nacería ya "pendiente". Máximo
+  // 90: a los 3 meses la base la da por vencida igual (script 27).
+  plazo_validez_dias: z.coerce
+    .number()
+    .int("La validez debe ser un número entero de días")
+    .min(1, "La validez debe ser de al menos 1 día")
+    .max(90, "La validez no puede superar los 90 días")
+    .default(3),
   // P10: "Tiempo de entrega: N día(s)" del modelo del cliente. Opcional; un
   // input vacío coerciona a 0 y la action lo guarda como null (sin leyenda).
   tiempo_entrega_dias: z.coerce.number().int().min(0).default(0),
