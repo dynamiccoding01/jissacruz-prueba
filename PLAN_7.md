@@ -16,7 +16,7 @@
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
 | **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Publicada en producción el 2026-10-11 — falta probar y confirmar |
-| **T6** | PDF de venta: Cantidad y Código centrados, y columna de unidad de medida | No | ✅ Publicada en producción el 2026-10-11 18:48 — falta que el usuario lo confirme en pantalla |
+| **T6** | PDF de venta: Cantidad y Código centrados, y columna de unidad de medida | No | ✅ Venta y proforma publicadas el 2026-10-11 18:48. **Kardex y reportes: código listo, sin subir todavía** |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
 
@@ -278,9 +278,17 @@ Son reglas de las tandas anteriores, exigidas también en la base:
 - **El PDF de proforma (y el de cotización, que lo comparte) tenía el mismo defecto y recibió el mismo arreglo**, para que los tres documentos queden iguales. En esos dos la unidad pasa de ir junto a la cantidad (T1) a su propia columna.
 - Se mantiene el diseño de JISSACRUZ (encabezado azul); no se copió la grilla con bordes de la factura de referencia.
 
-**Archivos:** `lib/pdf/venta-document.tsx`, `lib/pdf/proforma-document.tsx`, `app/api/pdf/venta/[id]/route.tsx`.
+**Revisión de todos los PDF del sistema (mismo día).** A pedido del cliente se generaron con datos de ejemplo los otros documentos (Kardex y los 5 reportes) y aparecieron defectos del mismo tipo, ya corregidos:
 
-**Verificado:** los dos documentos se generaron con datos de ejemplo (códigos cortos y largos, con medidas y códigos originales) y se revisaron a la vista. `tsc` y lint sin errores.
+- **Kardex:** la fecha se pegaba al movimiento (`11/10/2026 22:11Salida por venta`). Ahora cada columna tiene su ancho y su margen; Cantidad centrada, Costo y Saldo a la derecha.
+- **Reporte de inventario, bloque "Stock en tránsito":** `CantidadRecorrido` y `5CM` pegados. Además la flecha del recorrido (`→`) salía como un apóstrofo, porque la fuente del PDF no la tiene: en el PDF ahora va `>`.
+- **Reporte de proformas y de productos más vendidos:** la columna ancha era la primera (Número / Código) y el cliente o la descripción quedaban apretados en una angosta. Ahora la ancha es Cliente / Descripción (`columnaAncha` en `lib/reportes.ts`).
+- **Todos los PDF:** las palabras ya no se parten con guion (`FIL-TRO`, `SCA-NIA`, `ORI-ENTE`); pasan enteras al renglón siguiente (`lib/pdf/tipografia.ts`).
+- Los reportes de ventas por período y de rentabilidad estaban bien; solo ganaron el margen entre columnas.
+
+**Archivos:** `lib/pdf/venta-document.tsx`, `lib/pdf/proforma-document.tsx`, `lib/pdf/kardex-document.tsx`, `lib/pdf/reporte-document.tsx`, `lib/pdf/tipografia.ts` (nuevo), `lib/reportes.ts`, `lib/reportes-tipos.ts`, `app/api/pdf/venta/[id]/route.tsx`.
+
+**Verificado:** los ocho documentos (venta, proforma, kardex con y sin costo, y los 5 reportes) se generaron con datos de ejemplo — códigos cortos y largos, nombres largos, con medidas y códigos originales — y se revisaron a la vista. `tsc`, lint y build sin errores. No se probó con datos reales de producción.
 
 **Prueba:** abrir el PDF de una venta → Cantidad, Unidad y Código en columnas separadas y centradas. Lo mismo en el PDF de una proforma y de una cotización.
 

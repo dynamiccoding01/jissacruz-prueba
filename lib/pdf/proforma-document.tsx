@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { addDays, format } from "date-fns"
 
 import { importeALiteral } from "./numero-a-literal"
+import "./tipografia"
 import { formatearMedidas, type Medida } from "@/lib/medidas"
 
 // Tope de códigos originales por línea en el PDF (Q6): más allá se corta con "…"

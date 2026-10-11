@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { format } from "date-fns"
 
 import { ETIQUETA_MOVIMIENTO, esEntrada, type TipoMovimiento } from "@/lib/kardex"
+import "./tipografia"
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 9, fontFamily: "Helvetica" },
@@ -22,7 +23,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 4,
   },
-  headerCell: { color: "#FFFFFF", fontSize: 8, fontWeight: 700, flex: 1 },
+  headerCell: { color: "#FFFFFF", fontSize: 8, fontWeight: 700 },
   row: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -30,7 +31,17 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 4,
   },
-  cell: { fontSize: 8, flex: 1 },
+  cell: { fontSize: 8 },
+  // Columnas. Cada una lleva su margen interno para que el texto de una no quede
+  // pegado al de la siguiente (antes la fecha llenaba su columna y se juntaba
+  // con el movimiento). Cantidad va centrada; costo y saldo, a la derecha.
+  cFecha: { flex: 1.3, paddingHorizontal: 3 },
+  cMovimiento: { flex: 1.5, paddingHorizontal: 3 },
+  cSucursal: { flex: 1.2, paddingHorizontal: 3 },
+  cCantidad: { flex: 0.8, paddingHorizontal: 3, textAlign: "center" },
+  cCosto: { flex: 0.9, paddingHorizontal: 3, textAlign: "right" },
+  cSaldo: { flex: 0.7, paddingHorizontal: 3, textAlign: "right" },
+  cMotivo: { flex: 2, paddingHorizontal: 6 },
 })
 
 export type MovimientoPdf = {
@@ -72,29 +83,35 @@ export function KardexDocument({
         </View>
 
         <View style={styles.headerRow}>
-          <Text style={styles.headerCell}>Fecha</Text>
-          <Text style={[styles.headerCell, { flex: 1.4 }]}>Movimiento</Text>
-          <Text style={styles.headerCell}>Sucursal</Text>
-          <Text style={styles.headerCell}>Cantidad</Text>
-          {mostrarCosto && <Text style={styles.headerCell}>Costo (Bs)</Text>}
-          <Text style={styles.headerCell}>Saldo</Text>
-          <Text style={[styles.headerCell, { flex: 2 }]}>Motivo</Text>
+          <Text style={[styles.headerCell, styles.cFecha]}>Fecha</Text>
+          <Text style={[styles.headerCell, styles.cMovimiento]}>Movimiento</Text>
+          <Text style={[styles.headerCell, styles.cSucursal]}>Sucursal</Text>
+          <Text style={[styles.headerCell, styles.cCantidad]}>Cantidad</Text>
+          {mostrarCosto && <Text style={[styles.headerCell, styles.cCosto]}>Costo (Bs)</Text>}
+          <Text style={[styles.headerCell, styles.cSaldo]}>Saldo</Text>
+          <Text style={[styles.headerCell, styles.cMotivo]}>Motivo</Text>
         </View>
 
         {movimientos.map((m, i) => (
           <View style={styles.row} key={i} wrap={false}>
-            <Text style={styles.cell}>{format(new Date(m.creado_en), "dd/MM/yyyy HH:mm")}</Text>
-            <Text style={[styles.cell, { flex: 1.4 }]}>{ETIQUETA_MOVIMIENTO[m.tipo_movimiento]}</Text>
-            <Text style={styles.cell}>{m.sucursal?.nombre ?? "—"}</Text>
-            <Text style={styles.cell}>
+            <Text style={[styles.cell, styles.cFecha]}>
+              {format(new Date(m.creado_en), "dd/MM/yyyy HH:mm")}
+            </Text>
+            <Text style={[styles.cell, styles.cMovimiento]}>
+              {ETIQUETA_MOVIMIENTO[m.tipo_movimiento]}
+            </Text>
+            <Text style={[styles.cell, styles.cSucursal]}>{m.sucursal?.nombre ?? "—"}</Text>
+            <Text style={[styles.cell, styles.cCantidad]}>
               {esEntrada(m.tipo_movimiento) ? "+" : "-"}
               {m.cantidad}
             </Text>
             {mostrarCosto && (
-              <Text style={styles.cell}>{Number(m.costo_unitario ?? 0).toFixed(2)}</Text>
+              <Text style={[styles.cell, styles.cCosto]}>
+                {Number(m.costo_unitario ?? 0).toFixed(2)}
+              </Text>
             )}
-            <Text style={styles.cell}>{m.saldo}</Text>
-            <Text style={[styles.cell, { flex: 2 }]}>{m.motivo ?? "—"}</Text>
+            <Text style={[styles.cell, styles.cSaldo]}>{m.saldo}</Text>
+            <Text style={[styles.cell, styles.cMotivo]}>{m.motivo ?? "—"}</Text>
           </View>
         ))}
 

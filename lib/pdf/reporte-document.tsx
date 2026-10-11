@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { format } from "date-fns"
 
 import type { BloqueReporte, Columna, Fila } from "@/lib/reportes-tipos"
+import "./tipografia"
 
 const AZUL = "#0E3C6D"
 const GRIS = "#B6B7B4"
@@ -45,6 +46,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   cell: { fontSize: 8 },
+  // Margen interno de cada celda: sin él, una columna alineada a la derecha
+  // queda pegada a la siguiente alineada a la izquierda ("5CM > AC").
+  celda: { paddingHorizontal: 4 },
   pie: { marginTop: 24, fontSize: 7, color: GRIS, textAlign: "center" },
 })
 
@@ -57,8 +61,14 @@ export type ReportePdf = {
   filas: Fila[]
   resumen: { label: string; value: string }[]
   tituloTabla?: string
+  // Columna descriptiva (la más ancha) de la tabla principal. Default 0.
+  columnaAncha?: number
   bloqueExtra?: BloqueReporte
 }
+
+// La fuente del PDF (Helvetica) no trae la flecha "→" y la dibuja como un
+// apóstrofo: en el PDF se cambia por ">" (en pantalla y en Excel sigue igual).
+const textoPdf = (v: unknown) => String(v ?? "").replace(/→/g, ">")
 
 // Tabla reutilizable: `anchoIdx` marca la columna descriptiva (la más ancha).
 function Tabla({
@@ -79,7 +89,10 @@ function Tabla({
     <View>
       <View style={styles.headerRow}>
         {columnas.map((c, i) => (
-          <Text key={c.key} style={[styles.hCell, { width: ancho(i), textAlign: c.align ?? "left" }]}>
+          <Text
+            key={c.key}
+            style={[styles.hCell, styles.celda, { width: ancho(i), textAlign: c.align ?? "left" }]}
+          >
             {c.label}
           </Text>
         ))}
@@ -87,8 +100,11 @@ function Tabla({
       {filas.map((fila, i) => (
         <View style={styles.row} key={i} wrap={false}>
           {columnas.map((c, j) => (
-            <Text key={c.key} style={[styles.cell, { width: ancho(j), textAlign: c.align ?? "left" }]}>
-              {String(fila[c.key] ?? "")}
+            <Text
+              key={c.key}
+              style={[styles.cell, styles.celda, { width: ancho(j), textAlign: c.align ?? "left" }]}
+            >
+              {textoPdf(fila[c.key])}
             </Text>
           ))}
         </View>
@@ -133,7 +149,11 @@ export function ReporteDocument({
         </View>
 
         {reporte.tituloTabla && <Text style={styles.subBloque}>{reporte.tituloTabla}</Text>}
-        <Tabla columnas={reporte.columnas} filas={reporte.filas} anchoIdx={0} />
+        <Tabla
+          columnas={reporte.columnas}
+          filas={reporte.filas}
+          anchoIdx={reporte.columnaAncha ?? 0}
+        />
 
         {reporte.bloqueExtra &&
           (reporte.bloqueExtra.filas.length > 0 || reporte.bloqueExtra.mensajeVacio) && (

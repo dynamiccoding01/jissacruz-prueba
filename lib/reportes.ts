@@ -149,6 +149,8 @@ async function reporteProformas(desdeStr?: string, hastaStr?: string): Promise<R
     tipo: "proformas",
     titulo: "Reporte de proformas",
     subtitulo: etiquetaRango(desde, hasta),
+    // En el PDF la columna ancha es el cliente (no el número, que es corto).
+    columnaAncha: 2,
     columnas: [
       { key: "numero", label: "Número" },
       { key: "fecha", label: "Fecha" },
@@ -214,6 +216,8 @@ async function reporteMasVendidos(desdeStr?: string, hastaStr?: string): Promise
     tipo: "mas_vendidos",
     titulo: "Productos más vendidos",
     subtitulo: etiquetaRango(desde, hasta),
+    // En el PDF la columna ancha es la descripción (no el código).
+    columnaAncha: 1,
     columnas: [
       { key: "codigo", label: "Código" },
       { key: "descripcion", label: "Descripción" },

@@ -2,6 +2,7 @@ import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/render
 import { format } from "date-fns"
 
 import { importeALiteral } from "./numero-a-literal"
+import "./tipografia"
 import { formatearMedidas, type Medida } from "@/lib/medidas"
 
 const AZUL = "#0E3C6D"

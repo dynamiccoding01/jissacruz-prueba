@@ -44,5 +44,7 @@ export type ReporteResultado = {
   tituloTabla?: string
   // Nombre de la hoja principal en el Excel (default "Datos").
   hojaExcel?: string
+  // Columna descriptiva (la más ancha) de la tabla principal en el PDF. Default 0.
+  columnaAncha?: number
   bloqueExtra?: BloqueReporte
 }
