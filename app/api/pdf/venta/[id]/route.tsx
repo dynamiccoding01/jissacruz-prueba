@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getConfiguracionEmpresa } from "@/lib/datos-cacheados"
 import { getLogoEmpresa } from "@/lib/pdf/logo"
+import { resolverUnidadCorta } from "@/lib/unidades-server"
 import { VentaDocument, type VentaItemPdf, type VentaPdf } from "@/lib/pdf/venta-document"
 
 export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
@@ -24,11 +25,15 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const { data: itemsRaw } = await supabase
     .from("venta_items")
     .select(
-      "cantidad, precio_unitario, descuento_tipo, descuento_valor, subtotal_linea, productos(codigo, descripcion, linea_marca, unidad_medida, producto_medidas(etiqueta, valor, unidad, orden), producto_codigos_originales(codigo_original))"
+      "cantidad, precio_unitario, descuento_tipo, descuento_valor, subtotal_linea, productos(codigo, descripcion, linea_marca, unidad_medida, unidad_medida_id, producto_medidas(etiqueta, valor, unidad, orden), producto_codigos_originales(codigo_original))"
     )
     .eq("venta_id", params.id)
 
-  const empresa = await getConfiguracionEmpresa()
+  // La unidad sale como código corto del catálogo (PZA, KG), igual que en la proforma.
+  const [empresa, unidadCorta] = await Promise.all([
+    getConfiguracionEmpresa(),
+    resolverUnidadCorta(),
+  ])
 
   const cliente = (venta as Record<string, unknown>).clientes as VentaPdf["cliente"]
   const proformaOrigen = (venta as Record<string, unknown>).proformas as { numero: string } | null
@@ -58,6 +63,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       descripcion: string
       linea_marca: string | null
       unidad_medida: string | null
+      unidad_medida_id: string | null
       producto_medidas: { etiqueta: string; valor: number | null; unidad: string | null; orden: number }[] | null
       producto_codigos_originales: { codigo_original: string }[] | null
     } | null
@@ -78,7 +84,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
       descuento_tipo: it.descuento_tipo,
       descuento_valor: Number(it.descuento_valor),
       subtotal_linea: Number(it.subtotal_linea),
-      unidad: producto?.unidad_medida ?? "unidad",
+      unidad: unidadCorta(producto?.unidad_medida_id, producto?.unidad_medida),
       medidas,
       originales: (producto?.producto_codigos_originales ?? []).map((o) => o.codigo_original),
     }

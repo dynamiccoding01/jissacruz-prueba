@@ -16,6 +16,7 @@
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
 | **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Publicada en producción el 2026-10-11 — falta probar y confirmar |
+| **T6** | PDF de venta: Cantidad y Código centrados, y columna de unidad de medida | No | ✅ Código listo (2026-10-11) — **sin subir todavía** |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
 
@@ -72,7 +73,7 @@ La base está en el **43** (✅ corrido en dev + prod el 2026-09-27). Lo nuevo, 
 - **Alta** (`proformas/proforma-form.tsx`): la unidad se ve **siempre** en los resultados de búsqueda (antes se escondía si era la genérica) y hay una **columna "Unidad"** nueva en la tabla de ítems, al lado de la cantidad.
 - **Edición** (`proformas/[id]/proforma-detalle.tsx`): la unidad aparece en los resultados y en cada ítem (`Unidad: PZA`).
 - **Lectura** (proforma convertida o vencida): la línea dice `5 PZA × Bs 10.00`.
-- **PDF** (`lib/pdf/proforma-document.tsx`): la unidad va siempre junto a la cantidad (`5 PZA`). El documento es compartido con la **Cotización S/F**, así que su PDF también cambia.
+- **PDF** (`lib/pdf/proforma-document.tsx`): la unidad se muestra siempre. Primero iba junto a la cantidad (`5 PZA`); desde T6 va en su propia columna "Unidad". El documento es compartido con la **Cotización S/F**, así que su PDF también cambia.
 - **Código corto:** `resolverUnidadCorta()` en `lib/unidades-server.ts` (nuevo). Busca el código en el catálogo de unidades por el id del producto; si el producto no tiene unidad del catálogo, por el nombre guardado en el texto; si tampoco coincide, muestra el texto tal cual.
 - La unidad viaja en el ítem del formulario solo para mostrarla (`proformaItemSchema`); **no se guarda** en `proforma_items`. Siempre se ve la unidad actual del producto.
 
@@ -261,6 +262,27 @@ Son reglas de las tandas anteriores, exigidas también en la base:
 - **Sin SQL:** la columna `plazo_validez_dias`, la vista `vista_proformas` y `fn_convertir_proforma_a_venta` ya usaban el plazo de cada proforma (script 27).
 
 **Prueba:** Nueva proforma → aparece "Validez (días)" con 3 → poner 10 → crear → el PDF dice "Válida hasta el …" a 10 días. Poner 0 o 100 → no deja guardar y avisa. Editar una proforma → cambiar la validez → guardar → sigue vigente por esos días. Una proforma pendiente → guardar con la validez nueva → vuelve a estar vigente.
+
+---
+
+## T6 — PDF de venta: columnas centradas y unidad de medida ✅ código listo (2026-10-11) — sin SQL
+
+**Qué pide:** en el PDF de venta, la Cantidad y el Código salían pegados (`CantidadCódigo`, `1TKL35014`) y tienen que ir centrados; además faltaba la unidad de medida. Referencia del cliente: una factura de Velacuss con columna "Unidad de medida".
+
+**Por qué pasaba:** las columnas no tenían margen entre sí, y Cantidad iba alineada a la derecha justo al lado del Código, alineado a la izquierda.
+
+**Cómo quedó**
+
+- Tabla nueva: **N° · Cantidad · Unidad · Código · Línea · Detalle · P. Unit. · Importe**. N°, Cantidad, Unidad y Código van **centrados**, y cada columna tiene margen interno.
+- **Columna "Unidad"** propia, con el código corto del catálogo (`PZA`, `KG`), igual que en la proforma (`resolverUnidadCorta()`). Antes el PDF de venta solo mostraba la unidad pegada a la cantidad, y la escondía si era la genérica.
+- **El PDF de proforma (y el de cotización, que lo comparte) tenía el mismo defecto y recibió el mismo arreglo**, para que los tres documentos queden iguales. En esos dos la unidad pasa de ir junto a la cantidad (T1) a su propia columna.
+- Se mantiene el diseño de JISSACRUZ (encabezado azul); no se copió la grilla con bordes de la factura de referencia.
+
+**Archivos:** `lib/pdf/venta-document.tsx`, `lib/pdf/proforma-document.tsx`, `app/api/pdf/venta/[id]/route.tsx`.
+
+**Verificado:** los dos documentos se generaron con datos de ejemplo (códigos cortos y largos, con medidas y códigos originales) y se revisaron a la vista. `tsc` y lint sin errores.
+
+**Prueba:** abrir el PDF de una venta → Cantidad, Unidad y Código en columnas separadas y centradas. Lo mismo en el PDF de una proforma y de una cotización.
 
 ---
 

@@ -48,13 +48,17 @@ const styles = StyleSheet.create({
   },
   cell: { fontSize: 8 },
   // R14: Detalle más ancho para las líneas de medidas y códigos originales.
-  cNum: { width: "4%" },
-  cCant: { width: "11%", textAlign: "right" },
-  cCodigo: { width: "13%" },
-  cLinea: { width: "12%" },
-  cDetalle: { width: "40%" },
-  cPrecio: { width: "10%", textAlign: "right" },
-  cImporte: { width: "10%", textAlign: "right" },
+  // Columnas (suman 100%). Cada una lleva su margen interno para que el texto de
+  // una no quede pegado al de la siguiente; N°, Cantidad, Unidad y Código van
+  // centrados (antes Cantidad iba a la derecha, pegada al Código).
+  cNum: { width: "4%", paddingHorizontal: 3, textAlign: "center" },
+  cCant: { width: "8%", paddingHorizontal: 3, textAlign: "center" },
+  cUnidad: { width: "8%", paddingHorizontal: 3, textAlign: "center" },
+  cCodigo: { width: "14%", paddingHorizontal: 3, textAlign: "center" },
+  cLinea: { width: "11%", paddingHorizontal: 3 },
+  cDetalle: { width: "35%", paddingHorizontal: 3 },
+  cPrecio: { width: "10%", paddingHorizontal: 3, textAlign: "right" },
+  cImporte: { width: "10%", paddingHorizontal: 3, textAlign: "right" },
   detalleSub: { fontSize: 7, color: "#555", marginTop: 1 },
   totales: { marginTop: 10, marginLeft: "auto", width: "45%" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
@@ -97,7 +101,8 @@ export type VentaItemPdf = {
   descuento_tipo: "porcentaje" | "monto_fijo" | null
   descuento_valor: number
   subtotal_linea: number
-  // Sprint 6 (Q5/R14): unidad en Cantidad; medidas y OEM en Detalle.
+  // Unidad de medida, en su propia columna y como código corto del catálogo
+  // (PZA, KG); medidas y OEM en Detalle.
   unidad: string
   medidas: Medida[]
   originales: string[]
@@ -187,6 +192,7 @@ export function VentaDocument({
         <View style={styles.headerRow}>
           <Text style={[styles.hCell, styles.cNum]}>N°</Text>
           <Text style={[styles.hCell, styles.cCant]}>Cantidad</Text>
+          <Text style={[styles.hCell, styles.cUnidad]}>Unidad</Text>
           <Text style={[styles.hCell, styles.cCodigo]}>Código</Text>
           <Text style={[styles.hCell, styles.cLinea]}>Línea</Text>
           <Text style={[styles.hCell, styles.cDetalle]}>Detalle</Text>
@@ -195,17 +201,14 @@ export function VentaDocument({
         </View>
 
         {items.map((it, i) => {
-          const unidadCorta = it.unidad && it.unidad !== "unidad" ? ` ${it.unidad}` : ""
           const oem =
             it.originales.slice(0, TOPE_OEM).join("  ") +
             (it.originales.length > TOPE_OEM ? "  …" : "")
           return (
             <View style={styles.row} key={i} wrap={false}>
               <Text style={[styles.cell, styles.cNum]}>{i + 1}</Text>
-              <Text style={[styles.cell, styles.cCant]}>
-                {it.cantidad}
-                {unidadCorta}
-              </Text>
+              <Text style={[styles.cell, styles.cCant]}>{it.cantidad}</Text>
+              <Text style={[styles.cell, styles.cUnidad]}>{it.unidad || "—"}</Text>
               <Text style={[styles.cell, styles.cCodigo]}>{it.codigo}</Text>
               <Text style={[styles.cell, styles.cLinea]}>{it.linea_marca ?? "—"}</Text>
               <View style={styles.cDetalle}>
