@@ -16,6 +16,7 @@
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
 | **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Publicada en producción el 2026-10-11 — falta probar y confirmar |
+| **T7** | Rediseño de los PDF de venta, proforma y cotización según la factura de referencia | No | ✅ Código listo (2026-10-11) — **sin subir todavía** |
 | **T6** | PDF de venta: Cantidad y Código centrados, y columna de unidad de medida | No | ✅ Publicada en producción el 2026-10-11 (venta y proforma 18:48; kardex y reportes 18:59) — falta que el usuario lo confirme en pantalla |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
@@ -291,6 +292,54 @@ Son reglas de las tandas anteriores, exigidas también en la base:
 **Verificado:** los ocho documentos (venta, proforma, kardex con y sin costo, y los 5 reportes) se generaron con datos de ejemplo — códigos cortos y largos, nombres largos, con medidas y códigos originales — y se revisaron a la vista. `tsc`, lint y build sin errores. No se probó con datos reales de producción.
 
 **Prueba:** abrir el PDF de una venta → Cantidad, Unidad y Código en columnas separadas y centradas. Lo mismo en el PDF de una proforma y de una cotización.
+
+---
+
+## T7 — Rediseño de los PDF comerciales según la factura de referencia ✅ código listo (2026-10-11) — sin SQL
+
+**Qué pide:** revisar todos los PDF tipo factura que genera el sistema (ventas, compras, proforma, cotización) y cambiarles el diseño según la imagen de referencia (una factura de Velacuss), manteniendo la paleta de colores del sistema.
+
+**Qué PDF genera el sistema**
+
+| PDF | Se rediseñó |
+|---|---|
+| Comprobante de venta | ✅ |
+| Proforma | ✅ |
+| Cotización S/F | ✅ (comparte el documento de la proforma) |
+| **Compras** | ❌ **No existe**: el módulo Compras hoy no genera ningún PDF. Agregarlo es trabajo nuevo, a pedido. |
+| Kardex y Reportes | No son facturas: mantienen su diseño (corregido en T6). |
+
+**Cómo quedó** — un solo diseño para los tres, en `lib/pdf/documento-comercial.tsx` (nuevo). `venta-document.tsx` y `proforma-document.tsx` ya no tienen diseño propio: arman sus datos y usan ese componente.
+
+- **Arriba a la izquierda**, centrado: logo, nombre de la empresa, sucursal, dirección y teléfono (los de la sucursal; si no tiene, los de la empresa).
+- **Arriba a la derecha:** NIT, número del documento, vendedor y, en la venta, la proforma de origen.
+- **Título centrado** (`COMPROBANTE DE VENTA`, `PROFORMA`, `COTIZACIÓN`) con la leyenda "(Sin valor fiscal)".
+- **Datos en dos columnas:** Fecha, Nombre/Razón Social y Dirección a la izquierda; NIT/CI, Teléfono y Tipo de pago a la derecha. La glosa, si hay, va debajo.
+- **Tabla con grilla** y encabezados centrados, en el orden de la referencia: Código · Cantidad · Unidad de medida · Descripción · Precio unitario · Descuento · Subtotal. La línea, las medidas y los códigos originales van dentro de la descripción.
+- **Totales en un cuadro** pegado a la tabla, a la derecha (Subtotal, Descuento, Impuesto, Total a pagar), con el importe en literal a la izquierda.
+- **Pie centrado** con las leyendas (y la validez y el tiempo de entrega en proforma y cotización).
+- Colores de JISSACRUZ: encabezado de la tabla, título y líneas en el azul de la marca.
+
+**Diferencias con la referencia, a propósito**
+
+- **Columna "Descuento":** aparece solo si algún ítem tiene descuento (hoy, cotizaciones y documentos viejos). En Proforma y POS no hay descuentos desde PLAN_6.
+- **Título:** sigue diciendo "Comprobante de venta — sin valor fiscal", no "Factura": el sistema no emite facturas fiscales (no hay código de autorización ni QR).
+- **Números** en formato boliviano (`1.500,00`), cantidades enteras y unidad en código corto (`PZA`), como ya estaba decidido.
+- No se muestra el número de fila (la referencia no lo tiene).
+
+**Arreglos que salieron al rehacer los documentos**
+
+- **Hora equivocada:** los PDF mostraban la hora del servidor (UTC), 4 horas adelantada. El comprobante de la captura del cliente decía 22:11 para una venta de las 18:11, y una venta después de las 20:00 salía con la fecha del día siguiente. Ahora todos los PDF (también Kardex y Reportes) usan la hora de Bolivia con `textoFechaBolivia()` de `lib/fechas-bolivia.ts`.
+- **Documentos de varias hojas:** el encabezado de la tabla se repite en cada hoja y la tabla cierra bien al final de cada una.
+- **Importe en literal:** un total con resto de decimales podía salir como "… 100/100 Bolivianos".
+
+**Sin tocar:** `lib/reportes.ts` arma las fechas de las filas de los reportes en el servidor con la misma zona equivocada (por ejemplo la columna Fecha del reporte de proformas). Es un tema de datos, no de diseño; queda anotado.
+
+**Verificado:** venta, proforma y cotización generadas con datos de ejemplo (con y sin descuentos, con impuesto, con glosa, sin cliente, y una venta de 45 ítems en 3 hojas), con el reloj del proceso en UTC como el servidor, y revisadas a la vista. `tsc`, lint y build sin errores. No se probó con datos reales.
+
+**Archivos:** `lib/pdf/documento-comercial.tsx` (nuevo), `lib/pdf/venta-document.tsx`, `lib/pdf/proforma-document.tsx`, `lib/pdf/kardex-document.tsx`, `lib/pdf/reporte-document.tsx`, `lib/pdf/numero-a-literal.ts`, `lib/fechas-bolivia.ts` y las 3 rutas PDF.
+
+**Prueba:** abrir el PDF de una venta, de una proforma y de una cotización → mismo diseño, con la hora correcta. Una cotización con descuento → aparece la columna Descuento. Un documento con muchos ítems → el encabezado de la tabla se repite en la segunda hoja.
 
 ---
 

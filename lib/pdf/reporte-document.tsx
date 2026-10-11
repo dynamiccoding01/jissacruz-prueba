@@ -1,8 +1,8 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
-import { format } from "date-fns"
 
 import type { BloqueReporte, Columna, Fila } from "@/lib/reportes-tipos"
 import "./tipografia"
+import { textoFechaBolivia } from "@/lib/fechas-bolivia"
 
 const AZUL = "#0E3C6D"
 const GRIS = "#B6B7B4"
@@ -173,7 +173,7 @@ export function ReporteDocument({
           )}
 
         <Text style={styles.pie}>
-          Generado el {format(new Date(), "dd/MM/yyyy HH:mm")} · Precios en bolivianos (Bs).
+          Generado el {textoFechaBolivia(new Date(), true)} · Precios en bolivianos (Bs).
         </Text>
       </Page>
     </Document>

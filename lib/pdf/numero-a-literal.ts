@@ -119,8 +119,11 @@ function enteroALetras(n: number): string {
  * Los centavos van como fracción NN/100 (formato estándar de proformas/facturas).
  */
 export function importeALiteral(monto: number): string {
-  const entero = Math.floor(Math.abs(monto))
-  const centavos = Math.round((Math.abs(monto) - entero) * 100)
+  // Se redondea primero a centavos: con un importe como 3389,9999999 (resto de
+  // una cuenta con decimales) el entero quedaba en 3389 y los centavos en 100.
+  const enCentavos = Math.round(Math.abs(monto) * 100)
+  const entero = Math.floor(enCentavos / 100)
+  const centavos = enCentavos % 100
   const letras = enteroALetras(entero)
   const conMayuscula = letras.charAt(0).toUpperCase() + letras.slice(1)
   return `${conMayuscula} ${String(centavos).padStart(2, "0")}/100 Bolivianos`

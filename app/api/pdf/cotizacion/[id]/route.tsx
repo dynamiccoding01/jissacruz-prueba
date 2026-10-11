@@ -20,7 +20,7 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   const { data: cotizacion } = await supabase
     .from("cotizaciones")
     .select(
-      "numero, creado_en, tipo_pago, plazo_validez_dias, tiempo_entrega_dias, glosa, subtotal, descuento_tipo, descuento_valor, impuesto_porcentaje, total, clientes(nombre, ci_nit, telefono, direccion), sucursal:sucursales(codigo, nombre), vendedor:perfiles!cotizaciones_creado_por_fkey(nombre_completo)"
+      "numero, creado_en, tipo_pago, plazo_validez_dias, tiempo_entrega_dias, glosa, subtotal, descuento_tipo, descuento_valor, impuesto_porcentaje, total, clientes(nombre, ci_nit, telefono, direccion), sucursal:sucursales(codigo, nombre, direccion, telefono), vendedor:perfiles!cotizaciones_creado_por_fkey(nombre_completo)"
     )
     .eq("id", params.id)
     .single()

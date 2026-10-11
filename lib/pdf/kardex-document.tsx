@@ -1,8 +1,8 @@
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer"
-import { format } from "date-fns"
 
 import { ETIQUETA_MOVIMIENTO, esEntrada, type TipoMovimiento } from "@/lib/kardex"
 import "./tipografia"
+import { textoFechaBolivia } from "@/lib/fechas-bolivia"
 
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 9, fontFamily: "Helvetica" },
@@ -77,7 +77,7 @@ export function KardexDocument({
             <Text style={styles.subtitle}>{producto.descripcion}</Text>
             <Text style={styles.meta}>
               Stock actual: {producto.stock_actual} · Generado:{" "}
-              {format(new Date(), "dd/MM/yyyy HH:mm")}
+              {textoFechaBolivia(new Date(), true)}
             </Text>
           </View>
         </View>
@@ -95,7 +95,7 @@ export function KardexDocument({
         {movimientos.map((m, i) => (
           <View style={styles.row} key={i} wrap={false}>
             <Text style={[styles.cell, styles.cFecha]}>
-              {format(new Date(m.creado_en), "dd/MM/yyyy HH:mm")}
+              {textoFechaBolivia(m.creado_en, true)}
             </Text>
             <Text style={[styles.cell, styles.cMovimiento]}>
               {ETIQUETA_MOVIMIENTO[m.tipo_movimiento]}
