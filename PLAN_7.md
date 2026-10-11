@@ -1,7 +1,7 @@
 # PLAN_7.md — Séptima tanda de tareas (una por una)
 
 > Tareas nuevas del cliente. Se hacen **de a una**: implementar → probar → confirmar → siguiente.
-> Armado: 2026-10-06. **Estado al 2026-10-11: T1, T2 y T3 (paso 1) implementadas en código y subidas a los dos remotos el 2026-10-06. Falta correr los scripts `44`/`45`, probar en `localhost`, confirmar y desplegar. T4: llegó la imagen y está planificada, sin implementar. T5 (validez en Proforma): código listo el 2026-10-11.**
+> Armado: 2026-10-06. **Estado al 2026-10-11: T1, T2 y T3 (paso 1) están publicadas en producción desde el 2026-10-06 23:44, y T5 (validez en Proforma) desde el 2026-10-11 18:18: el push a los remotos disparó solo el despliegue en Vercel las dos veces. ⚠️ Falta confirmar que el script `44` esté corrido en producción (ver abajo) y correr el `45`. T4: llegó la imagen y está planificada, sin implementar.**
 > **Todo va a los dos entornos:** código a `origin` (jissacruz-prueba) **y** `produccion` (JissaCruz_Project); cada script SQL en la base de **desarrollo y en la de producción**.
 > **Una sola rama:** todo el trabajo va directo en `main`. No se crean ramas ni worktrees.
 
@@ -15,20 +15,22 @@
 | **T2** | En el formulario de Productos, que en "Medidas" quede solo el campo Etiqueta | Sí — `44` y `45` | ✅ Código listo — ⚠️ **falta correr `44` (antes de usar) y `45` (después de desplegar) en dev + prod** |
 | **T3** | Separar Inventario de Kardex: módulos independientes | Paso 1: no | ✅ Paso 1 listo — falta probar y confirmar. Paso 2 (filtros) queda para después |
 | **T4** | Diseño de Ventas y Proformas según la imagen de referencia | No se espera | ⏳ Imagen recibida el 2026-10-11. **Planificada, sin implementar**: faltan cerrar P10–P15 |
-| **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Código listo (2026-10-11) — falta probar y confirmar |
+| **T5** | Validez de la oferta (días) en Proforma, como en Cotización | No | ✅ Publicada en producción el 2026-10-11 — falta probar y confirmar |
 
 Verificado el 2026-10-06 con `tsc --noEmit`, `next lint` y `next build` (los tres sin errores). **No se probó en pantalla ni se ejecutaron los scripts SQL** (no hay acceso a la base desde la sesión): esa parte es la prueba en `localhost` de abajo.
 
 ---
 
-## Lo que falta para cerrar T1–T3 (en orden)
+## Lo que falta para cerrar T1–T3 y T5 (en orden)
 
-1. **Correr `supabase/44_medidas_solo_etiqueta.sql` en la base de desarrollo.** Sin él, guardar un producto que tenga medidas da error.
-2. **Probar en `localhost:3000`** con la lista de "Prueba" de cada tarea.
-3. Confirmar.
-4. Correr el `44` en **producción** → push de `main` a los dos remotos → `vercel --prod`.
-5. Recién después de desplegar, correr `supabase/45_medidas_a_texto.sql` en dev y en prod.
-6. Anotar acá `✅ corrido en dev + prod`.
+**⚠️ Urgente si no se hizo:** el código de T2 está en producción desde el 2026-10-06. Mientras el script `44` no esté corrido en la base de **producción**, **guardar un producto que tenga medidas da error** ("No se pudo actualizar el producto"). Los productos sin medidas se guardan bien.
+
+1. **Correr `supabase/44_medidas_solo_etiqueta.sql` en producción** (y en desarrollo), si todavía no se corrió.
+2. Probar en producción o en `localhost:3000` con la lista de "Prueba" de cada tarea.
+3. Correr `supabase/45_medidas_a_texto.sql` en dev y en prod (el código nuevo ya está publicado, así que ya se puede).
+4. Anotar acá `✅ corrido en dev + prod`.
+
+**Cómo se publicó:** el 2026-10-06 y el 2026-10-11 el push de `main` a los remotos creó un despliegue de producción en Vercel a los 6 segundos. No hizo falta `vercel --prod`. De ahora en adelante: **subir a los repositorios es publicar**, así que un script del que dependa el código va **antes** del push.
 
 ---
 
